@@ -1,8 +1,11 @@
 import { Router } from 'express';
-import { getPublicHome, getPublicRanking } from '../controllers/publicController.js';
+import { getRanking, getPointsCatalog } from '../controllers/publicController.js';
 
 const router = Router();
-router.get('/home', getPublicHome);
-router.get('/ranking', getPublicRanking);
+
+router.get('/ranking', getRanking);
+router.get('/points-catalog', getPointsCatalog);
 
 export default router;
+
+

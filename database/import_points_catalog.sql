@@ -1,0 +1,1 @@
+\copy points_catalog(source_code, group_name, action_name, action_level, points, evidence_required, max_frequency) FROM 'C:/Users/Oscar Prada/Documents/ecoamigos-web/ecoamigos-web/database/points_catalog_clean.csv' DELIMITER ',' CSV HEADER;

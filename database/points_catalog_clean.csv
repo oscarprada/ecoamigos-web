@@ -1,0 +1,57 @@
+﻿source_code,group_name,action_name,action_level,points,evidence_required,max_frequency
+2026-01-01,Hogares,Separación base,Nivel 1: Racha de 1 semana,10,Foto de canecas separadas + fecha visible.,Semanal
+2026-02-01,Hogares,Separación base,Nivel 2: Racha de 4 semanas (1 mes),50,Sistema interno valida 4 semanas seguidas.,Mensual
+2026-03-01,Hogares,Separación base,Nivel 3: Racha de 12 semanas (3 meses),180,Sistema interno valida 12 semanas seguidas.,Trimestral
+2026-04-01,Hogares,Separación base,Nivel 4: Racha de 24 semanas (6 meses),400,Sistema interno valida 24 semanas seguidas.,Semestral
+2026-05-01,Hogares,Entrega acopio,Nivel 1: Volumen bajo (1 a 5 kg),15,Foto de báscula o ticket.,Ilimitado
+2026-06-01,Hogares,Entrega acopio,Nivel 2: Volumen medio (6 a 15 kg),30,Foto de báscula o ticket.,Ilimitado
+2026-07-01,Hogares,Entrega acopio,Nivel 3: Volumen alto (16 a 30 kg),80,Foto de báscula o ticket.,Ilimitado
+2026-08-01,Hogares,Entrega acopio,Nivel 4: Volumen masivo (+30 kg),150,Video corto (5 seg) de báscula o ticket mayor.,Ilimitado
+2026-09-01,Hogares,Aceite de Cocina,Nivel 1: 1 a 3 Litros,20,Foto de botellas marcadas con volumen.,Ilimitado
+2026-10-01,Hogares,Aceite de Cocina,Nivel 2: 4 a 10 Litros,60,Foto de bidón o botellas.,Ilimitado
+2026-11-01,Hogares,Aceite de Cocina,Nivel 3: 11 a 20 Litros,150,Foto de bidones llenos.,Ilimitado
+2026-12-01,Hogares,Aceite de Cocina,Nivel 4: +20 Litros,300,Video corto entregando en punto autorizado.,Ilimitado
+1.13,Hogares,Pilas usadas,Nivel 1: Lote de 10 unidades,20,Foto de pilas agrupadas.,Ilimitado
+1.14,Hogares,Pilas usadas,Nivel 2: Lote de 30 unidades,70,Foto de pilas agrupadas.,Ilimitado
+1.15,Hogares,Pilas usadas,Nivel 3: +50 unidades,150,Foto de envase recolector lleno.,Ilimitado
+1.16,Hogares,Punto ecológico,Instalación de 3 canecas,25,2 fotos: armado y primer uso real.,Única vez
+1.17,Hogares,Economía circular,Donación de 5 a 10 prendas útiles,30,Foto entregando en fundación/ropero.,Mensual
+1.18,Hogares,Cosecha de Agua,20 Litros recuperados (lluvia/lavadora),15,Foto del balde/tanque de 20L en uso.,2 por semana
+1.19,Hogares,Ciclo orgánico,5 kg de abono generado en compostera,40,Foto pesando el abono resultante.,Ilimitado
+2026-01-02,Inst. Educativas,Tapitas plásticas,Nivel 1: Lote de 100 unidades,15,Foto de tapitas en grupos de 10.,Ilimitado
+2026-02-02,Inst. Educativas,Tapitas plásticas,Nivel 2: Lote de 500 unidades,60,Foto en botellón transparente.,Ilimitado
+2026-03-02,Inst. Educativas,Tapitas plásticas,"Nivel 3: Lote de 1,000 unidades",150,Video del volumen empacado.,Ilimitado
+2026-04-02,Inst. Educativas,Ecoladrillos,Nivel 1: 1 a 5 unidades compactas,30,Foto de unidades + peso (aprox 500g c/u).,Ilimitado
+2026-05-02,Inst. Educativas,Ecoladrillos,Nivel 2: 6 a 15 unidades,80,Foto de unidades juntas.,Ilimitado
+2026-06-02,Inst. Educativas,Ecoladrillos,Nivel 3: 16 a 30 unidades,200,Foto del lote completo.,Ilimitado
+2026-07-02,Inst. Educativas,Ecoladrillos,Nivel 4: +30 unidades,450,Video del lote completo.,Ilimitado
+2026-08-02,Inst. Educativas,Papel y Cartón,Nivel 1: 20 a 50 kg recolectados,80,Foto de la báscula de la recicladora.,Ilimitado
+2026-09-02,Inst. Educativas,Papel y Cartón,Nivel 2: +50 kg recolectados,150,Video pesando el material masivo.,Ilimitado
+2026-10-02,Inst. Educativas,Lonchera Cero,Nivel 1: Racha 5 días (1 sem escolar),30,5 fotos (1 por día) de lonchera sin plásticos.,Semanal
+2026-11-02,Inst. Educativas,Lonchera Cero,Nivel 2: Racha 20 días (1 mes escolar),150,Validado por historial en sistema.,Mensual
+2026-12-02,Inst. Educativas,Huerta escolar,Nivel 1: 5 a 10 plantas sembradas,60,Fotos del proceso de siembra grupal.,Ilimitado
+2.13,Inst. Educativas,Huerta escolar,Nivel 2: 11 a 30 plantas sembradas,150,Fotos del avance del cultivo.,Ilimitado
+2.14,Inst. Educativas,Jornada interna,Nivel 1: 2 horas cronometradas,25,Selfie grupal inicio/fin con reloj.,Ilimitado
+2.15,Inst. Educativas,Campaña liderada,Nivel 1: 10 a 20 estudiantes,75,Planilla firmas + 3 fotos del evento.,Trimestral
+2.16,Inst. Educativas,Campaña liderada,Nivel 2: 21 a 50 estudiantes,120,Planilla firmas + 5 fotos del evento.,Trimestral
+2026-01-03,Comunitario,Plogging/Limpieza,Nivel 1: 1 a 5 kg en vía pública,30,Foto de ruta en app deportiva + bolsa pesada.,Ilimitado
+2026-02-03,Comunitario,Plogging/Limpieza,Nivel 2: 6 a 15 kg en vía pública,70,Foto de ruta + bolsas.,Ilimitado
+2026-03-03,Comunitario,Plogging/Limpieza,Nivel 3: 16 a 30 kg en vía pública,150,Foto de recolección mayor.,Ilimitado
+2026-04-03,Comunitario,Expandir manada,Nivel 1: 1 referido activo,15,ID del referido validado.,Ilimitado
+2026-05-03,Comunitario,Expandir manada,Nivel 2: 5 referidos activos,100,Sistema valida 5 referidos.,Ilimitado
+2026-06-03,Comunitario,Expandir manada,Nivel 3: 10 referidos activos,250,Sistema valida 10 referidos.,Ilimitado
+2026-07-03,Comunitario,Difusión digital,Nivel 1: 1 post/reel con hashtag,10,Pantallazo de la publicación.,Semanal
+2026-08-03,Comunitario,Difusión digital,Nivel 2: Racha 4 semanas publicando,60,Sistema valida historial mensual.,Mensual
+2026-09-03,Comunitario,Caza-infractores,1 reporte GPS de vertedero ilegal,15,Foto de contaminación + ubicación GPS.,3 por semana
+2026-10-03,Comunitario,Trueque barrial,3 a 5 objetos intercambiados,40,Foto del intercambio con la otra persona.,2 al mes
+2026-11-03,Comunitario,Educador digital,1 video educativo publicado,50,Enlace al video.,Mensual
+2026-01-04,Senderos PNN,Siembra nativa,Nivel 1: 1 a 5 árboles,60,Fotos de plantones y terreno + GPS.,Ilimitado
+2026-02-04,Senderos PNN,Siembra nativa,Nivel 2: 6 a 15 árboles,120,Fotos de siembra grupal + GPS.,Ilimitado
+2026-03-04,Senderos PNN,Siembra nativa,Nivel 3: 16 a 50 árboles,300,Video de jornada masiva autorizada.,Ilimitado
+2026-04-04,Senderos PNN,Protección PNN,Nivel 1: Retiro de 1 a 5 kg,25,Foto de residuos retirados + ubicación.,Ilimitado
+2026-05-04,Senderos PNN,Protección PNN,Nivel 2: Retiro de 6 a 15 kg,60,Foto pesando el material.,Ilimitado
+2026-06-04,Senderos PNN,Limpieza pesada,Nivel 1: 20 a 50 kg de residuos,100,Fotos pesando el material retirado.,Ilimitado
+2026-07-04,Senderos PNN,Limpieza pesada,Nivel 2: +50 kg de residuos,180,"Video del antes, durante y después.",Ilimitado
+2026-08-04,Senderos PNN,Ingreso Consciente,1 revisión Cero Plásticos,50,Autodeclaración firmada/foto guardaparque.,1 por visita
+2026-09-04,Senderos PNN,Ciencia ciudadana,Registro de 3 especies fauna/flora,30,Pantallazo app iNaturalist.,1 por visita
+2026-10-04,Senderos PNN,Denuncia PNN,1 reporte fogata/tala ilegal,50,Foto clara + Ubicación GPS (sin confrontar).,Ilimitado

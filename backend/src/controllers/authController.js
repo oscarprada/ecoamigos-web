@@ -42,8 +42,9 @@ export async function login(req, res) {
       },
     });
   } catch (error) {
-    return res.status(500).json({ message: 'Error al iniciar sesión', error: error.message });
-  }
+  console.error('LOGIN ERROR:', error);
+  return res.status(500).json({ message: 'Error al iniciar sesión', error: error.message });
+}
 }
 
 export async function me(req, res) {
@@ -61,3 +62,5 @@ export async function me(req, res) {
     return res.status(500).json({ message: 'Error al obtener usuario', error: error.message });
   }
 }
+
+

@@ -87,3 +87,19 @@ INSERT INTO teams (name) VALUES
 -- Periodo inicial
 INSERT INTO periods (name, start_date, end_date, is_active)
 VALUES ('Periodo Inicial', CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days', true);
+
+-- =========================
+-- CATÁLOGO DE PUNTOS
+-- =========================
+CREATE TABLE IF NOT EXISTS points_catalog (
+    id SERIAL PRIMARY KEY,
+    source_code VARCHAR(50),
+    group_name VARCHAR(100) NOT NULL,
+    action_name VARCHAR(150) NOT NULL,
+    action_level VARCHAR(100),
+    points INTEGER NOT NULL DEFAULT 0,
+    evidence_required BOOLEAN NOT NULL DEFAULT false,
+    max_frequency VARCHAR(50)
+);
+
+
