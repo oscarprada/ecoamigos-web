@@ -1,0 +1,90 @@
+:root {
+  --green: #71b956;
+  --turquoise: #2cab87;
+  --black: #000000;
+  --soft: #f5faf6;
+  --border: #dbe6dd;
+  --text: #243028;
+  --danger: #c53d3d;
+  --success: #21804a;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: 'Montserrat', sans-serif;
+  color: var(--text);
+  background: linear-gradient(180deg, #f8fcf8, #eef7f2);
+}
+a { color: var(--turquoise); text-decoration: none; }
+h1,h2,h3,h4 { font-family: 'Nunito Sans', sans-serif; margin: 0 0 12px; color: var(--black); }
+p { margin-top: 0; }
+.navbar {
+  display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  padding: 16px 32px; border-bottom: 1px solid var(--border); background: white; position: sticky; top: 0; z-index: 20;
+}
+.navbar nav { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.page { padding: 32px 0 56px; }
+.container { width: min(1120px, 92%); margin: 0 auto; }
+.narrow { width: min(700px, 92%); }
+.stack-lg > * + * { margin-top: 24px; }
+.hero {
+  display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: stretch;
+  background: linear-gradient(135deg, rgba(113,185,86,.12), rgba(44,172,135,.16));
+  border: 1px solid var(--border); border-radius: 24px; padding: 32px;
+}
+.badge {
+  display: inline-block; background: rgba(44,172,135,.12); color: var(--turquoise);
+  padding: 6px 12px; border-radius: 999px; font-weight: 700; margin-bottom: 14px;
+}
+.mascot-placeholder {
+  border-radius: 20px; background: white; border: 2px dashed rgba(44,172,135,.35);
+  display: flex; justify-content: center; align-items: center; min-height: 220px; padding: 20px; text-align: center;
+}
+.grid { display: grid; gap: 20px; }
+.three-cols { grid-template-columns: repeat(3, 1fr); }
+.two-cols { grid-template-columns: repeat(2, 1fr); }
+.four-cols { grid-template-columns: repeat(4, 1fr); }
+.card {
+  background: white; border: 1px solid var(--border); border-radius: 20px; padding: 20px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.04);
+}
+.metric { font-size: 2rem; font-weight: 800; color: var(--green); }
+.metric-box {
+  background: var(--soft); border: 1px solid var(--border); border-radius: 14px; padding: 14px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.table-wrapper { overflow-x: auto; background: white; border-radius: 20px; border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 14px 16px; border-bottom: 1px solid var(--border); text-align: left; }
+th { background: #f3faf6; font-family: 'Nunito Sans', sans-serif; }
+.form { display: grid; gap: 14px; }
+.form input, .form textarea, .form select {
+  width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #cfdcd2; font-family: inherit;
+}
+.form textarea { min-height: 100px; resize: vertical; }
+.two-cols-form { grid-template-columns: repeat(2, 1fr); }
+.button, button {
+  border: none; cursor: pointer; font-family: 'Montserrat', sans-serif; font-weight: 700;
+}
+.button {
+  display: inline-flex; justify-content: center; align-items: center; padding: 12px 18px; border-radius: 12px;
+}
+.primary { background: var(--green); color: white; }
+.secondary { background: white; color: var(--turquoise); border: 1px solid var(--turquoise); }
+.success { background: var(--success); color: white; }
+.danger { background: var(--danger); color: white; }
+.small { padding: 8px 12px; border-radius: 10px; }
+.link-btn { background: transparent; color: var(--turquoise); }
+.inline-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.section-header { display: flex; justify-content: space-between; gap: 16px; align-items: center; }
+.status { padding: 4px 10px; border-radius: 999px; font-size: .85rem; font-weight: 700; text-transform: capitalize; }
+.status.pending { background: #fff5d9; color: #916701; }
+.status.approved { background: #dcf7e4; color: #1f7a45; }
+.status.rejected { background: #fde5e5; color: #a43333; }
+.error { color: var(--danger); }
+.helper { color: #64706a; font-size: .95rem; }
+.compact-grid { align-items: stretch; }
+@media (max-width: 900px) {
+  .hero, .three-cols, .two-cols, .four-cols, .two-cols-form { grid-template-columns: 1fr; }
+  .navbar { padding: 16px; align-items: flex-start; flex-direction: column; }
+}

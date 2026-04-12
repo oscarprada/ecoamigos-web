@@ -1,0 +1,23 @@
+# Node
+node_modules/
+
+# Env
+.env
+
+# Logs
+*.log
+
+# Build
+dist/
+build/
+
+# Uploads (evidencias)
+backend/uploads/*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+
