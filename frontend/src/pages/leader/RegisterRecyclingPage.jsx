@@ -1,252 +1,189 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 
-export default function RegisterRecyclingPage() {
-  const navigate = useNavigate();
+const QUALITY_CRITERIA = [
+  'Material limpio',
+  'Material seco',
+  'Separado correctamente',
+  'Sin residuos contaminantes',
+  'Evidencia clara',
+];
 
-  const [periods, setPeriods] = useState([]);
-  const [catalog, setCatalog] = useState([]);
-  const [loadingCatalog, setLoadingCatalog] = useState(true);
+function getCatalogReference(materialType, quantityValue) {
+  const quantity = Number(quantityValue) || 0;
+
+  if (materialType === 'organico') {
+    return {
+      catalog_group_name: 'Hogares',
+      catalog_action_name: 'Ciclo orgánico',
+      catalog_action_level: '5 kg de abono generado en compostera',
+    };
+  }
+
+  if (quantity <= 5) {
+    return {
+      catalog_group_name: 'Hogares',
+      catalog_action_name: 'Entrega acopio',
+      catalog_action_level: 'Nivel 1: Volumen bajo (1 a 5 kg)',
+    };
+  }
+
+  if (quantity <= 15) {
+    return {
+      catalog_group_name: 'Hogares',
+      catalog_action_name: 'Entrega acopio',
+      catalog_action_level: 'Nivel 2: Volumen medio (6 a 15 kg)',
+    };
+  }
+
+  if (quantity <= 30) {
+    return {
+      catalog_group_name: 'Hogares',
+      catalog_action_name: 'Entrega acopio',
+      catalog_action_level: 'Nivel 3: Volumen alto (16 a 30 kg)',
+    };
+  }
+
+  return {
+    catalog_group_name: 'Hogares',
+    catalog_action_name: 'Entrega acopio',
+    catalog_action_level: 'Nivel 4: Volumen masivo (+30 kg)',
+  };
+}
+
+export default function RegisterRecyclingPage() {
+  const [period, setPeriod] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
+  const [checkedCriteria, setCheckedCriteria] = useState(['Material limpio']);
 
   const [form, setForm] = useState({
     material_type: 'papel_carton',
     quantity: 1,
     unit: 'kg',
     quality_level: 'media',
-    criteria_count: 1,
     notes: '',
     period_id: '',
     record_date: new Date().toISOString().slice(0, 10),
     evidence: null,
-    catalog_group_name: '',
-    catalog_action_name: '',
-    catalog_action_level: '',
   });
 
   useEffect(() => {
-    const loadInitialData = async () => {
+    const loadPeriod = async () => {
       try {
-        const [rankingResponse, catalogResponse] = await Promise.all([
-          api.get('/public/ranking'),
-          api.get('/public/points-catalog'),
-        ]);
+        const { data } = await api.get('/public/ranking');
 
-        const rankingData = rankingResponse.data;
-        const catalogData = catalogResponse.data || [];
-
-        if (rankingData.currentPeriod) {
-          setPeriods([rankingData.currentPeriod]);
+        if (data.currentPeriod) {
+          setPeriod(data.currentPeriod);
           setForm((prev) => ({
             ...prev,
-            period_id: rankingData.currentPeriod.id,
+            period_id: data.currentPeriod.id,
           }));
         }
-
-        setCatalog(catalogData);
-
-        if (catalogData.length > 0) {
-          const firstItem = catalogData[0];
-          setForm((prev) => ({
-            ...prev,
-            catalog_group_name: firstItem.group_name || '',
-            catalog_action_name: firstItem.action_name || '',
-            catalog_action_level: firstItem.action_level || '',
-          }));
-        }
-      } catch (error) {
-        console.error('Error cargando datos iniciales:', error);
+      } catch (err) {
+        setError('No fue posible cargar el periodo activo.');
       } finally {
-        setLoadingCatalog(false);
+        setLoading(false);
       }
     };
 
-    loadInitialData();
+    loadPeriod();
   }, []);
 
-  const groupOptions = useMemo(() => {
-    return [...new Set(catalog.map((item) => item.group_name).filter(Boolean))];
-  }, [catalog]);
+  const catalogReference = useMemo(() => {
+    return getCatalogReference(form.material_type, form.quantity);
+  }, [form.material_type, form.quantity]);
 
-  const actionOptions = useMemo(() => {
-    return [
-      ...new Set(
-        catalog
-          .filter((item) => item.group_name === form.catalog_group_name)
-          .map((item) => item.action_name)
-          .filter(Boolean)
-      ),
-    ];
-  }, [catalog, form.catalog_group_name]);
-
-  const levelOptions = useMemo(() => {
-    return [
-      ...new Set(
-        catalog
-          .filter(
-            (item) =>
-              item.group_name === form.catalog_group_name &&
-              item.action_name === form.catalog_action_name
-          )
-          .map((item) => item.action_level || '')
-      ),
-    ];
-  }, [catalog, form.catalog_group_name, form.catalog_action_name]);
-
-  const selectedCatalogItem = useMemo(() => {
-    return (
-      catalog.find(
-        (item) =>
-          item.group_name === form.catalog_group_name &&
-          item.action_name === form.catalog_action_name &&
-          (item.action_level || '') === (form.catalog_action_level || '')
-      ) || null
+  const handleCriteriaChange = (criterion) => {
+    setCheckedCriteria((prev) =>
+      prev.includes(criterion)
+        ? prev.filter((item) => item !== criterion)
+        : [...prev, criterion]
     );
-  }, [
-    catalog,
-    form.catalog_group_name,
-    form.catalog_action_name,
-    form.catalog_action_level,
-  ]);
-
-  const handleGroupChange = (value) => {
-    const actionsForGroup = catalog.filter((item) => item.group_name === value);
-    const firstAction = actionsForGroup[0]?.action_name || '';
-    const firstLevel =
-      actionsForGroup.find((item) => item.action_name === firstAction)?.action_level || '';
-
-    setForm((prev) => ({
-      ...prev,
-      catalog_group_name: value,
-      catalog_action_name: firstAction,
-      catalog_action_level: firstLevel,
-    }));
-  };
-
-  const handleActionChange = (value) => {
-    const levelsForAction = catalog.filter(
-      (item) =>
-        item.group_name === form.catalog_group_name &&
-        item.action_name === value
-    );
-
-    const firstLevel = levelsForAction[0]?.action_level || '';
-
-    setForm((prev) => ({
-      ...prev,
-      catalog_action_name: value,
-      catalog_action_level: firstLevel,
-    }));
-  };
-
-  const handleLevelChange = (value) => {
-    setForm((prev) => ({
-      ...prev,
-      catalog_action_level: value,
-    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSuccess('');
+    setError('');
+    setSaving(true);
 
-    const payload = new FormData();
+    try {
+      const payload = new FormData();
 
-    Object.entries(form).forEach(([key, value]) => {
-      if (value !== null && value !== undefined) {
-        if (key === 'evidence' && value) {
-          payload.append('evidence', value);
-        }
+      payload.append('material_type', form.material_type);
+      payload.append('quantity', form.quantity);
+      payload.append('unit', form.unit);
+      payload.append('quality_level', form.quality_level);
+      payload.append('criteria_count', checkedCriteria.length);
+      payload.append('notes', form.notes || '');
+      payload.append('period_id', form.period_id);
+      payload.append('record_date', form.record_date);
 
-        if (key !== 'evidence') {
-          payload.append(key, value);
-        }
+      payload.append('catalog_group_name', catalogReference.catalog_group_name);
+      payload.append('catalog_action_name', catalogReference.catalog_action_name);
+      payload.append('catalog_action_level', catalogReference.catalog_action_level);
+
+      if (form.evidence) {
+        payload.append('evidence', form.evidence);
       }
-    });
 
-    await api.post('/recycling', payload, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+      await api.post('/recycling', payload, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
 
-    navigate('/leader');
+      setSuccess('Registro enviado correctamente. Quedó pendiente de validación por el administrador.');
+
+      setForm({
+        material_type: 'papel_carton',
+        quantity: 1,
+        unit: 'kg',
+        quality_level: 'media',
+        notes: '',
+        period_id: period?.id || '',
+        record_date: new Date().toISOString().slice(0, 10),
+        evidence: null,
+      });
+
+      setCheckedCriteria(['Material limpio']);
+    } catch (err) {
+      setError(err.response?.data?.message || 'No fue posible guardar el registro.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div className="container narrow">
-      <form className="card form" onSubmit={handleSubmit}>
-        <h2>Registrar reciclaje</h2>
+    <div style={styles.page}>
+      <form style={styles.card} onSubmit={handleSubmit}>
+        <div style={styles.header}>
+          <p style={styles.kicker}>Registro de actividad</p>
+          <h2 style={styles.title}>Registrar reciclaje</h2>
+          <p style={styles.description}>
+            Completa la información del material reciclado. El sistema asignará
+            los puntos cuando el administrador valide el registro.
+          </p>
+        </div>
 
-        <label>
-          Grupo del catálogo
-          <select
-            value={form.catalog_group_name}
-            onChange={(e) => handleGroupChange(e.target.value)}
-            required
-            disabled={loadingCatalog}
-          >
-            {groupOptions.map((group) => (
-              <option key={group} value={group}>
-                {group}
-              </option>
-            ))}
-          </select>
-        </label>
+        {success && <div style={styles.successBox}>{success}</div>}
+        {error && <div style={styles.errorBox}>{error}</div>}
 
-        <label>
-          Acción
-          <select
-            value={form.catalog_action_name}
-            onChange={(e) => handleActionChange(e.target.value)}
-            required
-            disabled={loadingCatalog}
-          >
-            {actionOptions.map((action) => (
-              <option key={action} value={action}>
-                {action}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          Nivel
-          <select
-            value={form.catalog_action_level || ''}
-            onChange={(e) => handleLevelChange(e.target.value)}
-            disabled={loadingCatalog}
-          >
-            {levelOptions.map((level, index) => (
-              <option key={`${level}-${index}`} value={level}>
-                {level || 'Sin nivel'}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {selectedCatalogItem && (
-          <div
-            style={{
-              background: '#f4fbf7',
-              border: '1px solid #d7ebdf',
-              borderRadius: '12px',
-              padding: '12px 14px',
-              marginBottom: '10px',
-            }}
-          >
-            <p style={{ margin: 0, fontWeight: 700 }}>
-              Puntaje base del catálogo: {selectedCatalogItem.points}
-            </p>
-            <p style={{ margin: '6px 0 0 0' }}>
-              Evidencia requerida: {selectedCatalogItem.evidence_required || 'No especificada'}
-            </p>
-            <p style={{ margin: '6px 0 0 0' }}>
-              Frecuencia máxima: {selectedCatalogItem.max_frequency || 'No definida'}
-            </p>
+        {period ? (
+          <div style={styles.periodBox}>
+            <strong>Periodo activo:</strong> {period.name}
+          </div>
+        ) : (
+          <div style={styles.warningBox}>
+            No hay un periodo activo. Crea o activa un periodo antes de registrar reciclaje.
           </div>
         )}
 
-        <label>
+        <label style={styles.label}>
           Material
           <select
+            style={styles.input}
             value={form.material_type}
             onChange={(e) => setForm({ ...form, material_type: e.target.value })}
           >
@@ -258,30 +195,35 @@ export default function RegisterRecyclingPage() {
           </select>
         </label>
 
-        <label>
-          Cantidad
-          <input
-            type="number"
-            min="0.1"
-            step="0.1"
-            value={form.quantity}
-            onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-            required
-          />
-        </label>
+        <div style={styles.twoCols}>
+          <label style={styles.label}>
+            Cantidad
+            <input
+              style={styles.input}
+              type="number"
+              min="0.1"
+              step="0.1"
+              value={form.quantity}
+              onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+              required
+            />
+          </label>
 
-        <label>
-          Unidad
-          <input
-            value={form.unit}
-            onChange={(e) => setForm({ ...form, unit: e.target.value })}
-            required
-          />
-        </label>
+          <label style={styles.label}>
+            Unidad
+            <input
+              style={styles.input}
+              value={form.unit}
+              onChange={(e) => setForm({ ...form, unit: e.target.value })}
+              required
+            />
+          </label>
+        </div>
 
-        <label>
-          Calidad
+        <label style={styles.label}>
+          Calidad del material
           <select
+            style={styles.input}
             value={form.quality_level}
             onChange={(e) => setForm({ ...form, quality_level: e.target.value })}
           >
@@ -291,62 +233,184 @@ export default function RegisterRecyclingPage() {
           </select>
         </label>
 
-        <label>
-          Criterios cumplidos
-          <input
-            type="number"
-            min="0"
-            max="10"
-            value={form.criteria_count}
-            onChange={(e) => setForm({ ...form, criteria_count: e.target.value })}
-          />
-        </label>
+        <div style={styles.criteriaBox}>
+          <p style={styles.criteriaTitle}>Criterios de calidad cumplidos</p>
 
-        <label>
-          Periodo
-          <select
-            value={form.period_id}
-            onChange={(e) => setForm({ ...form, period_id: e.target.value })}
-          >
-            {periods.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
+          <div style={styles.criteriaGrid}>
+            {QUALITY_CRITERIA.map((criterion) => (
+              <label key={criterion} style={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={checkedCriteria.includes(criterion)}
+                  onChange={() => handleCriteriaChange(criterion)}
+                />
+                {criterion}
+              </label>
             ))}
-          </select>
-        </label>
+          </div>
+        </div>
 
-        <label>
+        <label style={styles.label}>
           Fecha del registro
           <input
+            style={styles.input}
             type="date"
             value={form.record_date}
             onChange={(e) => setForm({ ...form, record_date: e.target.value })}
           />
         </label>
 
-        <label>
+        <label style={styles.label}>
           Observaciones
           <textarea
+            style={{ ...styles.input, minHeight: '100px', resize: 'vertical' }}
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            placeholder="Escribe observaciones relevantes del registro"
           />
         </label>
 
-        <label>
+        <label style={styles.label}>
           Evidencia (foto o video)
           <input
+            style={styles.input}
             type="file"
             accept="image/*,video/*"
             onChange={(e) => setForm({ ...form, evidence: e.target.files[0] })}
           />
         </label>
 
-        <button className="button primary" type="submit" disabled={loadingCatalog}>
-          Enviar registro
+        <button style={styles.submitButton} type="submit" disabled={loading || !period || saving}>
+          {saving ? 'Guardando...' : 'Enviar registro'}
         </button>
       </form>
     </div>
   );
 }
+
+const styles = {
+  page: {
+    maxWidth: '900px',
+    margin: '0 auto',
+    padding: '42px 32px 72px',
+    fontFamily: 'Montserrat, sans-serif',
+  },
+  card: {
+    backgroundColor: '#ffffff',
+    border: '1px solid #dfe7e2',
+    borderRadius: '22px',
+    padding: '28px',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.05)',
+    display: 'grid',
+    gap: '18px',
+  },
+  header: {
+    marginBottom: '4px',
+  },
+  kicker: {
+    margin: 0,
+    color: '#2cab87',
+    fontSize: '13px',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.7px',
+  },
+  title: {
+    margin: '8px 0 10px',
+    fontFamily: 'Nunito Sans, sans-serif',
+    fontSize: '34px',
+    color: '#000000',
+  },
+  description: {
+    margin: 0,
+    color: '#444',
+    lineHeight: 1.6,
+  },
+  successBox: {
+    backgroundColor: '#eef8f3',
+    color: '#2cab87',
+    border: '1px solid #d7ebdf',
+    borderRadius: '14px',
+    padding: '14px 16px',
+    fontWeight: 700,
+  },
+  errorBox: {
+    backgroundColor: '#fff3f0',
+    color: '#c0392b',
+    border: '1px solid #f2c7c0',
+    borderRadius: '14px',
+    padding: '14px 16px',
+    fontWeight: 700,
+  },
+  periodBox: {
+    backgroundColor: '#eef8f3',
+    color: '#000000',
+    border: '1px solid #d7ebdf',
+    borderRadius: '14px',
+    padding: '14px 16px',
+  },
+  warningBox: {
+    backgroundColor: '#fff3f0',
+    color: '#c0392b',
+    border: '1px solid #f2c7c0',
+    borderRadius: '14px',
+    padding: '14px 16px',
+    fontWeight: 600,
+  },
+  label: {
+    display: 'grid',
+    gap: '8px',
+    fontWeight: 600,
+    color: '#222',
+  },
+  input: {
+    width: '100%',
+    border: '1px solid #d6e1db',
+    borderRadius: '12px',
+    padding: '12px 14px',
+    fontSize: '14px',
+    fontFamily: 'Montserrat, sans-serif',
+    outline: 'none',
+    backgroundColor: '#ffffff',
+    boxSizing: 'border-box',
+  },
+  twoCols: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '16px',
+  },
+  criteriaBox: {
+    backgroundColor: '#f8fbf9',
+    border: '1px solid #e1ebe5',
+    borderRadius: '16px',
+    padding: '16px',
+  },
+  criteriaTitle: {
+    margin: '0 0 12px',
+    fontFamily: 'Nunito Sans, sans-serif',
+    fontSize: '19px',
+    fontWeight: 800,
+  },
+  criteriaGrid: {
+    display: 'grid',
+    gap: '10px',
+  },
+  checkboxLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    fontWeight: 500,
+  },
+  submitButton: {
+    backgroundColor: '#71b956',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '12px',
+    padding: '14px 22px',
+    fontSize: '15px',
+    fontWeight: 800,
+    cursor: 'pointer',
+    fontFamily: 'Montserrat, sans-serif',
+  },
+};
 

@@ -21,21 +21,14 @@ async function getCatalogPoints({
       FROM points_catalog
       WHERE LOWER(TRIM(group_name)) = LOWER(TRIM($1))
         AND LOWER(TRIM(action_name)) = LOWER(TRIM($2))
-        AND (
-          ($3 IS NULL AND (action_level IS NULL OR TRIM(action_level) = ''))
-          OR LOWER(TRIM(COALESCE(action_level, ''))) = LOWER(TRIM(COALESCE($3, '')))
-        )
+        AND LOWER(TRIM(COALESCE(action_level, ''))) = LOWER(TRIM(COALESCE($3, '')))
       ORDER BY id ASC
       LIMIT 1
     `,
-    [catalog_group_name, catalog_action_name, catalog_action_level]
+    [catalog_group_name, catalog_action_name, catalog_action_level || '']
   );
 
-  if (!result.rows[0]) {
-    return 0;
-  }
-
-  return Number(result.rows[0].points) || 0;
+  return Number(result.rows[0]?.points || 0);
 }
 
 export async function createRecord(req, res) {
@@ -73,10 +66,11 @@ export async function createRecord(req, res) {
           status,
           catalog_group_name,
           catalog_action_name,
-          catalog_action_level
+          catalog_action_level,
+          points_awarded
         )
         VALUES (
-          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending',$12,$13,$14
+          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending',$12,$13,$14,0
         )
         RETURNING *
       `,
@@ -100,6 +94,7 @@ export async function createRecord(req, res) {
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
+    console.error('CREATE RECYCLING ERROR:', error);
     res.status(500).json({
       message: 'Error al registrar reciclaje',
       error: error.message,
@@ -124,6 +119,7 @@ export async function listMyRecords(req, res) {
 
     res.json(result.rows);
   } catch (error) {
+    console.error('LIST MY RECORDS ERROR:', error);
     res.status(500).json({
       message: 'Error al listar registros',
       error: error.message,
@@ -151,6 +147,7 @@ export async function listPendingRecords(_req, res) {
 
     res.json(result.rows);
   } catch (error) {
+    console.error('LIST PENDING RECORDS ERROR:', error);
     res.status(500).json({
       message: 'Error al listar pendientes',
       error: error.message,
@@ -162,6 +159,10 @@ export async function reviewRecord(req, res) {
   try {
     const { id } = req.params;
     const { status, review_notes } = req.body;
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ message: 'Estado inválido' });
+    }
 
     const current = await query(
       `SELECT * FROM recycling_records WHERE id = $1`,
@@ -201,9 +202,11 @@ export async function reviewRecord(req, res) {
 
     res.json(result.rows[0]);
   } catch (error) {
+    console.error('REVIEW RECORD ERROR:', error);
     res.status(500).json({
       message: 'Error al validar registro',
       error: error.message,
     });
   }
 }
+
