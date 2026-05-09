@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import mascota from '../../assets/ecoamigos-mascota.png';
 
 export default function HomePage() {
@@ -12,19 +13,19 @@ export default function HomePage() {
 
             <p style={styles.description}>
               Bienvenido a la plataforma interna de Ecoamigos. Aquí podrás
-              aprender buenas prácticas de reciclaje, consultar el ranking de
-              equipos y fortalecer la cultura ambiental de la Dirección
+              consultar contenidos ambientales, ver el ranking de participación
+              y fortalecer las buenas prácticas institucionales de la Dirección
               Territorial Pacífico.
             </p>
 
             <div style={styles.buttons}>
-              <a href="/ranking" style={styles.linkReset}>
+              <Link to="/ranking" style={styles.linkReset}>
                 <button style={styles.primaryButton}>Ver Ranking</button>
-              </a>
+              </Link>
 
-              <a href="/login" style={styles.linkReset}>
+              <Link to="/login" style={styles.linkReset}>
                 <button style={styles.secondaryButton}>Iniciar Sesión</button>
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -41,41 +42,58 @@ export default function HomePage() {
       <section style={styles.educationSection}>
         <div style={styles.sectionHeader}>
           <p style={styles.sectionKicker}>Educación ambiental</p>
-          <h3 style={styles.sectionTitle}>Aprende a reciclar correctamente</h3>
+          <h3 style={styles.sectionTitle}>Centro de educación ambiental</h3>
           <p style={styles.sectionText}>
-            Consulta recomendaciones básicas para separar residuos y aportar al
-            cuidado del entorno en la entidad.
+            Consulta información institucional sobre buenas prácticas ambientales.
+            Encontrarás contenido escrito, imágenes y videos cargados por la
+            administración de la plataforma.
           </p>
         </div>
 
         <div style={styles.cards}>
-          <div style={styles.card}>
-            <h4 style={styles.cardTitle}>Papel y cartón</h4>
-            <p style={styles.cardText}>
-              Deposítalos limpios, secos y sin restos de comida, grasa o líquidos.
-            </p>
-          </div>
+          <Link to="/educacion/energia" style={styles.cardLink}>
+            <article style={styles.card}>
+              <div style={styles.iconCircle}>⚡</div>
+              <h4 style={styles.cardTitle}>Uso eficiente de la energía</h4>
+              <p style={styles.cardText}>
+                Recomendaciones para reducir el consumo energético y fomentar
+                hábitos responsables en la entidad.
+              </p>
+            </article>
+          </Link>
 
-          <div style={styles.card}>
-            <h4 style={styles.cardTitle}>Plástico</h4>
-            <p style={styles.cardText}>
-              Usa envases vacíos, limpios y secos. Aplasta las botellas para reducir volumen.
-            </p>
-          </div>
+          <Link to="/educacion/agua" style={styles.cardLink}>
+            <article style={styles.card}>
+              <div style={styles.iconCircle}>💧</div>
+              <h4 style={styles.cardTitle}>Uso eficiente del agua</h4>
+              <p style={styles.cardText}>
+                Información para promover el ahorro, cuidado y uso responsable
+                del recurso hídrico.
+              </p>
+            </article>
+          </Link>
 
-          <div style={styles.card}>
-            <h4 style={styles.cardTitle}>Vidrio</h4>
-            <p style={styles.cardText}>
-              Entrégalo vacío, limpio y seco para facilitar su aprovechamiento.
-            </p>
-          </div>
+          <Link to="/educacion/residuos" style={styles.cardLink}>
+            <article style={styles.card}>
+              <div style={styles.iconCircle}>♻️</div>
+              <h4 style={styles.cardTitle}>Gestión integral de residuos</h4>
+              <p style={styles.cardText}>
+                Contenidos sobre separación, disposición y manejo adecuado de
+                residuos sólidos.
+              </p>
+            </article>
+          </Link>
 
-          <div style={styles.card}>
-            <h4 style={styles.cardTitle}>Metales</h4>
-            <p style={styles.cardText}>
-              Lava bien las latas y recipientes, retira residuos y evita guardarlos mojados.
-            </p>
-          </div>
+          <Link to="/educacion/papel" style={styles.cardLink}>
+            <article style={styles.card}>
+              <div style={styles.iconCircle}>📄</div>
+              <h4 style={styles.cardTitle}>Uso eficiente del papel</h4>
+              <p style={styles.cardText}>
+                Buenas prácticas para reducir el consumo de papel y mejorar su
+                aprovechamiento institucional.
+              </p>
+            </article>
+          </Link>
         </div>
       </section>
     </div>
@@ -208,7 +226,7 @@ const styles = {
   sectionTitle: {
     margin: '0 0 10px 0',
     fontFamily: 'Nunito Sans, sans-serif',
-    fontSize: '32px',
+    fontSize: '34px',
     color: '#000000',
     fontWeight: 800,
   },
@@ -218,28 +236,47 @@ const styles = {
     fontSize: '16px',
     lineHeight: 1.6,
     color: '#444444',
-    maxWidth: '700px',
+    maxWidth: '760px',
   },
 
   cards: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
     gap: '20px',
-    marginTop: '26px',
+    marginTop: '28px',
+  },
+
+  cardLink: {
+    textDecoration: 'none',
+    color: '#000000',
   },
 
   card: {
     backgroundColor: '#ffffff',
-    borderRadius: '18px',
-    padding: '24px',
+    borderRadius: '20px',
+    padding: '26px',
     border: '1px solid #e8ece9',
     boxShadow: '0 10px 24px rgba(0, 0, 0, 0.05)',
+    minHeight: '210px',
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+  },
+
+  iconCircle: {
+    width: '54px',
+    height: '54px',
+    borderRadius: '50%',
+    backgroundColor: '#eef8f3',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '26px',
+    marginBottom: '18px',
   },
 
   cardTitle: {
     margin: '0 0 12px 0',
     fontFamily: 'Nunito Sans, sans-serif',
-    fontSize: '22px',
+    fontSize: '23px',
     color: '#000000',
     fontWeight: 800,
   },

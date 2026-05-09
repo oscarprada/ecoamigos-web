@@ -1,14 +1,21 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+
 import { AuthProvider } from './context/AuthContext';
+
 import AppLayout from './layouts/AppLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+
 import HomePage from './pages/public/HomePage';
 import RankingPage from './pages/public/RankingPage';
 import WinnersPage from './pages/public/WinnersPage';
 import PrizesPage from './pages/public/PrizesPage';
+import EducationCategoryPage from './pages/public/EducationCategoryPage';
+
 import LoginPage from './pages/auth/LoginPage';
+
 import LeaderDashboard from './pages/leader/LeaderDashboard';
 import RegisterRecyclingPage from './pages/leader/RegisterRecyclingPage';
+
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminReviewsPage from './pages/admin/AdminReviewsPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
@@ -21,17 +28,32 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route element={<AppLayout />}>
+
+            {/* Públicas */}
             <Route path="/" element={<HomePage />} />
             <Route path="/ranking" element={<RankingPage />} />
             <Route path="/winners" element={<WinnersPage />} />
             <Route path="/prizes" element={<PrizesPage />} />
+
+            {/* Educación ambiental */}
+            <Route
+              path="/educacion/:category"
+              element={<EducationCategoryPage />}
+            />
+
+            {/* Login */}
             <Route path="/login" element={<LoginPage />} />
 
+            {/* Líder */}
             <Route element={<ProtectedRoute roles={['leader', 'admin']} />}>
               <Route path="/leader" element={<LeaderDashboard />} />
-              <Route path="/leader/register" element={<RegisterRecyclingPage />} />
+              <Route
+                path="/leader/register"
+                element={<RegisterRecyclingPage />}
+              />
             </Route>
 
+            {/* Admin */}
             <Route element={<ProtectedRoute roles={['admin']} />}>
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/reviews" element={<AdminReviewsPage />} />
@@ -39,9 +61,11 @@ export default function App() {
               <Route path="/admin/content" element={<AdminContentPage />} />
               <Route path="/admin/settings" element={<AdminSettingsPage />} />
             </Route>
+
           </Route>
         </Routes>
       </BrowserRouter>
     </AuthProvider>
   );
 }
+
