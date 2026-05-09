@@ -51,45 +51,6 @@ export async function createUser(req, res) {
   try {
     const { name, email, password, role, team_id } = req.body;
 
-    if (!name || !email || !password || !role) {
-      return res.status(400).json({
-        message: 'Todos los campos son obligatorios',
-      });
-    }
-
-    const countResult = await query(
-      `SELECT COUNT(*)::int AS total FROM users`
-    );
-
-    if (countResult.rows[0].total >= 15) {
-      return res.status(400).json({
-        message: 'Solo se permiten máximo 15 usuarios',
-      });
-    }
-
-    const existingUser = await query(
-      `SELECT id FROM users WHERE email = $1`,
-      [email]
-    );
-
-    if (existingUser.rows.length > 0) {
-      return res.status(400).json({
-        message: 'El correo ya está registrado',
-      });
-    }
-
-    if (!['leader', 'admin'].includes(role)) {
-      return res.status(400).json({
-        message: 'Rol inválido',
-      });
-    }
-
-    if (role === 'leader' && !team_id) {
-      return res.status(400).json({
-        message: 'El líder debe tener un equipo asignado',
-      });
-    }
-
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const result = await query(
@@ -219,7 +180,7 @@ export async function listPrizes(_req, res) {
     const result = await query(`
       SELECT *
       FROM prizes
-      ORDER BY created_at DESC
+      ORDER BY id DESC
     `);
 
     res.json(result.rows);
@@ -233,15 +194,19 @@ export async function listPrizes(_req, res) {
 
 export async function createPrize(req, res) {
   try {
-    const { title, description } = req.body;
+    const { name, description, is_active } = req.body;
 
     const result = await query(
       `
-        INSERT INTO prizes (title, description)
-        VALUES ($1,$2)
+        INSERT INTO prizes (
+          name,
+          description,
+          is_active
+        )
+        VALUES ($1,$2,$3)
         RETURNING *
       `,
-      [title, description]
+      [name, description, is_active]
     );
 
     res.status(201).json(result.rows[0]);
@@ -319,6 +284,86 @@ export async function createContent(req, res) {
     });
   }
 }
+
+export async function updateContent(req, res) {
+  try {
+    const { id } = req.params;
+    const { title, category, type, description, status } = req.body;
+
+    const current = await query(
+      `SELECT * FROM content_items WHERE id = $1`,
+      [id]
+    );
+
+    if (!current.rows[0]) {
+      return res.status(404).json({
+        message: 'Contenido no encontrado',
+      });
+    }
+
+    const currentFileUrl = current.rows[0].file_url;
+
+    const file_url = req.file
+      ? `/uploads/content/${req.file.filename}`
+      : currentFileUrl;
+
+    const result = await query(
+      `
+        UPDATE content_items
+        SET
+          title = $1,
+          category = $2,
+          type = $3,
+          description = $4,
+          file_url = $5,
+          status = $6
+        WHERE id = $7
+        RETURNING *
+      `,
+      [
+        title,
+        category,
+        type,
+        description || null,
+        file_url,
+        status,
+        id,
+      ]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('UPDATE CONTENT ERROR:', error);
+
+    res.status(500).json({
+      message: 'Error al actualizar contenido',
+      error: error.message,
+    });
+  }
+}
+
+export async function deleteContent(req, res) {
+  try {
+    const { id } = req.params;
+
+    await query(
+      `DELETE FROM content_items WHERE id = $1`,
+      [id]
+    );
+
+    res.json({
+      message: 'Contenido eliminado correctamente',
+    });
+  } catch (error) {
+    console.error('DELETE CONTENT ERROR:', error);
+
+    res.status(500).json({
+      message: 'Error al eliminar contenido',
+      error: error.message,
+    });
+  }
+}
+
 
 
 

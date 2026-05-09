@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import multer from 'multer';
-import path from 'path';
 
 import {
   createContent,
@@ -8,12 +7,14 @@ import {
   createPrize,
   createTeam,
   createUser,
+  deleteContent,
   getDashboard,
   listContent,
   listPeriods,
   listPrizes,
   listTeams,
   listUsers,
+  updateContent,
 } from '../controllers/adminController.js';
 
 import { authenticateToken, authorizeRoles } from '../middleware/authMiddleware.js';
@@ -40,6 +41,8 @@ router.post('/users', createUser);
 
 router.get('/content', listContent);
 router.post('/content', upload.single('file'), createContent);
+router.put('/content/:id', upload.single('file'), updateContent);
+router.delete('/content/:id', deleteContent);
 
 router.get('/teams', listTeams);
 router.post('/teams', createTeam);
@@ -51,5 +54,4 @@ router.get('/prizes', listPrizes);
 router.post('/prizes', createPrize);
 
 export default router;
-
 
