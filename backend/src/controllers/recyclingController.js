@@ -210,3 +210,35 @@ export async function reviewRecord(req, res) {
   }
 }
 
+export async function listReviewedRecords(_req, res) {
+  try {
+    const result = await query(
+      `
+        SELECT
+          rr.*,
+          u.name AS leader_name,
+          t.name AS team_name,
+          p.name AS period_name,
+          reviewer.name AS reviewer_name
+        FROM recycling_records rr
+        JOIN users u ON u.id = rr.user_id
+        JOIN teams t ON t.id = rr.team_id
+        LEFT JOIN periods p ON p.id = rr.period_id
+        LEFT JOIN users reviewer ON reviewer.id = rr.reviewed_by
+        WHERE rr.status IN ('approved', 'rejected')
+        ORDER BY rr.reviewed_at DESC
+      `
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('LIST REVIEWED RECORDS ERROR:', error);
+
+    res.status(500).json({
+      message: 'Error al listar historial',
+      error: error.message,
+    });
+  }
+}
+
+
