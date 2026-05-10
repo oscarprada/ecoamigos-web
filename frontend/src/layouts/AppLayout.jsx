@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import parquesLogo from '../assets/parques-logo.png';
 import { useAuth } from '../context/AuthContext';
@@ -5,9 +6,15 @@ import { useAuth } from '../context/AuthContext';
 export default function AppLayout() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const closeMenu = () => {
+    setMenuOpen(false);
+  };
 
   const handleLogout = () => {
     logout();
+    closeMenu();
     navigate('/');
   };
 
@@ -15,34 +22,72 @@ export default function AppLayout() {
     <div style={styles.page}>
       <header style={styles.header}>
         <div style={styles.headerContent}>
-          <div style={styles.brandBlock}>
-            <img src={parquesLogo} alt="Parques Nacionales Naturales de Colombia" style={styles.logo} />
+          <Link to="/" style={styles.brandBlock} onClick={closeMenu}>
+            <img
+              src={parquesLogo}
+              alt="Parques Nacionales Naturales de Colombia"
+              style={styles.logo}
+            />
 
             <div style={styles.brandText}>
-              <p style={styles.kicker}>CAMPAÑA INTERNA ECOAMIGOS</p>
               <h1 style={styles.title}>
                 Parques Nacionales Naturales de Colombia – Dirección Territorial Pacífico
               </h1>
             </div>
-          </div>
+          </Link>
 
-          <nav style={styles.nav}>
-            <Link to="/" style={styles.link}>Inicio</Link>
-            <Link to="/ranking" style={styles.link}>Ranking</Link>
-            <Link to="/winners" style={styles.link}>Ganadores</Link>
-            <Link to="/prizes" style={styles.link}>Premios</Link>
+          <button
+            type="button"
+            style={styles.menuButton}
+            onClick={() => setMenuOpen((prev) => !prev)}
+          >
+            {menuOpen ? 'Cerrar' : 'Menú'}
+          </button>
+
+          <nav
+            style={{
+              ...styles.nav,
+              ...(menuOpen ? styles.navOpen : {}),
+            }}
+          >
+            <Link to="/" style={styles.link} onClick={closeMenu}>
+              Inicio
+            </Link>
+
+            <Link to="/ranking" style={styles.link} onClick={closeMenu}>
+              Ranking
+            </Link>
+
+            <Link to="/winners" style={styles.link} onClick={closeMenu}>
+              Ganadores
+            </Link>
+
+            <Link to="/prizes" style={styles.link} onClick={closeMenu}>
+              Premios
+            </Link>
 
             {user ? (
               <>
-                <Link to={user.role === 'admin' ? '/admin' : '/leader'} style={styles.panelButton}>
+                <Link
+                  to={user.role === 'admin' ? '/admin' : '/leader'}
+                  style={styles.panelButton}
+                  onClick={closeMenu}
+                >
                   {user.role === 'admin' ? 'Panel admin' : 'Panel líder'}
                 </Link>
-                <button type="button" onClick={handleLogout} style={styles.logoutButton}>
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  style={styles.logoutButton}
+                >
                   Cerrar sesión
                 </button>
               </>
             ) : (
-              <Link to="/login" style={styles.loginButton}>Ingresar</Link>
+              <Link to="/login" style={styles.loginButton} onClick={closeMenu}>
+                Ingresar
+              </Link>
             )}
           </nav>
         </div>
@@ -73,21 +118,24 @@ const styles = {
   headerContent: {
     maxWidth: '1280px',
     margin: '0 auto',
-    padding: '16px 32px',
+    padding: '12px 32px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: '24px',
+    gap: '36px',
+    flexWrap: 'wrap',
   },
   brandBlock: {
     display: 'flex',
     alignItems: 'center',
-    gap: '18px',
+    gap: '14px',
     minWidth: 0,
-    flex: 1,
+    flex: '0 1 620px',
+    textDecoration: 'none',
+    color: '#000000',
   },
   logo: {
-    width: '120px',
+    width: '96px',
     height: 'auto',
     objectFit: 'contain',
     display: 'block',
@@ -96,36 +144,46 @@ const styles = {
   brandText: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '4px',
     minWidth: 0,
-  },
-  kicker: {
-    margin: 0,
-    color: '#2cab87',
-    fontSize: '12px',
-    fontWeight: 700,
-    letterSpacing: '0.8px',
-    textTransform: 'uppercase',
   },
   title: {
     margin: 0,
     fontFamily: 'Nunito Sans, sans-serif',
-    fontSize: '18px',
+    fontSize: '15px',
     lineHeight: 1.2,
     color: '#000000',
     fontWeight: 800,
+    maxWidth: '520px',
+  },
+  menuButton: {
+    display: 'none',
+    backgroundColor: '#2cab87',
+    color: '#ffffff',
+    border: 'none',
+    padding: '10px 16px',
+    borderRadius: '10px',
+    fontSize: '14px',
+    fontWeight: 800,
+    cursor: 'pointer',
+    fontFamily: 'Montserrat, sans-serif',
   },
   nav: {
     display: 'flex',
     alignItems: 'center',
-    gap: '18px',
-    flexShrink: 0,
+    gap: '16px',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    flex: '1 1 auto',
+  },
+  navOpen: {
+    display: 'flex',
   },
   link: {
     textDecoration: 'none',
     color: '#000000',
     fontSize: '15px',
-    fontWeight: 600,
+    fontWeight: 700,
+    whiteSpace: 'nowrap',
   },
   loginButton: {
     textDecoration: 'none',
@@ -134,7 +192,8 @@ const styles = {
     padding: '10px 18px',
     borderRadius: '10px',
     fontSize: '14px',
-    fontWeight: 700,
+    fontWeight: 800,
+    whiteSpace: 'nowrap',
   },
   panelButton: {
     textDecoration: 'none',
@@ -143,7 +202,8 @@ const styles = {
     padding: '10px 18px',
     borderRadius: '10px',
     fontSize: '14px',
-    fontWeight: 700,
+    fontWeight: 800,
+    whiteSpace: 'nowrap',
   },
   logoutButton: {
     backgroundColor: '#000000',
@@ -152,9 +212,10 @@ const styles = {
     padding: '10px 18px',
     borderRadius: '10px',
     fontSize: '14px',
-    fontWeight: 700,
+    fontWeight: 800,
     cursor: 'pointer',
     fontFamily: 'Montserrat, sans-serif',
+    whiteSpace: 'nowrap',
   },
   main: {
     paddingTop: 0,

@@ -88,3 +88,144 @@ th { background: #f3faf6; font-family: 'Nunito Sans', sans-serif; }
   .hero, .three-cols, .two-cols, .four-cols, .two-cols-form { grid-template-columns: 1fr; }
   .navbar { padding: 16px; align-items: flex-start; flex-direction: column; }
 }
+
+/* =========================
+   RESPONSIVE MEJORADO
+========================= */
+
+html {
+  scroll-behavior: smooth;
+}
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+@media (max-width: 1024px) {
+  .container,
+  .narrow {
+    width: min(100%, 94%);
+  }
+
+  .four-cols {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .three-cols {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .container,
+  .narrow {
+    width: min(100%, 92%);
+  }
+
+  .page {
+    padding: 20px 0 40px;
+  }
+
+  .hero,
+  .three-cols,
+  .two-cols,
+  .four-cols,
+  .two-cols-form {
+    grid-template-columns: 1fr;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .card {
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .metric {
+    font-size: 1.7rem;
+  }
+
+  th,
+  td {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+
+  .button,
+  button {
+    min-height: 42px;
+  }
+
+  .inline-actions {
+    flex-direction: column;
+  }
+
+  .inline-actions .button,
+  .inline-actions button {
+    width: 100%;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+  }
+
+  h3 {
+    font-size: 1.35rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .container,
+  .narrow {
+    width: min(100%, 94%);
+  }
+
+  .navbar nav {
+    width: 100%;
+    gap: 10px;
+  }
+
+  .navbar nav a,
+  .navbar nav button {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .card {
+    padding: 16px;
+  }
+
+  .form input,
+  .form textarea,
+  .form select {
+    font-size: 16px;
+  }
+
+  .button {
+    width: 100%;
+  }
+
+  table {
+    min-width: 680px;
+  }
+}
+

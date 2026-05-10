@@ -12,21 +12,10 @@ export default function HomePage() {
             <h2 style={styles.slogan}>¡Pequeñas acciones, grandes cambios!</h2>
 
             <p style={styles.description}>
-              Bienvenido a la plataforma interna de Ecoamigos. Aquí podrás
-              consultar contenidos ambientales, ver el ranking de participación
-              y fortalecer las buenas prácticas institucionales de la Dirección
-              Territorial Pacífico.
+              Bienvenidos a la plataforma Ecoamigos. Aquí podrás
+              aprender prácticas sostenibles para optimizar el consumo de agua, la energía eléctrica, el papel
+              y la adecuada disposición de los residuos en la Dirección Territorial Pacífico.
             </p>
-
-            <div style={styles.buttons}>
-              <Link to="/ranking" style={styles.linkReset}>
-                <button style={styles.primaryButton}>Ver Ranking</button>
-              </Link>
-
-              <Link to="/login" style={styles.linkReset}>
-                <button style={styles.secondaryButton}>Iniciar Sesión</button>
-              </Link>
-            </div>
           </div>
 
           <div style={styles.heroImageWrapper}>
@@ -116,15 +105,16 @@ const styles = {
   heroContent: {
     maxWidth: '1280px',
     margin: '0 auto',
-    padding: '56px 32px 48px',
+    padding: '48px 32px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: '40px',
+    gap: '32px',
+    flexWrap: 'wrap',
   },
 
   heroText: {
-    flex: 1,
+    flex: '1 1 420px',
     maxWidth: '650px',
   },
 
@@ -142,63 +132,30 @@ const styles = {
   slogan: {
     margin: '0 0 18px 0',
     fontFamily: 'Nunito Sans, sans-serif',
-    fontSize: '54px',
+    fontSize: 'clamp(38px, 5vw, 54px)',
     lineHeight: 1.05,
     color: '#000000',
     fontWeight: 800,
   },
 
   description: {
-    margin: '0 0 28px 0',
-    fontSize: '18px',
+    margin: 0,
+    fontSize: 'clamp(15px, 2vw, 18px)',
     lineHeight: 1.6,
     color: '#2f2f2f',
     maxWidth: '580px',
   },
 
-  buttons: {
-    display: 'flex',
-    gap: '14px',
-    flexWrap: 'wrap',
-  },
-
-  linkReset: {
-    textDecoration: 'none',
-  },
-
-  primaryButton: {
-    backgroundColor: '#71b956',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '10px',
-    padding: '14px 22px',
-    fontSize: '15px',
-    fontWeight: 700,
-    cursor: 'pointer',
-    boxShadow: '0 8px 20px rgba(113, 185, 86, 0.25)',
-  },
-
-  secondaryButton: {
-    backgroundColor: '#2cab87',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '10px',
-    padding: '14px 22px',
-    fontSize: '15px',
-    fontWeight: 700,
-    cursor: 'pointer',
-    boxShadow: '0 8px 20px rgba(44, 171, 135, 0.22)',
-  },
-
   heroImageWrapper: {
-    flex: '0 0 360px',
+    flex: '0 1 300px',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
+    margin: '0 auto',
   },
 
   mascota: {
-    width: '340px',
+    width: 'clamp(190px, 28vw, 260px)',
     height: 'auto',
     objectFit: 'contain',
     display: 'block',
@@ -226,7 +183,7 @@ const styles = {
   sectionTitle: {
     margin: '0 0 10px 0',
     fontFamily: 'Nunito Sans, sans-serif',
-    fontSize: '34px',
+    fontSize: 'clamp(28px, 4vw, 34px)',
     color: '#000000',
     fontWeight: 800,
   },
@@ -258,7 +215,6 @@ const styles = {
     border: '1px solid #e8ece9',
     boxShadow: '0 10px 24px rgba(0, 0, 0, 0.05)',
     minHeight: '210px',
-    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
   },
 
   iconCircle: {
