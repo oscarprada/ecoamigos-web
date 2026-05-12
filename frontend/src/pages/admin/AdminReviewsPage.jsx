@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '../../api/client';
+import { useToast } from '../../context/ToastContext';
 
 export default function AdminReviewsPage() {
+  const { showToast } = useToast();
+
   const [pendingRecords, setPendingRecords] = useState([]);
   const [historyRecords, setHistoryRecords] = useState([]);
   const [activeTab, setActiveTab] = useState('pending');
@@ -11,28 +14,40 @@ export default function AdminReviewsPage() {
   const [notes, setNotes] = useState({});
 
   const load = async () => {
-    const [pendingRes, historyRes] = await Promise.all([
-      api.get('/recycling/pending'),
-      api.get('/recycling/reviewed'),
-    ]);
+    try {
+      const [pendingRes, historyRes] = await Promise.all([
+        api.get('/recycling/pending'),
+        api.get('/recycling/reviewed'),
+      ]);
 
-    setPendingRecords(pendingRes.data || []);
-    setHistoryRecords(historyRes.data || []);
+      setPendingRecords(pendingRes.data || []);
+      setHistoryRecords(historyRes.data || []);
+    } catch (error) {
+      showToast(
+        'No fue posible cargar los registros.',
+        'error'
+      );
+    }
   };
 
   useEffect(() => {
     load();
   }, []);
 
-  const records = activeTab === 'pending'
-    ? pendingRecords
-    : historyRecords;
+  const records =
+    activeTab === 'pending'
+      ? pendingRecords
+      : historyRecords;
 
   const filteredRecords = useMemo(() => {
     return records.filter((record) => {
       const matchesSearch =
-        record.team_name?.toLowerCase().includes(search.toLowerCase()) ||
-        record.leader_name?.toLowerCase().includes(search.toLowerCase());
+        record.team_name
+          ?.toLowerCase()
+          .includes(search.toLowerCase()) ||
+        record.leader_name
+          ?.toLowerCase()
+          .includes(search.toLowerCase());
 
       const matchesFilter =
         filter === 'all'
@@ -56,7 +71,20 @@ export default function AdminReviewsPage() {
             : 'Registro rechazado por administrador'),
       });
 
+      showToast(
+        status === 'approved'
+          ? 'Registro aprobado correctamente.'
+          : 'Registro rechazado correctamente.',
+        'success'
+      );
+
       await load();
+    } catch (error) {
+      showToast(
+        error.response?.data?.message ||
+          'No fue posible procesar la validación.',
+        'error'
+      );
     } finally {
       setSubmittingId(null);
     }
@@ -66,14 +94,17 @@ export default function AdminReviewsPage() {
     <div style={styles.page}>
       <div style={styles.header}>
         <div>
-          <p style={styles.kicker}>Supervisión y validación</p>
+          <p style={styles.kicker}>
+            Supervisión y validación
+          </p>
 
           <h2 style={styles.title}>
             Validación avanzada de reciclajes
           </h2>
 
           <p style={styles.description}>
-            Gestión institucional de registros, evidencias y auditoría.
+            Gestión institucional de registros,
+            evidencias y auditoría.
           </p>
         </div>
       </div>
@@ -115,12 +146,29 @@ export default function AdminReviewsPage() {
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         >
-          <option value="all">Todos los materiales</option>
-          <option value="papel_carton">Papel y cartón</option>
-          <option value="plastico">Plástico</option>
-          <option value="vidrio">Vidrio</option>
-          <option value="metal">Metal</option>
-          <option value="organico">Orgánico</option>
+          <option value="all">
+            Todos los materiales
+          </option>
+
+          <option value="papel_carton">
+            Papel y cartón
+          </option>
+
+          <option value="plastico">
+            Plástico
+          </option>
+
+          <option value="vidrio">
+            Vidrio
+          </option>
+
+          <option value="metal">
+            Metal
+          </option>
+
+          <option value="organico">
+            Orgánico
+          </option>
         </select>
       </div>
 
@@ -131,7 +179,10 @@ export default function AdminReviewsPage() {
       ) : (
         <div style={styles.cards}>
           {filteredRecords.map((record) => (
-            <article key={record.id} style={styles.card}>
+            <article
+              key={record.id}
+              style={styles.card}
+            >
               <div style={styles.top}>
                 <div>
                   <p style={styles.cardKicker}>
@@ -161,16 +212,25 @@ export default function AdminReviewsPage() {
               </div>
 
               <div style={styles.grid}>
-                <Info label="Líder" value={record.leader_name} />
+                <Info
+                  label="Líder"
+                  value={record.leader_name}
+                />
 
-                <Info label="Material" value={record.material_type} />
+                <Info
+                  label="Material"
+                  value={record.material_type}
+                />
 
                 <Info
                   label="Cantidad"
                   value={`${record.quantity} ${record.unit}`}
                 />
 
-                <Info label="Periodo" value={record.period_name} />
+                <Info
+                  label="Periodo"
+                  value={record.period_name}
+                />
 
                 <Info
                   label="Puntos"
@@ -185,14 +245,20 @@ export default function AdminReviewsPage() {
 
               {record.notes && (
                 <div style={styles.notes}>
-                  <strong>Observaciones del líder:</strong>
+                  <strong>
+                    Observaciones del líder:
+                  </strong>
+
                   <p>{record.notes}</p>
                 </div>
               )}
 
               {record.review_notes && (
                 <div style={styles.reviewNotes}>
-                  <strong>Observaciones administrativas:</strong>
+                  <strong>
+                    Observaciones administrativas:
+                  </strong>
+
                   <p>{record.review_notes}</p>
                 </div>
               )}
@@ -202,7 +268,9 @@ export default function AdminReviewsPage() {
 
                 {record.evidence_url ? (
                   <>
-                    {record.evidence_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                    {record.evidence_url.match(
+                      /\.(jpg|jpeg|png|gif|webp)$/i
+                    ) ? (
                       <img
                         src={`http://localhost:3000${record.evidence_url}`}
                         alt="Evidencia"
@@ -233,7 +301,8 @@ export default function AdminReviewsPage() {
                     onChange={(e) =>
                       setNotes({
                         ...notes,
-                        [record.id]: e.target.value,
+                        [record.id]:
+                          e.target.value,
                       })
                     }
                   />
@@ -241,22 +310,36 @@ export default function AdminReviewsPage() {
                   <div style={styles.actions}>
                     <button
                       style={styles.approveButton}
-                      disabled={submittingId === record.id}
+                      disabled={
+                        submittingId === record.id
+                      }
                       onClick={() =>
-                        review(record.id, 'approved')
+                        review(
+                          record.id,
+                          'approved'
+                        )
                       }
                     >
-                      Aprobar
+                      {submittingId === record.id
+                        ? 'Procesando...'
+                        : 'Aprobar'}
                     </button>
 
                     <button
                       style={styles.rejectButton}
-                      disabled={submittingId === record.id}
+                      disabled={
+                        submittingId === record.id
+                      }
                       onClick={() =>
-                        review(record.id, 'rejected')
+                        review(
+                          record.id,
+                          'rejected'
+                        )
                       }
                     >
-                      Rechazar
+                      {submittingId === record.id
+                        ? 'Procesando...'
+                        : 'Rechazar'}
                     </button>
                   </div>
                 </>
@@ -272,8 +355,13 @@ export default function AdminReviewsPage() {
 function Info({ label, value }) {
   return (
     <div style={styles.infoCard}>
-      <span style={styles.infoLabel}>{label}</span>
-      <strong style={styles.infoValue}>{value || '-'}</strong>
+      <span style={styles.infoLabel}>
+        {label}
+      </span>
+
+      <strong style={styles.infoValue}>
+        {value || '-'}
+      </strong>
     </div>
   );
 }
@@ -319,6 +407,7 @@ const styles = {
     display: 'flex',
     gap: '12px',
     marginBottom: '24px',
+    flexWrap: 'wrap',
   },
 
   tab: {
@@ -377,7 +466,9 @@ const styles = {
   top: {
     display: 'flex',
     justifyContent: 'space-between',
+    gap: '16px',
     marginBottom: '18px',
+    flexWrap: 'wrap',
   },
 
   cardKicker: {
@@ -413,7 +504,8 @@ const styles = {
 
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))',
+    gridTemplateColumns:
+      'repeat(auto-fit,minmax(180px,1fr))',
     gap: '14px',
     marginBottom: '18px',
   },
@@ -461,6 +553,7 @@ const styles = {
     width: '220px',
     borderRadius: '14px',
     marginTop: '12px',
+    maxWidth: '100%',
   },
 
   textarea: {
@@ -477,6 +570,7 @@ const styles = {
   actions: {
     display: 'flex',
     gap: '12px',
+    flexWrap: 'wrap',
   },
 
   approveButton: {
