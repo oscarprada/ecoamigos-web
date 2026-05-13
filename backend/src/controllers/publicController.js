@@ -79,6 +79,85 @@ export async function getRanking(_req, res) {
   }
 }
 
+export async function getPublicStats(_req, res) {
+  try {
+    const statusResult = await query(
+      `
+        SELECT
+          status,
+          COUNT(*)::int AS total
+        FROM recycling_records
+        GROUP BY status
+      `
+    );
+
+    const materialsResult = await query(
+      `
+        SELECT
+          material_type,
+          COUNT(*)::int AS total,
+          COALESCE(SUM(quantity), 0)::numeric AS total_quantity,
+          COALESCE(SUM(points_awarded), 0)::int AS total_points
+        FROM recycling_records
+        GROUP BY material_type
+        ORDER BY total DESC
+      `
+    );
+
+    const teamsResult = await query(
+      `
+        SELECT
+          t.id,
+          t.name,
+          t.dependency,
+          COUNT(rr.id)::int AS total_records,
+          COALESCE(SUM(rr.points_awarded), 0)::int AS total_points
+        FROM teams t
+        LEFT JOIN recycling_records rr ON rr.team_id = t.id
+        GROUP BY t.id, t.name, t.dependency
+        ORDER BY total_points DESC, total_records DESC, t.name ASC
+      `
+    );
+
+    const periodResult = await query(
+      `
+        SELECT
+          p.id,
+          p.name,
+          COUNT(rr.id)::int AS total_records,
+          COALESCE(SUM(rr.points_awarded), 0)::int AS total_points
+        FROM periods p
+        LEFT JOIN recycling_records rr ON rr.period_id = p.id
+        GROUP BY p.id, p.name
+        ORDER BY p.id DESC
+      `
+    );
+
+    const generalResult = await query(
+      `
+        SELECT
+          COUNT(*)::int AS total_records,
+          COALESCE(SUM(points_awarded), 0)::int AS total_points,
+          COALESCE(SUM(quantity), 0)::numeric AS total_quantity
+        FROM recycling_records
+      `
+    );
+
+    res.json({
+      general: generalResult.rows[0],
+      status: statusResult.rows,
+      materials: materialsResult.rows,
+      teams: teamsResult.rows,
+      periods: periodResult.rows,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Error al consultar estadísticas',
+      error: error.message,
+    });
+  }
+}
+
 export async function getPointsCatalog(_req, res) {
   try {
     const result = await query(
