@@ -1,4 +1,5 @@
 import { query } from '../config/db.js';
+import { calculateEnvironmentalIndicators } from '../utils/environmentalIndicators.js';
 
 export async function getRanking(_req, res) {
   try {
@@ -143,12 +144,17 @@ export async function getPublicStats(_req, res) {
       `
     );
 
+    const indicators = calculateEnvironmentalIndicators(
+      materialsResult.rows
+    );
+
     res.json({
       general: generalResult.rows[0],
       status: statusResult.rows,
       materials: materialsResult.rows,
       teams: teamsResult.rows,
       periods: periodResult.rows,
+      indicators,
     });
   } catch (error) {
     res.status(500).json({
