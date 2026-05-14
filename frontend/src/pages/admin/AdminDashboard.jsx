@@ -20,6 +20,13 @@ export default function AdminDashboard() {
     materials: [],
     teams: [],
     periods: [],
+    indicators: {
+      totalQuantity: 0,
+      estimatedTreesSaved: 0,
+      estimatedWaterSaved: 0,
+      estimatedCo2Reduction: 0,
+      estimatedEnergySaved: 0,
+    },
   });
 
   useEffect(() => {
@@ -70,7 +77,7 @@ export default function AdminDashboard() {
         <h2 style={styles.title}>Panel ejecutivo</h2>
         <p style={styles.description}>
           Visualiza el estado general de la campaña, participación por equipos,
-          materiales registrados y avance institucional.
+          materiales registrados, avance institucional e indicadores ambientales.
         </p>
       </section>
 
@@ -85,7 +92,29 @@ export default function AdminDashboard() {
         <StatCard title="Pendientes" value={statusSummary.pending} />
         <StatCard title="Aprobados" value={statusSummary.approved} />
         <StatCard title="Rechazados" value={statusSummary.rejected} />
-        <StatCard title="Cantidad registrada" value={Number(publicStats.general?.total_quantity || 0)} />
+        <StatCard title="Cantidad registrada (kg)" value={Number(publicStats.general?.total_quantity || 0)} />
+      </section>
+
+      <section style={styles.statsGrid}>
+        <StatCard
+          title="Árboles salvados"
+          value={publicStats.indicators?.estimatedTreesSaved || 0}
+        />
+
+        <StatCard
+          title="Agua ahorrada (L)"
+          value={publicStats.indicators?.estimatedWaterSaved || 0}
+        />
+
+        <StatCard
+          title="CO₂ reducido (kg)"
+          value={publicStats.indicators?.estimatedCo2Reduction || 0}
+        />
+
+        <StatCard
+          title="Energía ahorrada (kWh)"
+          value={publicStats.indicators?.estimatedEnergySaved || 0}
+        />
       </section>
 
       <section style={styles.chartsGrid}>
@@ -413,6 +442,8 @@ const styles = {
     margin: 0,
   },
 };
+
+
 
 
 
