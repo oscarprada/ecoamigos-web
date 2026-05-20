@@ -28,40 +28,43 @@ export default function EducationCategoryPage() {
       {items.length === 0 ? (
         <div style={styles.empty}>Aún no hay contenido publicado en esta categoría.</div>
       ) : (
-        <div style={styles.grid}>
+        <div style={styles.list}>
           {items.map((item) => (
             <article key={item.id} style={styles.card}>
-              <div style={styles.thumbnail}>
+              <div style={styles.preview}>
                 {item.file_url && item.type === 'image' ? (
                   <img
                     src={`http://localhost:3000${item.file_url}`}
                     alt={item.title}
-                    style={styles.thumbnailMedia}
+                    style={styles.previewMedia}
                   />
                 ) : item.file_url && item.type === 'video' ? (
                   <video
                     src={`http://localhost:3000${item.file_url}`}
-                    style={styles.thumbnailMedia}
+                    style={styles.previewMedia}
                     muted
                     preload="metadata"
                     controlsList="nodownload"
                     disablePictureInPicture
                   />
                 ) : (
-                  <div style={styles.textThumbnail}>{getTypeLabel(item.type)}</div>
+                  <div style={styles.textPreview}>{getTypeLabel(item.type)}</div>
                 )}
               </div>
 
-              <h3 style={styles.cardTitle}>{item.title}</h3>
-              <p style={styles.cardText}>{item.description}</p>
+              <div style={styles.content}>
+                <p style={styles.typeLabel}>{getTypeLabel(item.type)}</p>
+                <h3 style={styles.cardTitle}>{item.title}</h3>
+                <p style={styles.cardText}>{item.description}</p>
 
-              <button
-                type="button"
-                style={styles.viewButton}
-                onClick={() => setSelectedItem(item)}
-              >
-                Ver contenido
-              </button>
+                <button
+                  type="button"
+                  style={styles.viewButton}
+                  onClick={() => setSelectedItem(item)}
+                >
+                  Ver contenido completo
+                </button>
+              </div>
             </article>
           ))}
         </div>
@@ -166,50 +169,66 @@ const styles = {
     borderRadius: 16,
     border: '1px solid #dfe7e2',
   },
-  grid: {
+  list: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-    gap: 20,
+    gap: 22,
   },
   card: {
-    background: '#fff',
-    padding: 18,
-    borderRadius: 18,
-    border: '1px solid #dfe7e2',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.05)',
-  },
-  thumbnail: {
-    width: '100%',
-    height: 170,
-    borderRadius: 14,
-    overflow: 'hidden',
+  background: '#fff',
+  borderRadius: 22,
+  border: '1px solid #dfe7e2',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.05)',
+  overflow: 'hidden',
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+},
+  preview: {
     backgroundColor: '#eef8f3',
-    marginBottom: 16,
+    minHeight: 260,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
-  thumbnailMedia: {
+  previewMedia: {
     width: '100%',
     height: '100%',
     objectFit: 'cover',
   },
-  textThumbnail: {
+  textPreview: {
     color: '#2cab87',
     fontWeight: 800,
-    fontSize: 18,
+    fontSize: 20,
+  },
+  content: {
+    padding: 28,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  typeLabel: {
+    margin: 0,
+    color: '#2cab87',
+    fontSize: 12,
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '0.7px',
   },
   cardTitle: {
-    margin: '0 0 10px',
+    margin: 0,
     fontFamily: 'Nunito Sans, sans-serif',
-    fontSize: 22,
+    fontSize: 26,
+    color: '#000000',
   },
   cardText: {
-    margin: '0 0 16px',
+    margin: '0 0 8px',
     color: '#444',
-    lineHeight: 1.5,
+    lineHeight: 1.65,
+    fontSize: 16,
   },
   viewButton: {
+    alignSelf: 'flex-start',
     backgroundColor: '#71b956',
     color: '#fff',
     border: 'none',
@@ -280,5 +299,6 @@ const styles = {
     fontWeight: 800,
   },
 };
+
 
 

@@ -1,5 +1,7 @@
 import bcrypt from 'bcrypt';
+
 import { query } from '../config/db.js';
+import { logInfo, logError } from '../utils/logger.js';
 
 export async function getDashboard(_req, res) {
   try {
@@ -17,6 +19,8 @@ export async function getDashboard(_req, res) {
       pending: Number(pending.rows[0].count),
     });
   } catch (error) {
+    logError(`DASHBOARD ERROR: ${error.message}`);
+
     res.status(500).json({
       message: 'Error al cargar dashboard',
       error: error.message,
@@ -40,6 +44,8 @@ export async function listUsers(_req, res) {
 
     res.json(result.rows);
   } catch (error) {
+    logError(`LIST USERS ERROR: ${error.message}`);
+
     res.status(500).json({
       message: 'Error al listar usuarios',
       error: error.message,
@@ -77,9 +83,13 @@ export async function createUser(req, res) {
       ]
     );
 
+    logInfo(
+      `Usuario creado: ${email} | rol=${role} | admin_id=${req.user.id}`
+    );
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('CREATE USER ERROR:', error);
+    logError(`CREATE USER ERROR: ${error.message}`);
 
     res.status(500).json({
       message: 'Error al crear usuario',
@@ -98,6 +108,8 @@ export async function listTeams(_req, res) {
 
     res.json(result.rows);
   } catch (error) {
+    logError(`LIST TEAMS ERROR: ${error.message}`);
+
     res.status(500).json({
       message: 'Error al listar equipos',
       error: error.message,
@@ -118,8 +130,14 @@ export async function createTeam(req, res) {
       [name, dependency]
     );
 
+    logInfo(
+      `Equipo creado: ${name} | dependencia=${dependency} | admin_id=${req.user.id}`
+    );
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
+    logError(`CREATE TEAM ERROR: ${error.message}`);
+
     res.status(500).json({
       message: 'Error al crear equipo',
       error: error.message,
@@ -137,6 +155,8 @@ export async function listPeriods(_req, res) {
 
     res.json(result.rows);
   } catch (error) {
+    logError(`LIST PERIODS ERROR: ${error.message}`);
+
     res.status(500).json({
       message: 'Error al listar periodos',
       error: error.message,
@@ -166,8 +186,14 @@ export async function createPeriod(req, res) {
       [name, start_date, end_date, is_active]
     );
 
+    logInfo(
+      `Periodo creado: ${name} | activo=${is_active} | admin_id=${req.user.id}`
+    );
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
+    logError(`CREATE PERIOD ERROR: ${error.message}`);
+
     res.status(500).json({
       message: 'Error al crear periodo',
       error: error.message,
@@ -185,6 +211,8 @@ export async function listPrizes(_req, res) {
 
     res.json(result.rows);
   } catch (error) {
+    logError(`LIST PRIZES ERROR: ${error.message}`);
+
     res.status(500).json({
       message: 'Error al listar premios',
       error: error.message,
@@ -209,8 +237,14 @@ export async function createPrize(req, res) {
       [name, description, is_active]
     );
 
+    logInfo(
+      `Premio creado: ${name} | activo=${is_active} | admin_id=${req.user.id}`
+    );
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
+    logError(`CREATE PRIZE ERROR: ${error.message}`);
+
     res.status(500).json({
       message: 'Error al crear premio',
       error: error.message,
@@ -228,6 +262,8 @@ export async function listContent(_req, res) {
 
     res.json(result.rows);
   } catch (error) {
+    logError(`LIST CONTENT ERROR: ${error.message}`);
+
     res.status(500).json({
       message: 'Error al listar contenidos',
       error: error.message,
@@ -274,9 +310,13 @@ export async function createContent(req, res) {
       ]
     );
 
+    logInfo(
+      `Contenido creado: ${title} | categoria=${category} | tipo=${type} | admin_id=${req.user.id}`
+    );
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('CREATE CONTENT ERROR:', error);
+    logError(`CREATE CONTENT ERROR: ${error.message}`);
 
     res.status(500).json({
       message: 'Error al crear contenido',
@@ -331,9 +371,13 @@ export async function updateContent(req, res) {
       ]
     );
 
+    logInfo(
+      `Contenido actualizado: id=${id} | titulo=${title} | admin_id=${req.user.id}`
+    );
+
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('UPDATE CONTENT ERROR:', error);
+    logError(`UPDATE CONTENT ERROR: ${error.message}`);
 
     res.status(500).json({
       message: 'Error al actualizar contenido',
@@ -351,11 +395,15 @@ export async function deleteContent(req, res) {
       [id]
     );
 
+    logInfo(
+      `Contenido eliminado: id=${id} | admin_id=${req.user.id}`
+    );
+
     res.json({
       message: 'Contenido eliminado correctamente',
     });
   } catch (error) {
-    console.error('DELETE CONTENT ERROR:', error);
+    logError(`DELETE CONTENT ERROR: ${error.message}`);
 
     res.status(500).json({
       message: 'Error al eliminar contenido',
@@ -363,7 +411,6 @@ export async function deleteContent(req, res) {
     });
   }
 }
-
 
 
 

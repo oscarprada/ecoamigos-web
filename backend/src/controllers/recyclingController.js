@@ -1,4 +1,5 @@
 import { query } from '../config/db.js';
+import { logInfo, logError } from '../utils/logger.js';
 
 function normalizeValue(value) {
   if (value === undefined || value === null) return null;
@@ -92,9 +93,14 @@ export async function createRecord(req, res) {
       ]
     );
 
+    logInfo(
+      `Registro de reciclaje creado: record_id=${result.rows[0].id} | user_id=${req.user.id} | team_id=${req.user.team_id} | material=${material_type} | cantidad=${quantity}${unit}`
+    );
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('CREATE RECYCLING ERROR:', error);
+    logError(`CREATE RECYCLING ERROR user_id=${req.user?.id}: ${error.message}`);
+
     res.status(500).json({
       message: 'Error al registrar reciclaje',
       error: error.message,
@@ -119,7 +125,8 @@ export async function listMyRecords(req, res) {
 
     res.json(result.rows);
   } catch (error) {
-    console.error('LIST MY RECORDS ERROR:', error);
+    logError(`LIST MY RECORDS ERROR user_id=${req.user?.id}: ${error.message}`);
+
     res.status(500).json({
       message: 'Error al listar registros',
       error: error.message,
@@ -147,7 +154,8 @@ export async function listPendingRecords(_req, res) {
 
     res.json(result.rows);
   } catch (error) {
-    console.error('LIST PENDING RECORDS ERROR:', error);
+    logError(`LIST PENDING RECORDS ERROR: ${error.message}`);
+
     res.status(500).json({
       message: 'Error al listar pendientes',
       error: error.message,
@@ -161,7 +169,13 @@ export async function reviewRecord(req, res) {
     const { status, review_notes } = req.body;
 
     if (!['approved', 'rejected'].includes(status)) {
-      return res.status(400).json({ message: 'Estado inválido' });
+      logInfo(
+        `Intento de validación con estado inválido: record_id=${id} | status=${status} | admin_id=${req.user.id}`
+      );
+
+      return res.status(400).json({
+        message: 'Estado inválido',
+      });
     }
 
     const current = await query(
@@ -170,7 +184,13 @@ export async function reviewRecord(req, res) {
     );
 
     if (!current.rows[0]) {
-      return res.status(404).json({ message: 'Registro no encontrado' });
+      logInfo(
+        `Intento de validar registro inexistente: record_id=${id} | admin_id=${req.user.id}`
+      );
+
+      return res.status(404).json({
+        message: 'Registro no encontrado',
+      });
     }
 
     const record = current.rows[0];
@@ -200,9 +220,16 @@ export async function reviewRecord(req, res) {
       [status, normalizeValue(review_notes), req.user.id, points, id]
     );
 
+    logInfo(
+      `Registro validado: record_id=${id} | status=${status} | points=${points} | admin_id=${req.user.id}`
+    );
+
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('REVIEW RECORD ERROR:', error);
+    logError(
+      `REVIEW RECORD ERROR record_id=${req.params?.id} admin_id=${req.user?.id}: ${error.message}`
+    );
+
     res.status(500).json({
       message: 'Error al validar registro',
       error: error.message,
@@ -232,7 +259,7 @@ export async function listReviewedRecords(_req, res) {
 
     res.json(result.rows);
   } catch (error) {
-    console.error('LIST REVIEWED RECORDS ERROR:', error);
+    logError(`LIST REVIEWED RECORDS ERROR: ${error.message}`);
 
     res.status(500).json({
       message: 'Error al listar historial',
@@ -241,4 +268,4 @@ export async function listReviewedRecords(_req, res) {
   }
 }
 
-
+      
