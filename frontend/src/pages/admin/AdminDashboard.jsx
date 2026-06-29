@@ -43,6 +43,34 @@ export default function AdminDashboard() {
     load();
   }, []);
 
+  const handleExportExcel = async () => {
+  try {
+    const response = await api.get('/admin/export/excel', {
+      responseType: 'blob',
+    });
+
+    const url = window.URL.createObjectURL(
+      new Blob([response.data])
+    );
+
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.setAttribute('download', 'Reporte_Ecoamigos.xlsx');
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    link.remove();
+
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error(error);
+    alert('No fue posible generar el reporte.');
+  }
+};
+
   const statusSummary = useMemo(() => {
     const base = {
       pending: 0,
@@ -74,11 +102,20 @@ export default function AdminDashboard() {
     <div style={styles.page}>
       <section style={styles.header}>
         <p style={styles.kicker}>Administración Ecoamigos</p>
-        <h2 style={styles.title}>Panel ejecutivo</h2>
+        <h2 style={styles.title}>PANEL EJECUTIVO </h2>
         <p style={styles.description}>
           Visualiza el estado general de la campaña, participación por equipos,
           materiales registrados, avance institucional e indicadores ambientales.
         </p>
+        <div style={styles.exportContainer}>
+        <button
+          type="button"
+          onClick={handleExportExcel}
+          style={styles.exportButton}
+        >
+          📊 Exportar reporte Excel
+        </button>
+      </div>
       </section>
 
       <section style={styles.statsGrid}>
@@ -433,16 +470,32 @@ const styles = {
     lineHeight: 1.5,
     fontSize: '14px',
   },
-  quickAction: {
+   quickAction: {
     color: '#2cab87',
     fontWeight: 800,
   },
+
+  exportContainer: {
+    marginTop: '22px',
+  },
+
+  exportButton: {
+    backgroundColor: '#2cab87',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '12px',
+    padding: '12px 22px',
+    fontFamily: 'Montserrat, sans-serif',
+    fontWeight: 800,
+    fontSize: '15px',
+    cursor: 'pointer',
+  },
+
   emptyText: {
     color: '#666',
     margin: 0,
   },
 };
-
 
 
 

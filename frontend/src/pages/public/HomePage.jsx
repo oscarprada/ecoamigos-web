@@ -11,14 +11,14 @@ export default function HomePage() {
               <p style={styles.badge}>CAMPAÑA ECOAMIGOS</p>
 
               <h2 style={styles.slogan}>
-                ¡Pequeñas acciones, grandes cambios!
+                Con mis acciones cuido el planeta
               </h2>
 
               <p style={styles.description}>
                 Bienvenidos/as a la plataforma de sostenibilidad de la DTPA.
-                Aquí aprenderás prácticas diarias para optimizar el uso del
-                agua, la energía y el papel, y a gestionar correctamente
-                nuestros residuos para transformar nuestro entorno.
+                En este espacio aprenderás como optimizar el uso diario del
+                agua, la energía y el papel, Súmate y descubre pautas clave
+                para gestionar los residuos y transformar juntos nuestro entorno.
               </p>
             </div>
 

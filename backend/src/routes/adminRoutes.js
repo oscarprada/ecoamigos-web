@@ -17,7 +17,12 @@ import {
   updateContent,
 } from '../controllers/adminController.js';
 
-import { authenticateToken, authorizeRoles } from '../middleware/authMiddleware.js';
+import { exportRecyclingReport } from '../controllers/exportController.js';
+
+import {
+  authenticateToken,
+  authorizeRoles,
+} from '../middleware/authMiddleware.js';
 
 const router = Router();
 
@@ -36,6 +41,7 @@ const upload = multer({ storage });
 router.use(authenticateToken, authorizeRoles('admin'));
 
 router.get('/dashboard', getDashboard);
+
 router.get('/users', listUsers);
 router.post('/users', createUser);
 
@@ -53,5 +59,8 @@ router.post('/periods', createPeriod);
 router.get('/prizes', listPrizes);
 router.post('/prizes', createPrize);
 
-export default router;
+/* ========= EXPORTACIÓN ========= */
 
+router.get('/export/excel', exportRecyclingReport);
+
+export default router;
