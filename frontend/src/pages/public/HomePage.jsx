@@ -1,5 +1,9 @@
 import { Link } from 'react-router-dom';
 import mascota from '../../assets/cleoecoamigos.png';
+import aguaIcon from '../../assets/icons/agua.png';
+import energiaIcon from '../../assets/icons/energia.png';
+import papelIcon from '../../assets/icons/papel.png';
+import residuosIcon from '../../assets/icons/residuos.png';
 
 export default function HomePage() {
   return (
@@ -53,62 +57,86 @@ export default function HomePage() {
         </div>
 
         <div style={styles.cards}>
-          <Link to="/educacion/energia" style={styles.cardLink}>
-            <article style={styles.card}>
-              <div style={styles.iconCircle}>⚡</div>
+  <Link to="/educacion/agua" style={styles.cardLink}>
+    <article style={styles.card}>
+      <div style={styles.iconCircle}>
+        <img
+          src={aguaIcon}
+          alt="Agua"
+          style={styles.iconImg}
+        />
+      </div>
 
-              <h4 style={styles.cardTitle}>
-                Uso Eficiente de Energía
-              </h4>
+      <h4 style={styles.cardTitle}>
+        Ahorro y Uso Eficiente del Agua
+      </h4>
 
-              <p style={styles.cardText}>
-                Cada kilovatio cuenta, usa solo lo necesario.
-              </p>
-            </article>
-          </Link>
+      <p style={styles.cardText}>
+        El agua es vida, no la desperdicies.
+      </p>
+    </article>
+  </Link>
 
-          <Link to="/educacion/agua" style={styles.cardLink}>
-            <article style={styles.card}>
-              <div style={styles.iconCircle}>💧</div>
+  <Link to="/educacion/energia" style={styles.cardLink}>
+    <article style={styles.card}>
+      <div style={styles.iconCircle}>
+        <img
+          src={energiaIcon}
+          alt="Energía"
+          style={styles.iconImg}
+        />
+      </div>
 
-              <h4 style={styles.cardTitle}>
-                Ahorro y Uso Eficiente del Agua
-              </h4>
+      <h4 style={styles.cardTitle}>
+        Uso Eficiente de Energía
+      </h4>
 
-              <p style={styles.cardText}>
-                El agua es vida, no la desperdicies.
-              </p>
-            </article>
-          </Link>
+      <p style={styles.cardText}>
+        Cada kilovatio cuenta, usa solo lo necesario.
+      </p>
+    </article>
+  </Link>
 
-          <Link to="/educacion/residuos" style={styles.cardLink}>
-            <article style={styles.card}>
-              <div style={styles.iconCircle}>♻️</div>
+  <Link to="/educacion/papel" style={styles.cardLink}>
+    <article style={styles.card}>
+      <div style={styles.iconCircle}>
+        <img
+          src={papelIcon}
+          alt="Papel"
+          style={styles.iconImg}
+        />
+      </div>
 
-              <h4 style={styles.cardTitle}>
-                Gestión Integral de Residuos
-              </h4>
+      <h4 style={styles.cardTitle}>
+        Uso Responsable del Papel
+      </h4>
 
-              <p style={styles.cardText}>
-                Separa y dispone los residuos de forma adecuada.
-              </p>
-            </article>
-          </Link>
+      <p style={styles.cardText}>
+        Menos papel, más bosques: piensa antes de imprimir.
+      </p>
+    </article>
+  </Link>
 
-          <Link to="/educacion/papel" style={styles.cardLink}>
-            <article style={styles.card}>
-              <div style={styles.iconCircle}>📄</div>
+  <Link to="/educacion/residuos" style={styles.cardLink}>
+    <article style={styles.card}>
+      <div style={styles.iconCircle}>
+        <img
+          src={residuosIcon}
+          alt="Residuos"
+          style={styles.iconImg}
+        />
+      </div>
 
-              <h4 style={styles.cardTitle}>
-                Uso Responsable del Papel
-              </h4>
+      <h4 style={styles.cardTitle}>
+        Gestión Integral de Residuos
+      </h4>
 
-              <p style={styles.cardText}>
-                Menos papel, más bosques: piensa antes de imprimir.
-              </p>
-            </article>
-          </Link>
-        </div>
+      <p style={styles.cardText}>
+        Separa y dispone los residuos de forma adecuada.
+      </p>
+    </article>
+  </Link>
+</div>
       </section>
     </div>
   );
@@ -252,8 +280,8 @@ const styles = {
   },
 
   iconCircle: {
-    width: '62px',
-    height: '62px',
+    width: '110px',
+    height: '110px',
     borderRadius: '50%',
     backgroundColor: '#eef8f3',
     display: 'flex',
@@ -277,5 +305,11 @@ const styles = {
     fontSize: '16px',
     lineHeight: 1.7,
     color: '#4b4b4b',
+  },
+
+   iconImg: {
+    width: '90px',
+    height: '90px',
+    objectFit: 'contain',
   },
 };
