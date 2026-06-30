@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { query } from '../config/db.js';
 
 export async function exportRecyclingReport(req, res) {
@@ -21,49 +21,88 @@ export async function exportRecyclingReport(req, res) {
       ORDER BY rr.record_date DESC
     `);
 
-    const data = result.rows.map((row) => ({
-      Fecha: row.record_date,
-      Líder: row.leader,
-      Equipo: row.team,
-      Material: row.material_type,
-      Cantidad: row.quantity,
-      Unidad: row.unit,
-      Estado: row.status,
-      Puntos: row.points_awarded,
-      Período: row.period,
-    }));
+    const workbook = new ExcelJS.Workbook();
 
-    const workbook = XLSX.utils.book_new();
+    workbook.creator = 'Ecoamigos';
+    workbook.company = 'Parques Nacionales Naturales de Colombia';
+    workbook.created = new Date();
 
-    const worksheet = XLSX.utils.json_to_sheet(data);
+    const worksheet = workbook.addWorksheet('Reporte Ecoamigos');
 
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      'Reporte Ecoamigos'
-    );
+    worksheet.columns = [
+      { header: 'Fecha', key: 'fecha', width: 18 },
+      { header: 'Líder', key: 'leader', width: 28 },
+      { header: 'Equipo', key: 'team', width: 28 },
+      { header: 'Material', key: 'material', width: 20 },
+      { header: 'Cantidad', key: 'quantity', width: 15 },
+      { header: 'Unidad', key: 'unit', width: 12 },
+      { header: 'Estado', key: 'status', width: 18 },
+      { header: 'Puntos', key: 'points', width: 12 },
+      { header: 'Período', key: 'period', width: 25 },
+    ];
 
-    const buffer = XLSX.write(workbook, {
-      type: 'buffer',
-      bookType: 'xlsx',
+    worksheet.getRow(1).font = {
+      bold: true,
+      color: { argb: 'FFFFFFFF' },
+    };
+
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF71B956' },
+    };
+
+    worksheet.getRow(1).alignment = {
+      horizontal: 'center',
+      vertical: 'middle',
+    };
+
+    result.rows.forEach((row) => {
+      worksheet.addRow({
+        fecha: row.record_date,
+        leader: row.leader,
+        team: row.team,
+        material: row.material_type,
+        quantity: row.quantity,
+        unit: row.unit,
+        status: row.status,
+        points: row.points_awarded,
+        period: row.period,
+      });
     });
 
-    res.setHeader(
-      'Content-Disposition',
-      'attachment; filename=Reporte_Ecoamigos.xlsx'
-    );
+    worksheet.autoFilter = {
+      from: 'A1',
+      to: 'I1',
+    };
+
+    worksheet.views = [
+      {
+        state: 'frozen',
+        ySplit: 1,
+      },
+    ];
 
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     );
 
-    res.send(buffer);
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=Reporte_Ecoamigos.xlsx'
+    );
+
+    await workbook.xlsx.write(res);
+
+    res.end();
+
   } catch (error) {
+    console.error(error);
+
     res.status(500).json({
       message: 'Error al generar el reporte',
       error: error.message,
     });
   }
 }
-
