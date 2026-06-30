@@ -9,6 +9,73 @@ const CATEGORY_LABELS = {
   papel: 'Uso eficiente del papel',
 };
 
+// =============================================================
+// INTRODUCCIONES DE LAS CATEGORÍAS
+// Modifique únicamente los textos.
+// No cambie las llaves: agua, energia, papel y residuos.
+// =============================================================
+const CATEGORY_INTROS = {
+  agua: `¿Sabías que una llave abierta gasta hasta 12 litros de agua por minuto? ¡Ciérrala! 
+Optimizar el consumo de agua es un pilar fundamental para la sostenibilidad ambiental y 
+nuestra continuidad operativa. Implementar prácticas eficientes reduce el impacto ecológico y genera ahorros económicos 
+significativos para la DTPA. Te invitamos a seguir estas recomendaciones en nuestra sede territorial:
+
+💧Cerrar la llave  mientras se enjabonan las manos, cepilla los dientes  o se lavan los   
+utensilios de aseo y cocina, 
+
+💧Regar el jardín  al inicio o al final del día para evitar la evaporación 
+inmediata.
+
+💧Reportar  inmediatamente cualquier goteo, daño o fuga en grifos, cisternas 
+o tuberías al equipo de mantenimiento.
+“El Pacífico es agua: cuidémosla desde nuestra sede". 
+`,
+  energia: `¿Sabías que los equipos en modo de espera o "vampiros" pueden representar hasta el 10% del consumo eléctrico
+  de una oficina? ¡Desconéctalos!
+Optimizar el consumo eléctrico es vital para reducir nuestra huella de carbono, asegurar la eficiencia energética y operativa de la DTPA.
+Adoptar hábitos conscientes disminuye el impacto ambiental y optimiza los recursos de nuestra institución.
+Te invitamos a aplicar estas recomendaciones de uso eficiente en la sede de la Territorial Pacífico:
+
+⚡Apaga las luces al salir de oficinas, salas de juntas, baños o espacios comunes  
+ 	que no se estén utilizando.
+ 
+⚡Aprovecha la luz natural abriendo puertas, ventanas y persianas antes de  
+       encender la luz artificial.
+
+ ⚡Apaga y desconecta los aparatos electrónicos que no estén en uso.
+
+⚡Configura el modo ahorro de energía en tu computadora y apaga el monitor
+     por completo si te vas a ausentar por más de 30 minutos.
+ 
+⚡Usa el aire acondicionado a 24°C, manteniendo cerradas las puertas y
+ventanas del espacio para evitar fugas térmicas y sobrecostos.
+ 
+⚡Reporta fallas eléctricas o parpadeos en las luminarias de manera inmediata
+    al equipo de mantenimiento.
+ 
+“El Pacífico es energía: úsala con responsabilidad desde nuestra sede”.
+`,
+  papel: `¿Sabías que fabricar una sola resma de papel consume 5000 litros de agua y el 
+6% de un árbol? El año pasado, la DTPA consumió 24 resmas (12.000 hojas). lo que representa un impacto de 1.5 árboles talados y 120. 000 litros de agua limpia procesada.
+Con el fin de mitigar esta huella ambiental, es necesario cambiar tus hábitos hoy con estas recomendaciones: 
+
+
+🖨️ Configura tú equipo antes de mandar a imprimir.
+🌓 Imprime siempre a doble cara y en blanco y negro.
+♻️Usa papel reutilizable para documentos no oficiales.
+🎯 Evita el derroche,  imprime solo lo  necesario
+
+Protege los bosques de nuestro Pacífico. ¡Súmate al cambio! 
+`,
+  residuos: `¿Sabías que más del 60% de lo que tiramos a la basura se puede reciclar o compostar si se separa correctamente? Además, si no cambiamos nuestros hábitos de consumo, para el año 2050 habrá más plástico que peces en el mar.
+ 
+Por estas razones, en la Dirección Territorial Pacífico avanzamos en la gestión 
+adecuada de nuestros residuos para que no sean basura, sino semillas de
+esperanza.
+
+`,
+};
+
 export default function EducationCategoryPage() {
   const { category } = useParams();
   const [items, setItems] = useState([]);
@@ -24,6 +91,12 @@ export default function EducationCategoryPage() {
 
       <p style={styles.kicker}>Educación ambiental</p>
       <h2 style={styles.title}>{CATEGORY_LABELS[category]}</h2>
+
+      <div style={styles.introductionBox}>
+        <p style={styles.introduction}>
+          {CATEGORY_INTROS[category]}
+        </p>
+      </div>
 
       {items.length === 0 ? (
         <div style={styles.empty}>Aún no hay contenido publicado en esta categoría.</div>
@@ -163,6 +236,20 @@ const styles = {
     fontSize: '38px',
     margin: '8px 0 28px',
   },
+  introductionBox: {
+    background: '#f8fbf9',
+    border: '1px solid #dfe7e2',
+    borderRadius: 18,
+    padding: '22px 24px',
+    marginBottom: 30,
+  },
+  introduction: {
+    margin: 0,
+    color: '#444',
+    fontSize: '16px',
+    lineHeight: 1.8,
+    whiteSpace: 'pre-line',
+  },
   empty: {
     background: '#fff',
     padding: 24,
@@ -184,16 +271,18 @@ const styles = {
 },
   preview: {
     backgroundColor: '#eef8f3',
-    minHeight: 260,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
+  height: '180px',
+  padding: '10px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  overflow: 'hidden',
   },
   previewMedia: {
     width: '100%',
-    height: '100%',
-    objectFit: 'cover',
+  height: '100%',
+  objectFit: 'contain',
+  borderRadius: '12px',
   },
   textPreview: {
     color: '#2cab87',
@@ -299,6 +388,3 @@ const styles = {
     fontWeight: 800,
   },
 };
-
-
-
