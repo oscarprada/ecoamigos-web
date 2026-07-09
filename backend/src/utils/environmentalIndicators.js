@@ -34,27 +34,21 @@ export function calculateEnvironmentalIndicators(materials = []) {
   });
 
   return {
+    // Cantidad total reciclada (todos los materiales)
     totalQuantity: Number(totalQuantity.toFixed(2)),
 
-    estimatedTreesSaved: Number((paperKg / 80).toFixed(2)),
+    // EPA: 17 árboles por tonelada de papel reciclado
+    // 17 / 1000 = 0.017 árboles por kg
+    estimatedTreesSaved: Number((paperKg * 0.017).toFixed(2)),
 
-    estimatedWaterSaved: Number((paperKg * 50).toFixed(2)),
+    // EPA: 26.5 litros de agua ahorrados por kg de papel reciclado
+    estimatedWaterSaved: Number((paperKg * 26.5).toFixed(2)),
 
-    estimatedCo2Reduction: Number(
-      (
-        paperKg * 1.8 +
-        plasticKg * 1.5 +
-        glassKg * 0.3 +
-        metalKg * 2.1
-      ).toFixed(2)
-    ),
+    // EPA (valor conservador): 1 kg CO₂e evitado por kg de papel reciclado
+    estimatedCo2Reduction: Number((paperKg * 1.0).toFixed(2)),
 
-    estimatedEnergySaved: Number(
-      (
-        paperKg * 4 +
-        plasticKg * 6 +
-        metalKg * 14
-      ).toFixed(2)
-    ),
+    // EPA: 4.1 kWh ahorrados por kg de papel reciclado
+    estimatedEnergySaved: Number((paperKg * 4.1).toFixed(2)),
   };
 }
+

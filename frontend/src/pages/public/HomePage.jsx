@@ -4,6 +4,10 @@ import aguaIcon from '../../assets/icons/agua.png';
 import energiaIcon from '../../assets/icons/energia.png';
 import papelIcon from '../../assets/icons/papel.png';
 import residuosIcon from '../../assets/icons/residuos.png';
+import carvajalLogo from '../../assets/allies/carvajal.png';
+import asobosurLogo from '../../assets/allies/asobosur.png';
+import carlosPortelaLogo from '../../assets/allies/carlos-portela.png';
+import grupoRetornaLogo from '../../assets/allies/grupo-retorna.jpg';
 
 export default function HomePage() {
   return (
@@ -138,6 +142,73 @@ export default function HomePage() {
   </Link>
 </div>
       </section>
+
+      <section style={styles.alliesSection}>
+        <p style={styles.sectionKicker}>
+          NUESTROS ALIADOS
+        </p>
+
+        <h3 style={styles.sectionIntroTitle}>
+          Organizaciones que apoyan la sostenibilidad
+        </h3>
+
+        <div style={styles.alliesGrid}>
+
+          <a
+            href="https://www.fundacioncarvajal.org.co/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={styles.allyLink}
+          >
+            <img
+              src={carvajalLogo}
+              alt="Fundación Carvajal"
+              style={styles.allyLogo}
+            />
+          </a>
+
+          <a
+            href="https://asobosur.co/index.php/en/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={styles.allyLink}
+          >
+            <img
+              src={asobosurLogo}
+              alt="ASOBOSUR"
+              style={styles.allyLogo}
+            />
+          </a>
+
+          <a
+            href="https://fundacioncarlosportela.blogspot.com/p/nosotros.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={styles.allyLink}
+          >
+            <img
+              src={carlosPortelaLogo}
+              alt="Fundación Carlos Portela"
+              style={styles.allyLogo}
+            />
+          </a>
+
+          <a
+            href="https://gruporetorna.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={styles.allyLink}
+          >
+            <img
+              src={grupoRetornaLogo}
+              alt="Grupo Retorna"
+              style={styles.allyLogo}
+            />
+          </a>
+
+        </div>
+      </section>
+
     </div>
   );
 }
@@ -312,4 +383,34 @@ const styles = {
     height: '90px',
     objectFit: 'contain',
   },
+
+alliesSection: {
+  maxWidth: '1280px',
+  margin: '0 auto',
+  padding: '20px 32px 70px',
+  textAlign: 'center',
+},
+
+alliesGrid: {
+  marginTop: '35px',
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+  gap: '35px',
+  alignItems: 'center',
+},
+
+allyLink: {
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  textDecoration: 'none',
+},
+
+allyLogo: {
+  maxWidth: '170px',
+  maxHeight: '90px',
+  objectFit: 'contain',
+  transition: 'transform 0.25s ease',
+},
 };
+
