@@ -59,13 +59,6 @@ ventanas del espacio para evitar fugas térmicas y sobrecostos.
 6% de un árbol? El año pasado, la DTPA consumió 24 resmas (12.000 hojas). lo que representa un impacto de 1.5 árboles talados y 120. 000 litros de agua limpia procesada.
 Con el fin de mitigar esta huella ambiental, es necesario cambiar tus hábitos hoy con estas recomendaciones: 
 
-
-🖨️ Configura tú equipo antes de mandar a imprimir.
-🌓 Imprime siempre a doble cara y en blanco y negro.
-♻️Usa papel reutilizable para documentos no oficiales.
-🎯 Evita el derroche,  imprime solo lo  necesario
-
-Protege los bosques de nuestro Pacífico. ¡Súmate al cambio! 
 `,
   residuos: `¿Sabías que más del 60% de lo que tiramos a la basura se puede reciclar o compostar si se separa correctamente? Además, si no cambiamos nuestros hábitos de consumo, para el año 2050 habrá más plástico que peces en el mar.
  

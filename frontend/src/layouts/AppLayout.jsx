@@ -29,11 +29,15 @@ export default function AppLayout() {
               style={styles.logo}
             />
 
-            <div style={styles.brandText}>
-              <h1 style={styles.title}>
-                Parques Nacionales Naturales de Colombia – Dirección Territorial Pacífico
-              </h1>
-            </div>
+           <div style={styles.brandText}>
+            <h1 style={styles.title}>
+              Parques Nacionales Naturales de Colombia
+            </h1>
+
+            <p style={styles.subtitle}>
+              Dirección Territorial Pacífico
+            </p>
+          </div>
           </Link>
 
           <button
@@ -154,6 +158,15 @@ const styles = {
     color: '#000000',
     fontWeight: 800,
     maxWidth: '520px',
+
+    subtitle: {
+  margin: '2px 0 0',
+  fontFamily: 'Nunito Sans, sans-serif',
+  fontSize: '15px',
+  lineHeight: 1.2,
+  color: '#000000',
+  fontWeight: 800,
+},
   },
   menuButton: {
     display: 'none',
