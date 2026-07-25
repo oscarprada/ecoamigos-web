@@ -82,9 +82,29 @@ export default function EducationCategoryPage() {
     <div style={styles.page}>
       <Link to="/" style={styles.backButton}>← Atrás</Link>
 
-      <p style={styles.kicker}>Educación ambiental</p>
-      <h2 style={styles.title}>{CATEGORY_LABELS[category]}</h2>
+      <div style={styles.titleRow}>
+  <div>
+    <p style={styles.kicker}>Educación ambiental</p>
+    <h2 style={styles.title}>{CATEGORY_LABELS[category]}</h2>
+  </div>
 
+  {category === 'residuos' && (
+    <div style={styles.actionButtons}>
+      <Link to="/ranking" style={styles.secondaryButton}>
+        🏆 Ranking
+      </Link>
+
+      <Link to="/winners" style={styles.secondaryButton}>
+        🥇 Ganadores
+      </Link>
+
+      <Link to="/login" style={styles.primaryButton}>
+        🔑 Ingresar
+      </Link>
+    </div>
+  )}
+</div>
+///
       <div style={styles.introductionBox}>
         <p style={styles.introduction}>
           {CATEGORY_INTROS[category]}
@@ -227,8 +247,45 @@ const styles = {
   title: {
     fontFamily: 'Nunito Sans, sans-serif',
     fontSize: '38px',
-    margin: '8px 0 28px',
+    margin: '8px 0 0',
   },
+
+  titleRow: {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'flex-end',
+  gap: 20,
+  marginBottom: 28,
+  flexWrap: 'wrap',
+},
+
+actionButtons: {
+  display: 'flex',
+  gap: 12,
+  flexWrap: 'wrap',
+},
+
+secondaryButton: {
+  textDecoration: 'none',
+  backgroundColor: '#2cab87',
+  color: '#ffffff',
+  padding: '10px 18px',
+  borderRadius: '10px',
+  fontSize: '14px',
+  fontWeight: 700,
+  whiteSpace: 'nowrap',
+},
+
+primaryButton: {
+  textDecoration: 'none',
+  backgroundColor: '#71b956',
+  color: '#ffffff',
+  padding: '10px 18px',
+  borderRadius: '10px',
+  fontSize: '14px',
+  fontWeight: 800,
+  whiteSpace: 'nowrap',
+},
   introductionBox: {
     background: '#f8fbf9',
     border: '1px solid #dfe7e2',

@@ -29,15 +29,15 @@ export default function AppLayout() {
               style={styles.logo}
             />
 
-           <div style={styles.brandText}>
-            <h1 style={styles.title}>
-              Parques Nacionales Naturales de Colombia
-            </h1>
+            <div style={styles.brandText}>
+              <h1 style={styles.title}>
+                Parques Nacionales Naturales de Colombia
+              </h1>
 
-            <p style={styles.subtitle}>
-              Dirección Territorial Pacífico
-            </p>
-          </div>
+              <p style={styles.subtitle}>
+                Dirección Territorial Pacífico
+              </p>
+            </div>
           </Link>
 
           <button
@@ -58,18 +58,6 @@ export default function AppLayout() {
               Inicio
             </Link>
 
-            <Link to="/ranking" style={styles.link} onClick={closeMenu}>
-              Ranking
-            </Link>
-
-            <Link to="/winners" style={styles.link} onClick={closeMenu}>
-              Ganadores
-            </Link>
-
-            <Link to="/prizes" style={styles.link} onClick={closeMenu}>
-              Premios
-            </Link>
-
             {user ? (
               <>
                 <Link
@@ -77,7 +65,9 @@ export default function AppLayout() {
                   style={styles.panelButton}
                   onClick={closeMenu}
                 >
-                  {user.role === 'admin' ? 'Panel admin' : 'Panel líder'}
+                  {user.role === 'admin'
+                    ? 'Panel admin'
+                    : 'Panel líder'}
                 </Link>
 
                 <button
@@ -88,11 +78,7 @@ export default function AppLayout() {
                   Cerrar sesión
                 </button>
               </>
-            ) : (
-              <Link to="/login" style={styles.loginButton} onClick={closeMenu}>
-                Ingresar
-              </Link>
-            )}
+            ) : null}
           </nav>
         </div>
       </header>
@@ -111,6 +97,7 @@ const styles = {
     fontFamily: 'Montserrat, sans-serif',
     color: '#000000',
   },
+
   header: {
     position: 'sticky',
     top: 0,
@@ -119,6 +106,7 @@ const styles = {
     borderBottom: '1px solid #dfe7e2',
     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
   },
+
   headerContent: {
     maxWidth: '1280px',
     margin: '0 auto',
@@ -129,6 +117,7 @@ const styles = {
     gap: '36px',
     flexWrap: 'wrap',
   },
+
   brandBlock: {
     display: 'flex',
     alignItems: 'center',
@@ -138,6 +127,7 @@ const styles = {
     textDecoration: 'none',
     color: '#000000',
   },
+
   logo: {
     width: '96px',
     height: 'auto',
@@ -145,11 +135,13 @@ const styles = {
     display: 'block',
     flexShrink: 0,
   },
+
   brandText: {
     display: 'flex',
     flexDirection: 'column',
     minWidth: 0,
   },
+
   title: {
     margin: 0,
     fontFamily: 'Nunito Sans, sans-serif',
@@ -157,17 +149,16 @@ const styles = {
     lineHeight: 1.2,
     color: '#000000',
     fontWeight: 800,
-    maxWidth: '520px',
-
-    subtitle: {
-  margin: '2px 0 0',
-  fontFamily: 'Nunito Sans, sans-serif',
-  fontSize: '15px',
-  lineHeight: 1.2,
-  color: '#000000',
-  fontWeight: 800,
-},
   },
+
+  subtitle: {
+    margin: 0,
+    fontFamily: 'Montserrat, sans-serif',
+    fontSize: '14px',
+    color: '#333333',
+    fontWeight: 500,
+  },
+
   menuButton: {
     display: 'none',
     backgroundColor: '#2cab87',
@@ -180,6 +171,7 @@ const styles = {
     cursor: 'pointer',
     fontFamily: 'Montserrat, sans-serif',
   },
+
   nav: {
     display: 'flex',
     alignItems: 'center',
@@ -188,9 +180,11 @@ const styles = {
     justifyContent: 'flex-end',
     flex: '1 1 auto',
   },
+
   navOpen: {
     display: 'flex',
   },
+
   link: {
     textDecoration: 'none',
     color: '#000000',
@@ -198,16 +192,7 @@ const styles = {
     fontWeight: 700,
     whiteSpace: 'nowrap',
   },
-  loginButton: {
-    textDecoration: 'none',
-    backgroundColor: '#71b956',
-    color: '#ffffff',
-    padding: '10px 18px',
-    borderRadius: '10px',
-    fontSize: '14px',
-    fontWeight: 800,
-    whiteSpace: 'nowrap',
-  },
+
   panelButton: {
     textDecoration: 'none',
     backgroundColor: '#2cab87',
@@ -218,6 +203,7 @@ const styles = {
     fontWeight: 800,
     whiteSpace: 'nowrap',
   },
+
   logoutButton: {
     backgroundColor: '#000000',
     color: '#ffffff',
@@ -230,6 +216,7 @@ const styles = {
     fontFamily: 'Montserrat, sans-serif',
     whiteSpace: 'nowrap',
   },
+
   main: {
     paddingTop: 0,
   },
