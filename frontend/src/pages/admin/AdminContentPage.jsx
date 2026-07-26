@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import api from '../../api/client';
+import api, { getBackendUrl } from '../../api/client';
 
 const initialForm = {
   title: '',
@@ -225,7 +225,7 @@ export default function AdminContentPage() {
                   <td style={styles.td}>
                     {item.file_url ? (
                       <a
-                        href={`http://localhost:3000${item.file_url}`}
+                        href={getBackendUrl(item.file_url)}
                         target="_blank"
                         rel="noreferrer"
                         style={styles.link}

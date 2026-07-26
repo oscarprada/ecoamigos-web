@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import api from '../../api/client';
+import api, { getBackendUrl } from '../../api/client';
 import { useToast } from '../../context/ToastContext';
 
 export default function AdminReviewsPage() {
@@ -272,13 +272,13 @@ export default function AdminReviewsPage() {
                       /\.(jpg|jpeg|png|gif|webp)$/i
                     ) ? (
                       <img
-                        src={`http://localhost:3000${record.evidence_url}`}
+                        src={getBackendUrl(record.evidence_url)}
                         alt="Evidencia"
                         style={styles.previewImage}
                       />
                     ) : (
                       <a
-                        href={`http://localhost:3000${record.evidence_url}`}
+                        href={getBackendUrl(record.evidence_url)}
                         target="_blank"
                         rel="noreferrer"
                         style={styles.link}

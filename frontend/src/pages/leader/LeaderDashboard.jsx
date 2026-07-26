@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../../api/client';
+import api, { getBackendUrl } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
 export default function LeaderDashboard() {
@@ -139,7 +139,7 @@ export default function LeaderDashboard() {
                     <td style={styles.td}>
                       {item.evidence_url ? (
                         <a
-                          href={`http://localhost:3000${item.evidence_url}`}
+                          href={getBackendUrl(item.evidence_url)}
                           target="_blank"
                           rel="noreferrer"
                           style={styles.link}

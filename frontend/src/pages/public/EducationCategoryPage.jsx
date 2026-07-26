@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import api from '../../api/client';
+import api, { getBackendUrl } from '../../api/client';
 
 const CATEGORY_LABELS = {
   energia: 'Uso eficiente de la energía',
@@ -120,13 +120,13 @@ export default function EducationCategoryPage() {
               <div style={styles.preview}>
                 {item.file_url && item.type === 'image' ? (
                   <img
-                    src={`http://localhost:3000${item.file_url}`}
+                    src={getBackendUrl(item.file_url)}
                     alt={item.title}
                     style={styles.previewMedia}
                   />
                 ) : item.file_url && item.type === 'video' ? (
                   <video
-                    src={`http://localhost:3000${item.file_url}`}
+                    src={getBackendUrl(item.file_url)}
                     style={styles.previewMedia}
                     muted
                     preload="metadata"
@@ -178,7 +178,7 @@ export default function EducationCategoryPage() {
 
             {selectedItem.file_url && selectedItem.type === 'image' && (
               <img
-                src={`http://localhost:3000${selectedItem.file_url}`}
+                src={getBackendUrl(selectedItem.file_url)}
                 alt={selectedItem.title}
                 style={styles.modalMedia}
               />
@@ -186,7 +186,7 @@ export default function EducationCategoryPage() {
 
             {selectedItem.file_url && selectedItem.type === 'video' && (
               <video
-                src={`http://localhost:3000${selectedItem.file_url}`}
+                src={getBackendUrl(selectedItem.file_url)}
                 controls
                 controlsList="nodownload"
                 disablePictureInPicture
@@ -196,7 +196,7 @@ export default function EducationCategoryPage() {
 
             {selectedItem.file_url && selectedItem.type === 'file' && (
               <a
-                href={`http://localhost:3000${selectedItem.file_url}`}
+                href={getBackendUrl(selectedItem.file_url)}
                 target="_blank"
                 rel="noreferrer"
                 style={styles.fileButton}
