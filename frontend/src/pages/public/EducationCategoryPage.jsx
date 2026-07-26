@@ -104,7 +104,7 @@ export default function EducationCategoryPage() {
     </div>
   )}
 </div>
-///
+
       <div style={styles.introductionBox}>
         <p style={styles.introduction}>
           {CATEGORY_INTROS[category]}
