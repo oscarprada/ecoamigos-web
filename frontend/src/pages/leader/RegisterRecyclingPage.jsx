@@ -407,10 +407,10 @@ const styles = {
 
   card: {
     backgroundColor: '#ffffff',
-    border: '1px solid #dfe7e2',
-    borderRadius: '22px',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
     padding: '28px',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.05)',
+    boxShadow: 'var(--shadow-card)',
     display: 'grid',
     gap: '18px',
   },
@@ -421,7 +421,7 @@ const styles = {
 
   kicker: {
     margin: 0,
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     fontSize: '13px',
     fontWeight: 700,
     textTransform: 'uppercase',
@@ -510,7 +510,7 @@ const styles = {
   },
 
   submitButton: {
-    backgroundColor: '#71b956',
+    backgroundColor: 'var(--green)',
     color: '#ffffff',
     border: 'none',
     borderRadius: '12px',

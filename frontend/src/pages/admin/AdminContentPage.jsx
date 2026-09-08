@@ -315,7 +315,7 @@ const styles = {
   },
   kicker: {
     margin: 0,
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     fontSize: '13px',
     fontWeight: 800,
     textTransform: 'uppercase',
@@ -334,7 +334,7 @@ const styles = {
   },
   successBox: {
     backgroundColor: '#eef8f3',
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     border: '1px solid #d7ebdf',
     borderRadius: '14px',
     padding: '14px 16px',
@@ -352,10 +352,10 @@ const styles = {
   },
   formCard: {
     backgroundColor: '#ffffff',
-    border: '1px solid #dfe7e2',
-    borderRadius: '22px',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
     padding: '24px',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.05)',
+    boxShadow: 'var(--shadow-card)',
     display: 'grid',
     gap: '14px',
     marginBottom: '24px',
@@ -373,7 +373,7 @@ const styles = {
   },
   formGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))',
     gap: '14px',
   },
   input: {
@@ -387,7 +387,7 @@ const styles = {
     boxSizing: 'border-box',
   },
   primaryButton: {
-    backgroundColor: '#71b956',
+    backgroundColor: 'var(--green)',
     color: '#ffffff',
     border: 'none',
     borderRadius: '12px',
@@ -398,7 +398,7 @@ const styles = {
     fontFamily: 'Montserrat, sans-serif',
   },
   secondaryButton: {
-    backgroundColor: '#2cab87',
+    backgroundColor: 'var(--turquoise)',
     color: '#ffffff',
     border: 'none',
     borderRadius: '12px',
@@ -410,10 +410,10 @@ const styles = {
   },
   tableCard: {
     backgroundColor: '#ffffff',
-    border: '1px solid #dfe7e2',
-    borderRadius: '22px',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
     padding: '24px',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.05)',
+    boxShadow: 'var(--shadow-card)',
   },
   tableHeader: {
     display: 'flex',
@@ -427,7 +427,7 @@ const styles = {
     fontSize: '26px',
   },
   countBadge: {
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     fontWeight: 800,
   },
   tableWrapper: {
@@ -454,7 +454,7 @@ const styles = {
   publishedBadge: {
     ...badgeBase,
     backgroundColor: '#eef8f3',
-    color: '#2cab87',
+    color: 'var(--turquoise)',
   },
   draftBadge: {
     ...badgeBase,
@@ -462,7 +462,7 @@ const styles = {
     color: '#9a6700',
   },
   link: {
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     fontWeight: 800,
     textDecoration: 'none',
   },
@@ -472,7 +472,7 @@ const styles = {
     flexWrap: 'wrap',
   },
   editButton: {
-    backgroundColor: '#2cab87',
+    backgroundColor: 'var(--turquoise)',
     color: '#ffffff',
     border: 'none',
     borderRadius: '10px',

@@ -268,7 +268,7 @@ const styles = {
   },
   kicker: {
     margin: 0,
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     fontSize: '13px',
     fontWeight: 800,
     textTransform: 'uppercase',
@@ -288,15 +288,15 @@ const styles = {
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(310px, 100%), 1fr))',
     gap: '22px',
   },
   card: {
     backgroundColor: '#ffffff',
-    border: '1px solid #dfe7e2',
-    borderRadius: '22px',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
     padding: '24px',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.05)',
+    boxShadow: 'var(--shadow-card)',
   },
   cardHeader: {
     marginBottom: '18px',
@@ -335,7 +335,7 @@ const styles = {
     fontWeight: 600,
   },
   button: {
-    backgroundColor: '#71b956',
+    backgroundColor: 'var(--green)',
     color: '#ffffff',
     border: 'none',
     borderRadius: '12px',
@@ -369,7 +369,7 @@ const styles = {
   },
   badge: {
     backgroundColor: '#eef8f3',
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     borderRadius: '999px',
     padding: '7px 11px',
     fontSize: '12px',

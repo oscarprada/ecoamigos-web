@@ -319,7 +319,7 @@ const styles = {
   },
   kicker: {
     margin: 0,
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     fontSize: '13px',
     fontWeight: 800,
     textTransform: 'uppercase',
@@ -339,16 +339,16 @@ const styles = {
   },
   statsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(210px, 100%), 1fr))',
     gap: '18px',
     marginBottom: '22px',
   },
   statCard: {
     backgroundColor: '#ffffff',
-    border: '1px solid #dfe7e2',
+    border: '1px solid var(--border)',
     borderRadius: '20px',
     padding: '22px',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.05)',
+    boxShadow: 'var(--shadow-card)',
     display: 'flex',
     flexDirection: 'column',
     gap: '10px',
@@ -361,23 +361,23 @@ const styles = {
     letterSpacing: '0.5px',
   },
   statValue: {
-    color: '#71b956',
+    color: 'var(--green)',
     fontFamily: 'Nunito Sans, sans-serif',
     fontSize: '40px',
     lineHeight: 1,
   },
   chartsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',
     gap: '22px',
     marginTop: '22px',
   },
   chartCard: {
     backgroundColor: '#ffffff',
-    border: '1px solid #dfe7e2',
-    borderRadius: '22px',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
     padding: '24px',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.05)',
+    boxShadow: 'var(--shadow-card)',
   },
   chartTitle: {
     margin: '0 0 18px',
@@ -412,12 +412,12 @@ const styles = {
   barFill: {
     height: '100%',
     borderRadius: '999px',
-    backgroundColor: '#71b956',
+    backgroundColor: 'var(--green)',
   },
   barFillAlt: {
     height: '100%',
     borderRadius: '999px',
-    backgroundColor: '#2cab87',
+    backgroundColor: 'var(--turquoise)',
   },
   statusGrid: {
     display: 'grid',
@@ -448,7 +448,7 @@ const styles = {
   },
   quickGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))',
     gap: '14px',
   },
   quickCard: {
@@ -471,7 +471,7 @@ const styles = {
     fontSize: '14px',
   },
    quickAction: {
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     fontWeight: 800,
   },
 
@@ -480,7 +480,7 @@ const styles = {
   },
 
   exportButton: {
-    backgroundColor: '#2cab87',
+    backgroundColor: 'var(--turquoise)',
     color: '#ffffff',
     border: 'none',
     borderRadius: '12px',

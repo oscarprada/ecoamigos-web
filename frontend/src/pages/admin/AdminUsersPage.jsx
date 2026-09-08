@@ -293,7 +293,7 @@ const styles = {
   },
   kicker: {
     margin: 0,
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     fontSize: '13px',
     fontWeight: 700,
     letterSpacing: '0.6px',
@@ -313,15 +313,15 @@ const styles = {
   },
   statsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))',
     gap: '18px',
   },
   statCard: {
     backgroundColor: '#ffffff',
-    border: '1px solid #dfe7e2',
+    border: '1px solid var(--border)',
     borderRadius: '18px',
     padding: '20px',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.04)',
+    boxShadow: 'var(--shadow-card)',
     display: 'flex',
     flexDirection: 'column',
     gap: '10px',
@@ -337,7 +337,7 @@ const styles = {
     fontFamily: 'Nunito Sans, sans-serif',
     fontSize: '36px',
     fontWeight: 800,
-    color: '#71b956',
+    color: 'var(--green)',
   },
   layoutGrid: {
     display: 'grid',
@@ -347,17 +347,17 @@ const styles = {
   },
   formCard: {
     backgroundColor: '#ffffff',
-    border: '1px solid #dfe7e2',
+    border: '1px solid var(--border)',
     borderRadius: '20px',
     padding: '24px',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.05)',
+    boxShadow: 'var(--shadow-card)',
   },
   tableCard: {
     backgroundColor: '#ffffff',
-    border: '1px solid #dfe7e2',
+    border: '1px solid var(--border)',
     borderRadius: '20px',
     padding: '24px',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.05)',
+    boxShadow: 'var(--shadow-card)',
   },
   formHeader: {
     display: 'flex',
@@ -396,7 +396,7 @@ const styles = {
   successBox: {
     backgroundColor: '#eef8f3',
     border: '1px solid #d7ebdf',
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     borderRadius: '12px',
     padding: '12px 14px',
     marginBottom: '16px',

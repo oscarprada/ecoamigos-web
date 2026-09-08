@@ -11,18 +11,18 @@ import grupoRetornaLogo from '../../assets/allies/grupo-retorna.jpg';
 
 export default function HomePage() {
   return (
-    <div style={styles.page}>
-      <section style={styles.hero}>
-        <div style={styles.heroOverlay}>
-          <div style={styles.heroContent}>
-            <div style={styles.heroText}>
-              <p style={styles.badge}>CAMPAÑA ECOAMIGOS</p>
+    <div className="home-page">
+      <section className="home-hero">
+        <div className="home-heroOverlay">
+          <div className="home-heroContent">
+            <div className="home-heroText">
+              <p className="home-badge">CAMPAÑA ECOAMIGOS</p>
 
-              <h2 style={styles.slogan}>
+              <h2 className="home-slogan">
                 Con mis acciones cuido el planeta
               </h2>
 
-              <p style={styles.description}>
+              <p className="home-description">
                 Bienvenidos/as a la plataforma de sostenibilidad de la DTPA.
                 En este espacio aprenderás como optimizar el uso diario del
                 agua, la energía y el papel, Súmate y descubre pautas clave
@@ -30,28 +30,28 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div style={styles.heroImageWrapper}>
+            <div className="home-heroImageWrapper">
               <img
                 src={mascota}
                 alt="Mascota Ecoamigos"
-                style={styles.mascota}
+                className="home-mascota"
               />
             </div>
           </div>
         </div>
       </section>
 
-      <section style={styles.educationSection}>
-        <div style={styles.sectionHeader}>
-          <p style={styles.sectionKicker}>
+      <section className="home-educationSection">
+        <div className="home-sectionHeader">
+          <p className="home-sectionKicker">
             EDUCACIÓN AMBIENTAL
           </p>
 
-          <p style={styles.sectionIntroTitle}>
+          <p className="home-sectionIntroTitle">
             ¡Tú eres parte del cambio!
           </p>
 
-          <p style={styles.sectionText}>
+          <p className="home-sectionText">
             Explora los programas de gestión ambiental y descubre cómo tus
             decisiones diarias transforman nuestro entorno. Selecciona una
             sección para aprender tips, consejos y prácticas sostenibles que
@@ -60,82 +60,82 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div style={styles.cards}>
-  <Link to="/educacion/agua" style={styles.cardLink}>
-    <article style={styles.card}>
-      <div style={styles.iconCircle}>
+        <div className="home-cards">
+  <Link to="/educacion/agua" className="home-cardLink">
+    <article className="home-card">
+      <div className="home-iconCircle">
         <img
           src={aguaIcon}
           alt="Agua"
-          style={styles.iconImg}
+          className="home-iconImg"
         />
       </div>
 
-      <h4 style={styles.cardTitle}>
+      <h4 className="home-cardTitle">
         Ahorro y Uso Eficiente del Agua
       </h4>
 
-      <p style={styles.cardText}>
+      <p className="home-cardText">
         El agua es vida, no la desperdicies.
       </p>
     </article>
   </Link>
 
-  <Link to="/educacion/energia" style={styles.cardLink}>
-    <article style={styles.card}>
-      <div style={styles.iconCircle}>
+  <Link to="/educacion/energia" className="home-cardLink">
+    <article className="home-card">
+      <div className="home-iconCircle">
         <img
           src={energiaIcon}
           alt="Energía"
-          style={styles.iconImg}
+          className="home-iconImg"
         />
       </div>
 
-      <h4 style={styles.cardTitle}>
+      <h4 className="home-cardTitle">
         Uso Eficiente de Energía
       </h4>
 
-      <p style={styles.cardText}>
+      <p className="home-cardText">
         Cada kilovatio cuenta, usa solo lo necesario.
       </p>
     </article>
   </Link>
 
-  <Link to="/educacion/papel" style={styles.cardLink}>
-    <article style={styles.card}>
-      <div style={styles.iconCircle}>
+  <Link to="/educacion/papel" className="home-cardLink">
+    <article className="home-card">
+      <div className="home-iconCircle">
         <img
           src={papelIcon}
           alt="Papel"
-          style={styles.iconImg}
+          className="home-iconImg"
         />
       </div>
 
-      <h4 style={styles.cardTitle}>
+      <h4 className="home-cardTitle">
         Uso Responsable del Papel
       </h4>
 
-      <p style={styles.cardText}>
+      <p className="home-cardText">
         Menos papel, más bosques: piensa antes de imprimir.
       </p>
     </article>
   </Link>
 
-  <Link to="/educacion/residuos" style={styles.cardLink}>
-    <article style={styles.card}>
-      <div style={styles.iconCircle}>
+  <Link to="/educacion/residuos" className="home-cardLink">
+    <article className="home-card">
+      <div className="home-iconCircle">
         <img
           src={residuosIcon}
           alt="Residuos"
-          style={styles.iconImg}
+          className="home-iconImg"
         />
       </div>
 
-      <h4 style={styles.cardTitle}>
+      <h4 className="home-cardTitle">
         Gestión Integral de Residuos
       </h4>
 
-      <p style={styles.cardText}>
+      <p className="home-cardText">
         Separa y dispone los residuos de forma adecuada.
       </p>
     </article>
@@ -143,27 +143,27 @@ export default function HomePage() {
 </div>
       </section>
 
-      <section style={styles.alliesSection}>
-        <p style={styles.sectionKicker}>
+      <section className="home-alliesSection">
+        <p className="home-sectionKicker">
           NUESTROS ALIADOS
         </p>
 
-        <h3 style={styles.sectionIntroTitle}>
+        <h3 className="home-sectionIntroTitle">
           Organizaciones que apoyan la sostenibilidad
         </h3>
 
-        <div style={styles.alliesGrid}>
+        <div className="home-alliesGrid">
 
           <a
             href="https://www.fundacioncarvajal.org.co/"
             target="_blank"
             rel="noopener noreferrer"
-            style={styles.allyLink}
+            className="home-allyLink"
           >
             <img
               src={carvajalLogo}
               alt="Fundación Carvajal"
-              style={styles.allyLogo}
+              className="home-allyLogo"
             />
           </a>
 
@@ -171,12 +171,12 @@ export default function HomePage() {
             href="https://asobosur.co/index.php/en/"
             target="_blank"
             rel="noopener noreferrer"
-            style={styles.allyLink}
+            className="home-allyLink"
           >
             <img
               src={asobosurLogo}
               alt="ASOBOSUR"
-              style={styles.allyLogo}
+              className="home-allyLogo"
             />
           </a>
 
@@ -184,12 +184,12 @@ export default function HomePage() {
             href="https://fundacioncarlosportela.blogspot.com/p/nosotros.html"
             target="_blank"
             rel="noopener noreferrer"
-            style={styles.allyLink}
+            className="home-allyLink"
           >
             <img
               src={carlosPortelaLogo}
               alt="Fundación Carlos Portela"
-              style={styles.allyLogo}
+              className="home-allyLogo"
             />
           </a>
 
@@ -197,12 +197,12 @@ export default function HomePage() {
             href="https://gruporetorna.com/"
             target="_blank"
             rel="noopener noreferrer"
-            style={styles.allyLink}
+            className="home-allyLink"
           >
             <img
               src={grupoRetornaLogo}
               alt="Grupo Retorna"
-              style={styles.allyLogo}
+              className="home-allyLogo"
             />
           </a>
 
@@ -212,205 +212,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-const styles = {
-  page: {
-    minHeight: '100vh',
-    backgroundColor: '#f6f8f7',
-    fontFamily: 'Montserrat, sans-serif',
-    color: '#000000',
-  },
-
-  hero: {
-    background:
-      'linear-gradient(180deg, #eef7f2 0%, #f6f8f7 100%)',
-    overflow: 'hidden',
-  },
-
-  heroOverlay: {
-    background:
-      'radial-gradient(circle at top right, rgba(44,171,135,0.10), transparent 40%)',
-  },
-
-  heroContent: {
-    maxWidth: '1280px',
-    margin: '0 auto',
-    padding: '52px 32px 36px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '40px',
-    flexWrap: 'wrap',
-  },
-
-  heroText: {
-    flex: '1 1 460px',
-    maxWidth: '620px',
-  },
-
-  badge: {
-    display: 'inline-block',
-    margin: '0 0 16px 0',
-    color: '#2cab87',
-    fontSize: '15px',
-    fontWeight: 800,
-    letterSpacing: '1px',
-    textTransform: 'uppercase',
-  },
-
-  slogan: {
-    margin: '0 0 18px 0',
-    fontFamily: 'Nunito Sans, sans-serif',
-    fontSize: 'clamp(28px, 3.4vw, 38px)',
-    lineHeight: 1.1,
-    color: '#000000',
-    fontWeight: 800,
-    maxWidth: '540px',
-  },
-
-  description: {
-    margin: 0,
-    fontSize: 'clamp(15px, 2vw, 18px)',
-    lineHeight: 1.7,
-    color: '#2f2f2f',
-    maxWidth: '580px',
-  },
-
-  heroImageWrapper: {
-    flex: '1 1 420px',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  mascota: {
-    width: '100%',
-    maxWidth: '620px',
-    height: 'auto',
-    objectFit: 'contain',
-    display: 'block',
-    filter: 'drop-shadow(0 10px 28px rgba(0,0,0,0.08))',
-    mixBlendMode: 'multiply',
-  },
-
-  educationSection: {
-    maxWidth: '1280px',
-    margin: '0 auto',
-    padding: '54px 32px 72px',
-  },
-
-  sectionHeader: {
-    marginBottom: '30px',
-  },
-
-  sectionKicker: {
-    margin: '0 0 12px 0',
-    color: '#2cab87',
-    fontSize: '14px',
-    fontWeight: 800,
-    letterSpacing: '1px',
-    textTransform: 'uppercase',
-  },
-
-  sectionIntroTitle: {
-    margin: '0 0 14px 0',
-    fontFamily: 'Nunito Sans, sans-serif',
-    fontSize: '30px',
-    color: '#000000',
-    fontWeight: 800,
-  },
-
-  sectionText: {
-    margin: 0,
-    fontSize: '17px',
-    lineHeight: 1.7,
-    color: '#444444',
-    maxWidth: '860px',
-  },
-
-  cards: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '22px',
-    marginTop: '34px',
-  },
-
-  cardLink: {
-    textDecoration: 'none',
-    color: '#000000',
-  },
-
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: '24px',
-    padding: '28px',
-    border: '1px solid #e8ece9',
-    boxShadow: '0 10px 24px rgba(0, 0, 0, 0.05)',
-    minHeight: '230px',
-    transition: 'all 0.25s ease',
-  },
-
-  iconCircle: {
-    width: '110px',
-    height: '110px',
-    borderRadius: '50%',
-    backgroundColor: '#eef8f3',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '30px',
-    marginBottom: '20px',
-  },
-
-  cardTitle: {
-    margin: '0 0 14px 0',
-    fontFamily: 'Nunito Sans, sans-serif',
-    fontSize: '24px',
-    color: '#000000',
-    fontWeight: 800,
-    lineHeight: 1.2,
-  },
-
-  cardText: {
-    margin: 0,
-    fontSize: '16px',
-    lineHeight: 1.7,
-    color: '#4b4b4b',
-  },
-
-   iconImg: {
-    width: '90px',
-    height: '90px',
-    objectFit: 'contain',
-  },
-
-alliesSection: {
-  maxWidth: '1280px',
-  margin: '0 auto',
-  padding: '20px 32px 70px',
-  textAlign: 'center',
-},
-
-alliesGrid: {
-  marginTop: '35px',
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-  gap: '35px',
-  alignItems: 'center',
-},
-
-allyLink: {
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  textDecoration: 'none',
-},
-
-allyLogo: {
-  maxWidth: '170px',
-  maxHeight: '90px',
-  objectFit: 'contain',
-  transition: 'transform 0.25s ease',
-},
-};
-

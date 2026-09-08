@@ -230,7 +230,7 @@ const styles = {
     fontFamily: 'Montserrat, sans-serif',
   },
   backButton: {
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     fontWeight: 800,
     textDecoration: 'none',
     display: 'inline-block',
@@ -238,7 +238,7 @@ const styles = {
   },
   kicker: {
     margin: 0,
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     fontWeight: 800,
     textTransform: 'uppercase',
     fontSize: '13px',
@@ -267,7 +267,7 @@ actionButtons: {
 
 secondaryButton: {
   textDecoration: 'none',
-  backgroundColor: '#2cab87',
+  backgroundColor: 'var(--turquoise)',
   color: '#ffffff',
   padding: '10px 18px',
   borderRadius: '10px',
@@ -278,7 +278,7 @@ secondaryButton: {
 
 primaryButton: {
   textDecoration: 'none',
-  backgroundColor: '#71b956',
+  backgroundColor: 'var(--green)',
   color: '#ffffff',
   padding: '10px 18px',
   borderRadius: '10px',
@@ -288,7 +288,7 @@ primaryButton: {
 },
   introductionBox: {
     background: '#f8fbf9',
-    border: '1px solid #dfe7e2',
+    border: '1px solid var(--border)',
     borderRadius: 18,
     padding: '22px 24px',
     marginBottom: 30,
@@ -304,7 +304,7 @@ primaryButton: {
     background: '#fff',
     padding: 24,
     borderRadius: 16,
-    border: '1px solid #dfe7e2',
+    border: '1px solid var(--border)',
   },
   list: {
     display: 'grid',
@@ -313,11 +313,11 @@ primaryButton: {
   card: {
   background: '#fff',
   borderRadius: 22,
-  border: '1px solid #dfe7e2',
-  boxShadow: '0 10px 24px rgba(0,0,0,0.05)',
+  border: '1px solid var(--border)',
+  boxShadow: 'var(--shadow-card)',
   overflow: 'hidden',
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))',
 },
   preview: {
     backgroundColor: '#eef8f3',
@@ -335,7 +335,7 @@ primaryButton: {
   borderRadius: '12px',
   },
   textPreview: {
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     fontWeight: 800,
     fontSize: 20,
   },
@@ -348,7 +348,7 @@ primaryButton: {
   },
   typeLabel: {
     margin: 0,
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     fontSize: 12,
     fontWeight: 800,
     textTransform: 'uppercase',
@@ -368,7 +368,7 @@ primaryButton: {
   },
   viewButton: {
     alignSelf: 'flex-start',
-    backgroundColor: '#71b956',
+    backgroundColor: 'var(--green)',
     color: '#fff',
     border: 'none',
     borderRadius: 12,
@@ -430,7 +430,7 @@ primaryButton: {
   },
   fileButton: {
     display: 'inline-flex',
-    backgroundColor: '#2cab87',
+    backgroundColor: 'var(--turquoise)',
     color: '#fff',
     padding: '12px 16px',
     borderRadius: 12,

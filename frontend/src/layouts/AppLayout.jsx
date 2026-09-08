@@ -19,22 +19,22 @@ export default function AppLayout() {
   };
 
   return (
-    <div style={styles.page}>
-      <header style={styles.header}>
-        <div style={styles.headerContent}>
-          <Link to="/" style={styles.brandBlock} onClick={closeMenu}>
+    <div className="site-page">
+      <header className="site-header">
+        <div className="site-headerContent">
+          <Link to="/" className="site-brandBlock" onClick={closeMenu}>
             <img
               src={parquesLogo}
               alt="Parques Nacionales Naturales de Colombia"
-              style={styles.logo}
+              className="site-logo"
             />
 
-            <div style={styles.brandText}>
-              <h1 style={styles.title}>
+            <div className="site-brandText">
+              <h1 className="site-title">
                 Parques Nacionales Naturales de Colombia
               </h1>
 
-              <p style={styles.subtitle}>
+              <p className="site-subtitle">
                 Dirección Territorial Pacífico
               </p>
             </div>
@@ -42,19 +42,16 @@ export default function AppLayout() {
 
           <button
             type="button"
-            style={styles.menuButton}
+            className="site-menuButton"
             onClick={() => setMenuOpen((prev) => !prev)}
           >
             {menuOpen ? 'Cerrar' : 'Menú'}
           </button>
 
           <nav
-            style={{
-              ...styles.nav,
-              ...(menuOpen ? styles.navOpen : {}),
-            }}
+            className={`site-nav${menuOpen ? " site-navOpen" : ""}`}
           >
-            <Link to="/" style={styles.link} onClick={closeMenu}>
+            <Link to="/" className="site-link" onClick={closeMenu}>
               Inicio
             </Link>
 
@@ -62,7 +59,7 @@ export default function AppLayout() {
               <>
                 <Link
                   to={user.role === 'admin' ? '/admin' : '/leader'}
-                  style={styles.panelButton}
+                  className="site-panelButton"
                   onClick={closeMenu}
                 >
                   {user.role === 'admin'
@@ -73,7 +70,7 @@ export default function AppLayout() {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  style={styles.logoutButton}
+                  className="site-logoutButton"
                 >
                   Cerrar sesión
                 </button>
@@ -83,145 +80,9 @@ export default function AppLayout() {
         </div>
       </header>
 
-      <main style={styles.main}>
+      <main className="site-main">
         <Outlet />
       </main>
     </div>
   );
 }
-
-const styles = {
-  page: {
-    minHeight: '100vh',
-    backgroundColor: '#f6f8f7',
-    fontFamily: 'Montserrat, sans-serif',
-    color: '#000000',
-  },
-
-  header: {
-    position: 'sticky',
-    top: 0,
-    zIndex: 1000,
-    backgroundColor: '#ffffff',
-    borderBottom: '1px solid #dfe7e2',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
-  },
-
-  headerContent: {
-    maxWidth: '1280px',
-    margin: '0 auto',
-    padding: '12px 32px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '36px',
-    flexWrap: 'wrap',
-  },
-
-  brandBlock: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '14px',
-    minWidth: 0,
-    flex: '0 1 620px',
-    textDecoration: 'none',
-    color: '#000000',
-  },
-
-  logo: {
-    width: '96px',
-    height: 'auto',
-    objectFit: 'contain',
-    display: 'block',
-    flexShrink: 0,
-  },
-
-  brandText: {
-    display: 'flex',
-    flexDirection: 'column',
-    minWidth: 0,
-  },
-
-  title: {
-    margin: 0,
-    fontFamily: 'Nunito Sans, sans-serif',
-    fontSize: '15px',
-    lineHeight: 1.2,
-    color: '#000000',
-    fontWeight: 800,
-  },
-
-  subtitle: {
-    margin: 0,
-    fontFamily: 'Montserrat, sans-serif',
-    fontSize: '14px',
-    color: '#333333',
-    fontWeight: 500,
-  },
-
-  menuButton: {
-    display: 'none',
-    backgroundColor: '#2cab87',
-    color: '#ffffff',
-    border: 'none',
-    padding: '10px 16px',
-    borderRadius: '10px',
-    fontSize: '14px',
-    fontWeight: 800,
-    cursor: 'pointer',
-    fontFamily: 'Montserrat, sans-serif',
-  },
-
-  nav: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-end',
-    flex: '1 1 auto',
-  },
-
-  navOpen: {
-    display: 'flex',
-  },
-
-  link: {
-    textDecoration: 'none',
-    color: '#000000',
-    fontSize: '15px',
-    fontWeight: 700,
-    whiteSpace: 'nowrap',
-  },
-
-  panelButton: {
-    textDecoration: 'none',
-    backgroundColor: '#2cab87',
-    color: '#ffffff',
-    padding: '10px 18px',
-    borderRadius: '10px',
-    fontSize: '14px',
-    fontWeight: 800,
-    whiteSpace: 'nowrap',
-  },
-
-  logoutButton: {
-    backgroundColor: '#000000',
-    color: '#ffffff',
-    border: 'none',
-    padding: '10px 18px',
-    borderRadius: '10px',
-    fontSize: '14px',
-    fontWeight: 800,
-    cursor: 'pointer',
-    fontFamily: 'Montserrat, sans-serif',
-    whiteSpace: 'nowrap',
-  },
-
-  main: {
-    paddingTop: 0,
-  },
-};
-
-
-
-

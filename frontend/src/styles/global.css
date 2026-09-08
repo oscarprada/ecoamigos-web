@@ -1,9 +1,10 @@
 :root {
-  --green: #71b956;
-  --turquoise: #2cab87;
+  --green: #376b35;
+  --turquoise: #25664e;
   --black: #000000;
-  --soft: #f5faf6;
-  --border: #dbe6dd;
+  --soft: #f1f5ee;
+  --border: #dce4d8;
+  --shadow-card: 0 4px 20px rgba(30, 57, 36, .045);
   --text: #243028;
   --danger: #c53d3d;
   --success: #21804a;
@@ -13,7 +14,7 @@ body {
   margin: 0;
   font-family: 'Montserrat', sans-serif;
   color: var(--text);
-  background: linear-gradient(180deg, #f8fcf8, #eef7f2);
+  background: #f7f8f4;
 }
 a { color: var(--turquoise); text-decoration: none; }
 h1,h2,h3,h4 { font-family: 'Nunito Sans', sans-serif; margin: 0 0 12px; color: var(--black); }
@@ -45,8 +46,8 @@ p { margin-top: 0; }
 .two-cols { grid-template-columns: repeat(2, 1fr); }
 .four-cols { grid-template-columns: repeat(4, 1fr); }
 .card {
-  background: white; border: 1px solid var(--border); border-radius: 20px; padding: 20px;
-  box-shadow: 0 12px 30px rgba(0,0,0,.04);
+  background: white; border: 1px solid var(--border); border-radius: 16px; padding: 20px;
+  box-shadow: var(--shadow-card);
 }
 .metric { font-size: 2rem; font-weight: 800; color: var(--green); }
 .metric-box {
@@ -228,4 +229,3 @@ body {
     min-width: 680px;
   }
 }
-

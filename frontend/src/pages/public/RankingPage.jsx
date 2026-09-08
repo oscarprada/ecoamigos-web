@@ -118,7 +118,7 @@ const styles = {
 
   kicker: {
     margin: 0,
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     fontSize: '13px',
     fontWeight: 700,
     textTransform: 'uppercase',
@@ -145,7 +145,7 @@ const styles = {
     display: 'inline-block',
     marginTop: '18px',
     backgroundColor: '#eef8f3',
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     border: '1px solid #d7ebdf',
     borderRadius: '999px',
     padding: '10px 16px',
@@ -154,24 +154,24 @@ const styles = {
 
   podium: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))',
     gap: '20px',
     marginBottom: '26px',
   },
 
   podiumCard: {
     backgroundColor: '#ffffff',
-    border: '1px solid #dfe7e2',
-    borderRadius: '22px',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
     padding: '26px',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.05)',
+    boxShadow: 'var(--shadow-card)',
   },
 
   positionCircle: {
     width: '52px',
     height: '52px',
     borderRadius: '50%',
-    backgroundColor: '#71b956',
+    backgroundColor: 'var(--green)',
     color: '#ffffff',
     display: 'flex',
     alignItems: 'center',
@@ -194,13 +194,13 @@ const styles = {
   },
 
   points: {
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     fontSize: '24px',
   },
 
   card: {
     backgroundColor: '#ffffff',
-    border: '1px solid #dfe7e2',
+    border: '1px solid var(--border)',
     borderRadius: '18px',
     padding: '28px',
     color: '#444',
@@ -208,10 +208,10 @@ const styles = {
 
   tableCard: {
     backgroundColor: '#ffffff',
-    border: '1px solid #dfe7e2',
-    borderRadius: '22px',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
     padding: '24px',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.05)',
+    boxShadow: 'var(--shadow-card)',
   },
 
   tableHeader: {
@@ -230,7 +230,7 @@ const styles = {
   },
 
   totalTeams: {
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     fontWeight: 700,
   },
 
@@ -261,7 +261,7 @@ const styles = {
 
   rankBadge: {
     backgroundColor: '#eef8f3',
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     borderRadius: '999px',
     padding: '8px 12px',
     fontWeight: 800,

@@ -3,6 +3,8 @@ node_modules/
 
 # Env
 .env
+.env.*
+!.env.example
 
 # Logs
 *.log
@@ -17,7 +19,12 @@ backend/uploads/*
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Local database backups
+backups/
+*.dump
+*.backup
 
 # Editor
 .vscode/
-

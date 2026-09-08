@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { ToastProvider } from './context/ToastContext';
 import './styles/global.css';
+import './styles/pages.css';
+import './styles/refinements.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

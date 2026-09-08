@@ -233,7 +233,7 @@ const styles = {
   },
   kicker: {
     margin: 0,
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     fontSize: '13px',
     fontWeight: 800,
     textTransform: 'uppercase',
@@ -252,7 +252,7 @@ const styles = {
   },
   primaryButton: {
     textDecoration: 'none',
-    backgroundColor: '#71b956',
+    backgroundColor: 'var(--green)',
     color: '#ffffff',
     padding: '14px 20px',
     borderRadius: '12px',
@@ -262,16 +262,16 @@ const styles = {
   },
   statsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))',
     gap: '18px',
     marginBottom: '20px',
   },
   statCard: {
     backgroundColor: '#ffffff',
-    border: '1px solid #dfe7e2',
+    border: '1px solid var(--border)',
     borderRadius: '20px',
     padding: '22px',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.05)',
+    boxShadow: 'var(--shadow-card)',
     display: 'flex',
     flexDirection: 'column',
     gap: '10px',
@@ -284,7 +284,7 @@ const styles = {
     letterSpacing: '0.5px',
   },
   statValue: {
-    color: '#71b956',
+    color: 'var(--green)',
     fontFamily: 'Nunito Sans, sans-serif',
     fontSize: '38px',
     lineHeight: 1,
@@ -297,7 +297,7 @@ const styles = {
   },
   statusCard: {
     backgroundColor: '#ffffff',
-    border: '1px solid #dfe7e2',
+    border: '1px solid var(--border)',
     borderRadius: '999px',
     padding: '10px 14px',
     display: 'flex',
@@ -316,7 +316,7 @@ const styles = {
     width: 10,
     height: 10,
     borderRadius: '50%',
-    backgroundColor: '#2cab87',
+    backgroundColor: 'var(--turquoise)',
   },
   statusDotRejected: {
     width: 10,
@@ -326,10 +326,10 @@ const styles = {
   },
   historyCard: {
     backgroundColor: '#ffffff',
-    border: '1px solid #dfe7e2',
-    borderRadius: '22px',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
     padding: '24px',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.05)',
+    boxShadow: 'var(--shadow-card)',
   },
   historyHeader: {
     marginBottom: '18px',
@@ -370,7 +370,7 @@ const styles = {
     verticalAlign: 'middle',
   },
   link: {
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     fontWeight: 800,
     textDecoration: 'none',
   },

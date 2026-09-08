@@ -387,7 +387,7 @@ const styles = {
 
   kicker: {
     margin: 0,
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     fontSize: '13px',
     fontWeight: 800,
     textTransform: 'uppercase',
@@ -412,7 +412,7 @@ const styles = {
 
   tab: {
     backgroundColor: '#ffffff',
-    border: '1px solid #dfe7e2',
+    border: '1px solid var(--border)',
     borderRadius: '12px',
     padding: '12px 18px',
     cursor: 'pointer',
@@ -420,7 +420,7 @@ const styles = {
   },
 
   activeTab: {
-    backgroundColor: '#2cab87',
+    backgroundColor: 'var(--turquoise)',
     color: '#ffffff',
     border: 'none',
     borderRadius: '12px',
@@ -445,7 +445,7 @@ const styles = {
 
   empty: {
     backgroundColor: '#ffffff',
-    border: '1px solid #dfe7e2',
+    border: '1px solid var(--border)',
     borderRadius: '18px',
     padding: '24px',
   },
@@ -457,10 +457,10 @@ const styles = {
 
   card: {
     backgroundColor: '#ffffff',
-    border: '1px solid #dfe7e2',
-    borderRadius: '22px',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
     padding: '24px',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.05)',
+    boxShadow: 'var(--shadow-card)',
   },
 
   top: {
@@ -473,7 +473,7 @@ const styles = {
 
   cardKicker: {
     margin: 0,
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     fontSize: '12px',
     fontWeight: 700,
   },
@@ -493,7 +493,7 @@ const styles = {
   approvedBadge: {
     ...badgeBase,
     backgroundColor: '#eef8f3',
-    color: '#2cab87',
+    color: 'var(--turquoise)',
   },
 
   rejectedBadge: {
@@ -574,7 +574,7 @@ const styles = {
   },
 
   approveButton: {
-    backgroundColor: '#71b956',
+    backgroundColor: 'var(--green)',
     color: '#fff',
     border: 'none',
     borderRadius: '12px',
@@ -596,7 +596,7 @@ const styles = {
   link: {
     display: 'inline-block',
     marginTop: '12px',
-    color: '#2cab87',
+    color: 'var(--turquoise)',
     fontWeight: 700,
     textDecoration: 'none',
   },
