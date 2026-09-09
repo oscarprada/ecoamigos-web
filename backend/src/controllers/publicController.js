@@ -42,35 +42,9 @@ export async function getRanking(_req, res) {
       }));
     }
 
-    const winnersResult = await query(
-      `
-        SELECT
-          p.id AS period_id,
-          p.name AS period_name,
-          t.name AS team_name,
-          SUM(rr.points_awarded) AS total_points
-        FROM recycling_records rr
-        JOIN teams t ON t.id = rr.team_id
-        JOIN periods p ON p.id = rr.period_id
-        WHERE rr.status = 'approved'
-        GROUP BY p.id, p.name, t.name
-        ORDER BY p.id DESC, total_points DESC
-      `
-    );
-
-    const prizesResult = await query(
-      `
-        SELECT *
-        FROM prizes
-        ORDER BY created_at DESC
-      `
-    );
-
     res.json({
       currentPeriod,
       ranking,
-      winners: winnersResult.rows,
-      prizes: prizesResult.rows,
     });
   } catch (error) {
     res.status(500).json({
@@ -221,4 +195,3 @@ export async function getPublicContentByCategory(req, res) {
     });
   }
 }
-

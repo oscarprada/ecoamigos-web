@@ -4,14 +4,12 @@ import multer from 'multer';
 import {
   createContent,
   createPeriod,
-  createPrize,
   createTeam,
   createUser,
   deleteContent,
   getDashboard,
   listContent,
   listPeriods,
-  listPrizes,
   listTeams,
   listUsers,
   updateContent,
@@ -55,9 +53,6 @@ router.post('/teams', createTeam);
 
 router.get('/periods', listPeriods);
 router.post('/periods', createPeriod);
-
-router.get('/prizes', listPrizes);
-router.post('/prizes', createPrize);
 
 /* ========= EXPORTACIÓN ========= */
 

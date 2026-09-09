@@ -64,13 +64,11 @@ points = max(round(base × cantidad × multiplicador + min(criterios, 5) × 2), 
 
 Bases: papel_carton 8, plastico 10, vidrio 9, metal 12, organico 6; desconocido 5. Calidad alta 1.4, media 1, baja 0.5; desconocida 1. Cantidad/criterios no numéricos pasan a 0. No presentar esta fórmula como la regla productiva actual.
 
-## Ranking, periodos, premios y ganadores
+## Ranking y periodos
 
 Ranking elige periodo is_active por fecha inicial DESC e id DESC, sin comprobar que hoy esté dentro de las fechas. Sin activo devuelve ranking vacío. Incluye todos los equipos con suma de aprobados del periodo; empates por nombre y posiciones consecutivas, no compartidas.
 
-Crear periodo activo primero desactiva todos y después inserta, sin transacción. Si el INSERT falla puede no quedar ninguno activo; solicitudes simultáneas pueden dejar estados inconsistentes. No hay cierre automático ni historial formal de ganadores.
-
-`winners` agrega todos los equipos/periodos con registros aprobados; no consulta winner_records ni asigna premios. La vista tiene un contrato antiguo. Los premios públicos incluyen inactivos y no están ligados a ganadores por API.
+Crear periodo activo primero desactiva todos y después inserta, sin transacción. Si el INSERT falla puede no quedar ninguno activo; solicitudes simultáneas pueden dejar estados inconsistentes. Premios y ganadores no forman parte de la API actual; sus tablas históricas no participan en este cálculo.
 
 ## Estadísticas e indicadores
 

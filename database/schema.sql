@@ -43,7 +43,7 @@ CREATE TABLE content_items (
   created_by INT REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMP DEFAULT NOW()
 );
--- LEGADO: compatibilidad con consultas/rutas aun presentes; no sembrar premios.
+-- LEGADO: estructura histórica conservada; la aplicación no consulta ni administra premios.
 CREATE TABLE prizes (
   id SERIAL PRIMARY KEY,
   name VARCHAR(150) NOT NULL,

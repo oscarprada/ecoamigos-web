@@ -78,14 +78,16 @@ No hay índice único parcial que garantice un solo periodo activo. La creación
 | created_by | INT, nullable | FK users; ON DELETE SET NULL |
 | created_at | TIMESTAMP | NOW() |
 
-### prizes
+### prizes — legado conservado
+
+La aplicación actual no consulta ni administra esta tabla. Se mantiene sin cambios para preservar historia y posibles dependencias externas hasta autorizar una limpieza física posterior.
 
 | Campo | Tipo | Regla / uso |
 | --- | --- | --- |
 | id | SERIAL | Identificador |
 | name | VARCHAR(150) | Obligatorio |
 | description | TEXT | Nullable |
-| is_active | BOOLEAN | Por defecto true; API pública no filtra esta bandera |
+| is_active | BOOLEAN | Por defecto true; sin uso en la API actual |
 | created_at | TIMESTAMP | NOW() |
 
 ### recycling_records

@@ -243,7 +243,7 @@ export default function AdminDashboard() {
 
             <QuickCard
               title="Configuración"
-              text="Equipos, periodos y premios."
+              text="Equipos y periodos del ranking."
               to="/admin/settings"
             />
           </div>
@@ -496,7 +496,6 @@ const styles = {
     margin: 0,
   },
 };
-
 
 
 

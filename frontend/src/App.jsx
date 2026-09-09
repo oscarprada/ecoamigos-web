@@ -7,8 +7,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 import HomePage from './pages/public/HomePage';
 import RankingPage from './pages/public/RankingPage';
-import WinnersPage from './pages/public/WinnersPage';
-import PrizesPage from './pages/public/PrizesPage';
 import EducationCategoryPage from './pages/public/EducationCategoryPage';
 
 import LoginPage from './pages/auth/LoginPage';
@@ -32,8 +30,6 @@ export default function App() {
             {/* Públicas */}
             <Route path="/" element={<HomePage />} />
             <Route path="/ranking" element={<RankingPage />} />
-            <Route path="/winners" element={<WinnersPage />} />
-            <Route path="/prizes" element={<PrizesPage />} />
 
             {/* Educación ambiental */}
             <Route
@@ -68,4 +64,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-

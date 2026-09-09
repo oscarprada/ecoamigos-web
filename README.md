@@ -2,6 +2,8 @@
 
 Plataforma de educación ambiental y registro de reciclaje de **Parques Nacionales Naturales de Colombia — Dirección Territorial Pacífico (DTPA)**. Incluye contenidos públicos, registro por líderes, validación administrativa, ranking y reportes Excel.
 
+La funcionalidad de premios y ganadores fue retirada del alcance actual. Sus tablas históricas permanecen conservadas en PostgreSQL, pero la aplicación ya no las consulta ni expone operaciones sobre ellas.
+
 Documentación revisada contra el código local el **7 de septiembre de 2026**. Describe lo implementado y sus limitaciones; no certifica un despliegue ni una base de datos existente.
 
 ## Documentación completa
@@ -32,7 +34,6 @@ Frontend y backend son aplicaciones independientes. El `package.json` raíz **no
 - La puntuación vigente proviene de `points_catalog` al aprobar. La fórmula antigua de materiales y calidad permanece en una utilidad sin uso en ese flujo.
 - El CSV tiene 56 filas y no incluye `Dependencias institucionales`, el grupo que envía el formulario. Importarlo por sí solo no resuelve la puntuación.
 - No hay credenciales ni datos de demostración predeterminados. Crear el primer administrador con datos propios siguiendo [database/README.md](database/README.md).
-- La vista de ganadores espera campos que la API no devuelve. Estos hallazgos se documentan, no se corrigen con esta entrega.
 
 ## Ejecución local
 

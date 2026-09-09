@@ -4,7 +4,6 @@ import api from '../../api/client';
 export default function AdminSettingsPage() {
   const [teams, setTeams] = useState([]);
   const [periods, setPeriods] = useState([]);
-  const [prizes, setPrizes] = useState([]);
 
   const [teamForm, setTeamForm] = useState({ name: '', dependency: '' });
   const [periodForm, setPeriodForm] = useState({
@@ -13,22 +12,14 @@ export default function AdminSettingsPage() {
     end_date: '',
     is_active: true,
   });
-  const [prizeForm, setPrizeForm] = useState({
-    name: '',
-    description: '',
-    is_active: true,
-  });
-
   const load = async () => {
-    const [teamsRes, periodsRes, prizesRes] = await Promise.all([
+    const [teamsRes, periodsRes] = await Promise.all([
       api.get('/admin/teams'),
       api.get('/admin/periods'),
-      api.get('/admin/prizes'),
     ]);
 
     setTeams(teamsRes.data || []);
     setPeriods(periodsRes.data || []);
-    setPrizes(prizesRes.data || []);
   };
 
   useEffect(() => {
@@ -54,21 +45,14 @@ export default function AdminSettingsPage() {
     load();
   };
 
-  const submitPrize = async (e) => {
-    e.preventDefault();
-    await api.post('/admin/prizes', prizeForm);
-    setPrizeForm({ name: '', description: '', is_active: true });
-    load();
-  };
-
   return (
     <div style={styles.page}>
       <section style={styles.header}>
         <p style={styles.kicker}>Configuración</p>
         <h2 style={styles.title}>Configuración general</h2>
         <p style={styles.description}>
-          Administra los equipos participantes, periodos de competencia y premios
-          disponibles para la campaña Ecoamigos.
+          Administra los equipos participantes y los periodos del ranking
+          Ecoamigos.
         </p>
       </section>
 
@@ -167,52 +151,6 @@ export default function AdminSettingsPage() {
           />
         </ConfigCard>
 
-        <ConfigCard title="Premios" subtitle="Registra premios visibles para la campaña.">
-          <form style={styles.form} onSubmit={submitPrize}>
-            <input
-              style={styles.input}
-              placeholder="Nombre del premio"
-              value={prizeForm.name}
-              onChange={(e) =>
-                setPrizeForm({ ...prizeForm, name: e.target.value })
-              }
-              required
-            />
-
-            <textarea
-              style={{ ...styles.input, minHeight: '100px', resize: 'vertical' }}
-              placeholder="Descripción"
-              value={prizeForm.description}
-              onChange={(e) =>
-                setPrizeForm({ ...prizeForm, description: e.target.value })
-              }
-            />
-
-            <label style={styles.checkboxLabel}>
-              <input
-                type="checkbox"
-                checked={prizeForm.is_active}
-                onChange={(e) =>
-                  setPrizeForm({ ...prizeForm, is_active: e.target.checked })
-                }
-              />
-              Premio activo
-            </label>
-
-            <button style={styles.button} type="submit">
-              Crear premio
-            </button>
-          </form>
-
-          <ItemList
-            items={prizes.map((item) => ({
-              id: item.id,
-              title: item.name || item.title,
-              subtitle: item.description || 'Sin descripción',
-              badge: item.is_active ? 'Activo' : 'Inactivo',
-            }))}
-          />
-        </ConfigCard>
       </section>
     </div>
   );
@@ -383,4 +321,3 @@ const styles = {
     color: '#666',
   },
 };
-

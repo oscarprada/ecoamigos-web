@@ -29,7 +29,7 @@ No hay contrato uniforme para errores de Multer, JSON inválido o rutas desconoc
 | --- | --- | --- | --- |
 | POST | `/auth/login` | Público | token, user |
 | GET | `/auth/me` | Autenticado | Usuario actual |
-| GET | `/public/ranking` | Público | currentPeriod, ranking, winners, prizes |
+| GET | `/public/ranking` | Público | currentPeriod, ranking |
 | GET | `/public/stats` | Público | general, status, materials, teams, periods, indicators |
 | GET | `/public/points-catalog` | Público | Catálogo completo |
 | GET | `/public/content/:category` | Público | Contenido publicado |
@@ -45,15 +45,13 @@ No hay contrato uniforme para errores de Multer, JSON inválido o rutas desconoc
 | POST | `/admin/teams` | admin | Equipo creado |
 | GET | `/admin/periods` | admin | Periodos |
 | POST | `/admin/periods` | admin | Periodo creado |
-| GET | `/admin/prizes` | admin | Premios |
-| POST | `/admin/prizes` | admin | Premio creado |
 | GET | `/admin/content` | admin | Todos los contenidos |
 | POST | `/admin/content` | admin | Contenido creado |
 | PUT | `/admin/content/:id` | admin | Contenido actualizado |
 | DELETE | `/admin/content/:id` | admin | Mensaje |
 | GET | `/admin/export/excel` | admin | Reporte_Ecoamigos.xlsx |
 
-Fuera del prefijo: `GET /` devuelve texto de disponibilidad; `GET /uploads/<archivo>` y `/uploads/content/<archivo>` sirven archivos sin autenticación. No hay endpoint separado `/health`, `/public/prizes` ni `/public/winners`.
+Fuera del prefijo: `GET /` devuelve texto de disponibilidad; `GET /uploads/<archivo>` y `/uploads/content/<archivo>` sirven archivos sin autenticación. No hay endpoint separado `/health`. Las rutas de premios y ganadores fueron retiradas del alcance actual.
 
 ## Autenticación
 
@@ -86,9 +84,7 @@ Devuelve `id, name, email, role, team_id, team_name` desde la base. No devuelve 
 ```json
 {
   "currentPeriod": null,
-  "ranking": [],
-  "winners": [],
-  "prizes": []
+  "ranking": []
 }
 ```
 
@@ -96,10 +92,7 @@ Las listas del ejemplo representan una base vacía. Con datos:
 
 - `currentPeriod`: fila completa de periods activa, primera por start_date DESC e id DESC, o null.
 - `ranking[]`: `id, name, dependency, total_points, position`. Incluye equipos sin puntos cuando existe periodo activo. Solo suma aprobados de ese periodo. Empates: nombre ASC y posiciones consecutivas.
-- `winners[]`: `period_id, period_name, team_name, total_points`. Agrega equipos con registros aprobados de todos los periodos; no selecciona exclusivamente ganadores. Ordena period_id DESC y puntos DESC.
-- `prizes[]`: filas completas de prizes, creadas más recientemente primero; incluye inactivos.
-
-No devuelve `winners.id`, `final_score` ni `prize_name`, aunque WinnersPage los espera. Un fallo al consultar premios o historial también hace fallar toda la respuesta de ranking.
+La respuesta se limita al periodo vigente y la clasificación. No consulta ni devuelve premios o ganadores.
 
 ### GET /public/stats
 
@@ -202,10 +195,6 @@ GET: filas completas, start_date DESC. POST:
 ```
 
 Enviar booleanos JSON, no cadenas. Si is_active es verdadero desactiva todos los periodos antes de insertar. Devuelve fila completa con 201. No hay transacción, activación de un periodo existente ni validación de orden de fechas.
-
-### GET y POST /admin/prizes
-
-GET: filas completas, id DESC. POST: `{ "name": "Premio", "description": "Descripción", "is_active": true }`; devuelve fila completa con 201. No asocia directamente el premio a un periodo ni ganador. No hay edición/eliminación.
 
 ### GET /admin/content
 

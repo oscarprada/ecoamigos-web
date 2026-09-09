@@ -84,9 +84,9 @@ Se conserva compatibilidad temporal, no se reactiva el módulo:
 
 | Estructura | Dependencias y efecto de retirarla |
 | --- | --- |
-| prizes | publicController consulta premios dentro de ranking; adminController y adminRoutes gestionan premios. Sin tabla, ranking también fallaría. |
+| prizes | Sin consultas ni rutas activas; se conserva por seguridad e historial hasta autorizar limpieza física. |
 | winner_records / prize_id | Estructura histórica, sin consulta activa; relaciona teams/periods/prizes. No se borra de bases existentes. |
 | rewards | Solo estaba en la antigua definición alternativa; no tiene consultas activas. El nuevo esquema no la crea. Ninguna tabla existente se elimina. |
-| winners de la API | Agregación de recycling_records/periods/teams; no depende de winner_records pero sí la consume WinnersPage. |
+| Código de aplicación | No hay consultas, endpoints, rutas ni pantallas activas para este módulo. |
 
-Retirar código requiere coordinar `backend/src/controllers/publicController.js`, `adminController.js`, `backend/src/routes/adminRoutes.js`, `frontend/src/App.jsx`, `pages/admin/AdminSettingsPage.jsx`, `pages/public/PrizesPage.jsx`, `WinnersPage.jsx`, `EducationCategoryPage.jsx` y el componente antiguo `Navbar.jsx`; también el esquema y documentación de esos módulos. No se hace esa retirada en D01–D10. Solo se retiran las inserciones de demostración del seed, sin borrar datos de ninguna base.
+La funcionalidad ejecutable y visible se retiró de forma controlada al resolver F01–F03. No se hizo `DROP TABLE`, `DROP COLUMN` ni migración destructiva; una limpieza física posterior requiere inventario y autorización separados.

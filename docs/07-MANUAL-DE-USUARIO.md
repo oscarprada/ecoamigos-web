@@ -18,13 +18,11 @@ En desarrollo abrir `http://localhost:5173`. Para usar datos, el backend y Postg
 
 Los contenidos pueden ser texto, imagen, video o archivo descargable. Solo aparecen los publicados. Un listado vacío puede corresponder a falta de publicaciones; si se esperaba contenido, revisar disponibilidad de API. Las introducciones generales no se administran desde la pantalla de contenidos.
 
-### Ranking, ganadores y premios
+### Ranking
 
-En Residuos se encuentran enlaces a Ranking, Ganadores e Ingresar. Las direcciones directas son `/ranking`, `/winners`, `/prizes` y `/login`.
+En Residuos se encuentran enlaces a Ranking e Ingresar. Las direcciones directas son `/ranking` y `/login`.
 
 Ranking muestra el periodo activo, primeros tres equipos y tabla general. Los puntos provienen de registros aprobados. Sin periodo activo no hay clasificación. Empates se ordenan por nombre.
-
-Premios muestra el listado recibido. La pantalla de ganadores está pendiente de corregir: puede omitir puntaje y mostrar “Pendiente” como premio porque sus campos no coinciden con la API. No usarla como acta oficial de premiación.
 
 Los logos de aliados abren sitios externos. Regresar a Ecoamigos desde su pestaña original.
 
@@ -70,11 +68,10 @@ Estados: Pendiente, Aprobado y Rechazado. El historial muestra comentario admini
 1. Entrar a `/admin/settings` desde el panel.
 2. Crear los equipos con nombre y dependencia.
 3. Crear un periodo con nombre, fecha inicial/final y activo cuando corresponda. Crear uno activo desactiva los demás.
-4. Registrar premios si se utilizarán.
-5. Entrar a Usuarios y crear líderes asociados a sus equipos.
-6. Pedir al responsable de datos que confirme el catálogo institucional antes de aprobar registros.
+4. Entrar a Usuarios y crear líderes asociados a sus equipos.
+5. Pedir al responsable de datos que confirme el catálogo institucional antes de aprobar registros.
 
-No hay pantalla para editar un periodo existente, asignar ganadores ni cargar catálogo. Evitar periodos duplicados: una creación fallida de periodo activo puede dejar los anteriores desactivados.
+No hay pantalla para editar un periodo existente ni cargar catálogo. Evitar periodos duplicados: una creación fallida de periodo activo puede dejar los anteriores desactivados. Premios y ganadores están fuera del alcance actual.
 
 ### Usuarios
 

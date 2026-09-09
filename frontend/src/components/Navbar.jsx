@@ -13,8 +13,6 @@ export default function Navbar() {
       <nav>
         <Link to="/">Inicio</Link>
         <Link to="/ranking">Ranking</Link>
-        <Link to="/winners">Ganadores</Link>
-        <Link to="/prizes">Premios</Link>
         {user?.role === 'leader' && <Link to="/leader">Panel líder</Link>}
         {user?.role === 'admin' && <Link to="/admin">Administración</Link>}
         {!user ? <Link to="/login">Ingresar</Link> : <button className="link-btn" onClick={logout}>Salir</button>}

@@ -199,57 +199,6 @@ export async function createPeriod(req, res) {
   }
 }
 
-export async function listPrizes(_req, res) {
-  try {
-    const result = await query(`
-      SELECT *
-      FROM prizes
-      ORDER BY id DESC
-    `);
-
-    res.json(result.rows);
-  } catch (error) {
-    logError(`LIST PRIZES ERROR: ${error.message}`);
-
-    res.status(500).json({
-      message: 'Error al listar premios',
-      error: error.message,
-    });
-  }
-}
-
-export async function createPrize(req, res) {
-  try {
-    const { name, description, is_active } = req.body;
-
-    const result = await query(
-      `
-        INSERT INTO prizes (
-          name,
-          description,
-          is_active
-        )
-        VALUES ($1,$2,$3)
-        RETURNING *
-      `,
-      [name, description, is_active]
-    );
-
-    logInfo(
-      `Premio creado: ${name} | activo=${is_active} | admin_id=${req.user.id}`
-    );
-
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    logError(`CREATE PRIZE ERROR: ${error.message}`);
-
-    res.status(500).json({
-      message: 'Error al crear premio',
-      error: error.message,
-    });
-  }
-}
-
 export async function listContent(_req, res) {
   try {
     const result = await query(`
@@ -409,5 +358,4 @@ export async function deleteContent(req, res) {
     });
   }
 }
-
 

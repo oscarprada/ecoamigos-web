@@ -17,7 +17,7 @@ flowchart LR
   C --> X[ExcelJS: descarga XLSX]
 ```
 
-SPA cliente sin renderizado en servidor, API REST sin ORM y almacenamiento local de archivos. Hay pruebas acotadas de instalación en backend/tests/installation.test.js, sin script npm. No hay colas, WebSockets, servicios programados, microservicios, contenedores ni configuración CI/CD en el repositorio revisado. No hay sincronización automática de ganadores ni cierre periódico de campañas.
+SPA cliente sin renderizado en servidor, API REST sin ORM y almacenamiento local de archivos. Hay pruebas acotadas de instalación en backend/tests/installation.test.js, sin script npm. No hay colas, WebSockets, servicios programados, microservicios, contenedores ni configuración CI/CD en el repositorio revisado. Premios y ganadores no forman parte de la aplicación actual.
 
 `frontend/src/main.jsx` monta React StrictMode, ToastProvider y App. App monta AuthProvider, BrowserRouter y rutas. El layout incluye cabecera institucional y Outlet. Las rutas privadas atraviesan ProtectedRoute; la API repite la autorización en middleware.
 
@@ -70,7 +70,7 @@ Estas son versiones solicitadas, no necesariamente las instaladas. Cada lockfile
 | `src/controllers/authController.js` | bcrypt, JWT, usuario y logging de acceso |
 | `src/controllers/publicController.js` | Agregaciones públicas y contenido publicado |
 | `src/controllers/recyclingController.js` | Normalización, registros, catálogo y revisión |
-| `src/controllers/adminController.js` | Dashboard, creación/listado de usuarios, equipos, periodos, premios y CRUD de contenidos |
+| `src/controllers/adminController.js` | Dashboard, creación/listado de usuarios, equipos, periodos y CRUD de contenidos |
 | `src/controllers/exportController.js` | Generación del archivo XLSX |
 | `src/middleware/authMiddleware.js` | Firma de token y lista de roles permitidos |
 | `src/middleware/uploadMiddleware.js` | Evidencias; carpeta, nombres, filtro y límite |
@@ -95,14 +95,11 @@ Estas son versiones solicitadas, no necesariamente las instaladas. Cada lockfile
 | `src/context/AuthContext.jsx` | Usuario, carga, login y logout |
 | `src/context/ToastContext.jsx` | Aviso temporal de 3500 ms |
 | `src/components/ProtectedRoute.jsx` | Espera de sesión y redirección por rol |
-| `src/components/Card.jsx` | Tarjeta compartida, título y children |
 | `src/components/Navbar.jsx` | Navegación antigua; no la importa el árbol activo |
 | `src/layouts/AppLayout.jsx` | Cabecera, logo, sesión, enlaces y Outlet |
 | `src/pages/public/HomePage.jsx` | Portada, educación ambiental y aliados |
 | `src/pages/public/EducationCategoryPage.jsx` | Introducciones, consulta por categoría y modal |
 | `src/pages/public/RankingPage.jsx` | Periodo, podio y tabla |
-| `src/pages/public/WinnersPage.jsx` | Tarjetas de ganadores; contrato pendiente |
-| `src/pages/public/PrizesPage.jsx` | Tarjetas de premios |
 | `src/pages/auth/LoginPage.jsx` | Formulario y redirección por rol |
 | `src/pages/leader/LeaderDashboard.jsx` | Historial personal y resumen del equipo |
 | `src/pages/leader/RegisterRecyclingPage.jsx` | Formulario multipart y referencia de catálogo |
@@ -110,7 +107,7 @@ Estas son versiones solicitadas, no necesariamente las instaladas. Cada lockfile
 | `src/pages/admin/AdminUsersPage.jsx` | Altas, cupo visual de 15 y listado |
 | `src/pages/admin/AdminReviewsPage.jsx` | Pendientes, búsqueda, filtros y revisión |
 | `src/pages/admin/AdminContentPage.jsx` | Alta, edición, borrador/publicación y eliminación |
-| `src/pages/admin/AdminSettingsPage.jsx` | Equipos, periodos y premios |
+| `src/pages/admin/AdminSettingsPage.jsx` | Equipos y periodos del ranking |
 | `src/styles/global.css` | Bases y componentes compartidos |
 | `src/styles/pages.css` | Estilos extraídos de portada y layout |
 | `src/styles/refinements.css` | Refinamientos, estados de foco y responsive |

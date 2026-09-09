@@ -4,7 +4,7 @@
 
 ## Revisión controlada D01–D10
 
-Los diez hallazgos se contrastaron nuevamente con código, rutas, SQL, seed y CSV antes de editar. El esquema oficial único es [database/schema.sql](../database/schema.sql); las otras dos rutas solo lo incluyen. No se modificaron frontend, rutas ni reglas de puntuación. Las secciones F01–F20, S01–S12 y T01–T28 conservan exactamente el texto anterior como registro, sin reevaluarse en esta tarea.
+Los diez hallazgos se contrastaron nuevamente con código, rutas, SQL, seed y CSV antes de editar. El esquema oficial único es [database/schema.sql](../database/schema.sql); las otras dos rutas solo lo incluyen. Durante esa entrega D01–D10 no se modificaron frontend, rutas ni reglas de puntuación.
 
 Se ejecutaron seis pruebas aprobadas en un cluster PostgreSQL 18.1 nuevo, temporal y aislado, sin leer .env ni conectar a la base de la aplicación. Se prepararon 39 consultas estáticas de controladores, se comprobó la instalación vacía, seed sin escrituras, importación de 56 filas repetida sin cambios, conflictos sin sobrescrituras, restricciones de contenido, bcrypt y alta con solo password_hash. Los únicos usuarios creados fueron fixtures de prueba en ese cluster, que quedó detenido. Ver [procedimiento](../database/README.md) y [reporte](11-CORRECCION-D01-D10.md).
 
@@ -25,17 +25,19 @@ CORREGIDO se refiere al código y la instalación nueva probados, no a una base 
 | D09 | Repetir seed podía duplicar premios/contenidos | **CORREGIDO en instalación**: seed ejecutado dos veces sin escrituras; bootstrap repetido aborta sin cambiar cuenta. Duplicados anteriores requieren revisión manual. |
 | D10 | Importación absoluta y sin control de duplicados | **CORREGIDO**: ruta relativa desde raíz, staging, transacción y bloqueo; segunda carga no cambia filas, conflicto aborta y el índice de identidad evita duplicados nuevos. |
 
-Premios están fuera del alcance de producto; se conservaron estructuras de compatibilidad y código activo tras explicar sus dependencias, sin crear premios/ganadores ni borrar tablas existentes. [Detalle de archivos afectados por una futura retirada](../database/README.md).
+## Retiro controlado de premios y ganadores — F01–F03
 
-Las secciones siguientes permanecen sin cambios por alcance y no implican resolución de F/S/T.
+Premios y ganadores están fuera del alcance actual del producto. Se retiraron sus páginas, rutas, enlaces, llamadas, controladores y endpoints, y `GET /public/ranking` volvió a limitarse a `currentPeriod` y `ranking`. No se modificó el cálculo de posiciones o puntos. Las tablas `prizes`, `winner_records` y `rewards` permanecen deliberadamente como legado; no se ejecutó SQL destructivo ni se modificaron datos.
+
+F04–F20, S01–S12 y T01–T28 permanecen sin resolver por alcance. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
 
 ## Hallazgos funcionales y técnicos
 
 | ID | Hallazgo | Consecuencia / prioridad de revisión |
 | --- | --- | --- |
-| F01 | WinnersPage espera id/final_score/prize_name; API entrega otros campos | Pantalla incompleta; alinear contrato antes de premiar |
-| F02 | winners agrega todos los equipos aprobados, no solo ganadores | Definir ganadores y asignación de premios |
-| F03 | Premios públicos incluyen is_active false | Decidir semántica de visibilidad |
+| F01 | WinnersPage espera id/final_score/prize_name; API entrega otros campos | **CORREGIDO mediante retiro controlado**: WinnersPage, su ruta, imports y enlaces fueron eliminados |
+| F02 | winners agrega todos los equipos aprobados, no solo ganadores | **CORREGIDO mediante retiro controlado**: la agregación `winners` fue eliminada; ranking conserva únicamente el periodo activo y sus posiciones |
+| F03 | Premios públicos incluyen is_active false | **CORREGIDO mediante retiro controlado**: premios ya no se consultan ni exponen en API o frontend; tablas históricas conservadas |
 | F04 | Fórmula calculatePoints sin uso | Evitar documentación/reglas contradictorias; retirar o integrar de forma deliberada |
 | F05 | Grupo/acción/nivel recibidos del cliente | Backend no garantiza relación con material/cantidad |
 | F06 | Frecuencia, rachas y evidencia del catálogo no se validan | No presentar esas reglas como automatizadas |
@@ -47,7 +49,7 @@ Las secciones siguientes permanecen sin cambios por alcance y no implican resolu
 | F12 | Límite de 15 solo frontend | No se cumple si se usa API directamente |
 | F13 | Estadísticas suman todos los estados/unidades | Indicadores no equivalen a reciclaje aprobado en kg |
 | F14 | Factores ambientales sin fuente trazable en repositorio | Requieren revisión metodológica antes de uso institucional |
-| F15 | Solo contenido tiene CRUD completo | No hay edición/baja de usuarios, equipos, periodos o premios |
+| F15 | Solo contenido tiene CRUD completo | No hay edición/baja de usuarios, equipos o periodos |
 | F16 | Sin endpoint de recuperación/cambio de contraseña | Soporte requiere intervención autorizada |
 | F17 | Algunas promesas UI sin catch y sin 404 SPA | Errores pueden verse como vacíos o páginas sin contenido |
 | F18 | showToast cambia identidad, depende efecto de registro | Posibles consultas repetidas al actualizar avisos |

@@ -21,7 +21,7 @@ Se requieren tres servicios: hosting estático para frontend, proceso Node persi
 | Proceso Node | Ejecutar desde backend, reinicio supervisado y apagado/monitoreo definidos |
 | Almacenamiento | Volumen persistente para uploads y protección/rotación de logs |
 | Errores y seguridad | Validaciones, límites de archivos/contenido, errores sin detalles internos y protección de login |
-| Interfaz | Corregir contrato de ganadores y probar rutas al recargar |
+| Interfaz | Probar rutas activas al recargar y mantener retirados premios/ganadores |
 
 ## Build y ejecución
 

@@ -94,10 +94,6 @@ export default function EducationCategoryPage() {
         🏆 Ranking
       </Link>
 
-      <Link to="/winners" style={styles.secondaryButton}>
-        🥇 Ganadores
-      </Link>
-
       <Link to="/login" style={styles.primaryButton}>
         🔑 Ingresar
       </Link>

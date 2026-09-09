@@ -9,8 +9,6 @@
 | `/` | HomePage | Público | Contenido estático, mascota, cuatro categorías y aliados |
 | `/educacion/:category` | EducationCategoryPage | Público | GET public/content/category; introducción local y modal |
 | `/ranking` | RankingPage | Público | GET public/ranking; podio de tres y tabla |
-| `/winners` | WinnersPage | Público | winners de public/ranking; contrato incompatible |
-| `/prizes` | PrizesPage | Público | prizes de public/ranking |
 | `/login` | LoginPage | Público | POST auth/login |
 | `/leader` | LeaderDashboard | leader, admin | GET recycling/mine y public/ranking |
 | `/leader/register` | RegisterRecyclingPage | leader, admin | Periodo desde ranking; POST multipart recycling |
@@ -18,7 +16,7 @@
 | `/admin/users` | AdminUsersPage | admin | Listado/creación de usuarios y consulta equipos |
 | `/admin/reviews` | AdminReviewsPage | admin | Pendientes/revisados, filtros y PATCH de revisión |
 | `/admin/content` | AdminContentPage | admin | CRUD de contenidos y archivos |
-| `/admin/settings` | AdminSettingsPage | admin | Listado/creación de equipos, periodos y premios |
+| `/admin/settings` | AdminSettingsPage | admin | Listado/creación de equipos y periodos |
 
 No hay ruta comodín de página 404. BrowserRouter exige fallback a index.html en el servidor estático para recargar rutas internas.
 
@@ -30,7 +28,7 @@ ProtectedRoute muestra “Cargando...” mientras se consulta sesión, redirige 
 
 AppLayout contiene logo institucional, nombre, subtítulo, enlace Inicio y, con sesión, panel correspondiente y Cerrar sesión. `Navbar.jsx` no está montado. Existe estado menuOpen y un botón de menú, pero su estilo base es `display: none`; la navegación se adapta por envoltura, no por un menú móvil desplegable operativo. No documentar el botón oculto como una función visible.
 
-La entrada visible a login, ranking y ganadores se encuentra en educación de residuos. Premios tiene ruta directa aunque el encabezado activo no la enlaza.
+La entrada visible a login y ranking se encuentra en educación de residuos. No existen rutas ni enlaces activos de premios o ganadores.
 
 ## Comportamiento por módulo
 
@@ -40,9 +38,9 @@ La portada no consulta la API. Importa mascota e iconos, contiene textos de camp
 
 El modal presenta texto, imagen, video local con controles o enlace de archivo según tipo. Se cierra con su botón o al pulsar el fondo. No implementa trampa de foco ni cierre por Escape. No hay reproductor YouTube activo a partir de `youtube_url`.
 
-### Ranking, ganadores y premios
+### Ranking
 
-Ranking maneja loading y estados vacíos, convierte puntos a Number y toma los primeros tres para podio. WinnersPage espera id/final_score/prize_name ausentes en la respuesta actual: pueden faltar puntos y aparecer claves React no únicas. PrizesPage lista todos los premios recibidos, sin filtrar is_active.
+Ranking maneja loading y estados vacíos, convierte puntos a Number y toma los primeros tres para podio. La funcionalidad visible de premios y ganadores fue retirada del alcance actual.
 
 ### Líder
 
@@ -60,7 +58,7 @@ Revisiones carga pendientes e historial en paralelo. Las pestañas, búsqueda po
 
 Contenidos trabaja con FormData; admite texto/imagen/video/archivo y borrador/publicado. Editar precarga campos y desplaza arriba; cancelar restablece el formulario. Eliminar solicita confirmación con window.confirm. El archivo opcional puede sustituirse al editar; no hay acción para quitarlo sin reemplazo.
 
-Configuración usa tres formularios independientes y recarga las tres listas después de cada creación. Periodo y premio comienzan con is_active true. No hay pantallas de edición/eliminación de estas entidades ni activación de un periodo ya creado.
+Configuración usa formularios independientes para equipos y periodos y recarga ambas listas después de cada creación. El periodo comienza con is_active true. No hay pantallas de edición/eliminación de estas entidades ni activación de un periodo ya creado.
 
 ## Estado, validaciones y errores
 
