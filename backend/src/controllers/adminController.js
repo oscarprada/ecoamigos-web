@@ -64,19 +64,17 @@ export async function createUser(req, res) {
         INSERT INTO users (
           name,
           email,
-          password,
           password_hash,
           role,
           is_active,
           team_id
         )
-        VALUES ($1,$2,$3,$4,$5,true,$6)
+        VALUES ($1,$2,$3,$4,true,$5)
         RETURNING id, name, email, role, team_id
       `,
       [
         name,
         email,
-        hashedPassword,
         hashedPassword,
         role,
         role === 'leader' ? team_id : null,
@@ -411,6 +409,5 @@ export async function deleteContent(req, res) {
     });
   }
 }
-
 
 

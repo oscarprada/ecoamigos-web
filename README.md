@@ -28,10 +28,10 @@ Frontend y backend son aplicaciones independientes. El `package.json` raíz **no
 
 ## Antes de instalar
 
-- Los dos esquemas SQL históricos no coinciden con el backend actual. Para una base nueva se incluye un [esquema de referencia](docs/sql/schema-referencia.sql) derivado del código, pendiente de prueba de integración. No aplicarlo a una base existente.
+- El esquema oficial único es [database/schema.sql](database/schema.sql), para bases nuevas. Las rutas anteriores remiten a él; una base existente requiere [inspección y migración manual](database/README.md).
 - La puntuación vigente proviene de `points_catalog` al aprobar. La fórmula antigua de materiales y calidad permanece en una utilidad sin uso en ese flujo.
 - El CSV tiene 56 filas y no incluye `Dependencias institucionales`, el grupo que envía el formulario. Importarlo por sí solo no resuelve la puntuación.
-- La contraseña anunciada en el seed no coincide con su hash. Seguir el procedimiento de primer administrador.
+- No hay credenciales ni datos de demostración predeterminados. Crear el primer administrador con datos propios siguiendo [database/README.md](database/README.md).
 - La vista de ganadores espera campos que la API no devuelve. Estos hallazgos se documentan, no se corrigen con esta entrega.
 
 ## Ejecución local

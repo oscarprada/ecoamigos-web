@@ -17,7 +17,7 @@ flowchart LR
   C --> X[ExcelJS: descarga XLSX]
 ```
 
-SPA cliente sin renderizado en servidor, API REST sin ORM y almacenamiento local de archivos. No hay colas, WebSockets, servicios programados, microservicios, contenedores ni configuración CI/CD en el repositorio revisado. No hay sincronización automática de ganadores ni cierre periódico de campañas.
+SPA cliente sin renderizado en servidor, API REST sin ORM y almacenamiento local de archivos. Hay pruebas acotadas de instalación en backend/tests/installation.test.js, sin script npm. No hay colas, WebSockets, servicios programados, microservicios, contenedores ni configuración CI/CD en el repositorio revisado. No hay sincronización automática de ganadores ni cierre periódico de campañas.
 
 `frontend/src/main.jsx` monta React StrictMode, ToastProvider y App. App monta AuthProvider, BrowserRouter y rutas. El layout incluye cabecera institucional y Outlet. Las rutas privadas atraviesan ProtectedRoute; la API repite la autorización en middleware.
 
@@ -50,10 +50,10 @@ Estas son versiones solicitadas, no necesariamente las instaladas. Cada lockfile
 | `.gitignore` | Exclusión de dependencias, entorno, build, logs, uploads y respaldos |
 | `package.json`, `package-lock.json` | Paquete raíz, con ExcelJS; sin scripts ni workspaces |
 | `6.png`, `ManobiMesa de trabajo.png`, `ManobiMesa de trabajo 1.png`, `ManobiMesa de trabajo 2.png` | Recursos gráficos raíz, sin imports encontrados en la aplicación |
-| `database/schema.sql` | Esquema histórico simplificado; incompatible con API actual |
+| `database/schema.sql` | Único esquema oficial para base vacía, sin datos de negocio |
 | `database/points_catalog_clean.csv` | 56 acciones históricas en cuatro grupos |
-| `database/import_points_catalog.sql` | Importación histórica con ruta absoluta de la computadora original |
-| `backend/schema.sql` | Segundo esquema histórico, más cercano al modelo actual pero incompleto |
+| `database/import_points_catalog.sql` | Importación relativa, transaccional, repetible y sin sobrescrituras |
+| `backend/schema.sql` | Entrada psql que remite al esquema oficial |
 
 ## Inventario backend
 
@@ -77,7 +77,7 @@ Estas son versiones solicitadas, no necesariamente las instaladas. Cada lockfile
 | `src/utils/logger.js` | Escritura síncrona a logs locales |
 | `src/utils/environmentalIndicators.js` | Indicadores estimados sobre cantidades |
 | `src/utils/calculatePoints.js` | Fórmula histórica exportada, no usada por controladores actuales |
-| `src/seed.sql` | Equipos, periodo abril 2026, premios, admin y contenidos de ejemplo antiguos |
+| `src/seed.sql` | Aviso sin escrituras: no hay datos predeterminados |
 | `uploads/`, `uploads/content/`, `logs/` | Datos generados, no código distribuido |
 
 ## Inventario frontend

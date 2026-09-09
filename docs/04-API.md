@@ -116,7 +116,7 @@ Todas las consultas usan todos los estados y periodos. Materiales se ordenan por
 
 ### GET /public/points-catalog
 
-Array con `id, source_code, group_name, action_name, action_level, points, evidence_required, max_frequency`, ordenado por grupo y acción ASC. No hay agrupación JSON ni filtrado por grupo. `evidence_required` depende del esquema real: el CSV exige texto, el SQL histórico lo define booleano.
+Array con `id, source_code, group_name, action_name, action_level, points, evidence_required, max_frequency`, ordenado por grupo y acción ASC. No hay agrupación JSON ni filtrado por grupo. `evidence_required` es TEXT en el esquema oficial; verificar compatibilidad antes de migrar una base histórica.
 
 ### GET /public/content/:category
 
@@ -187,7 +187,7 @@ POST JSON:
 { "name": "Líder de ejemplo", "email": "lider@ejemplo.test", "password": "CLAVE_UNICA", "role": "leader", "team_id": 2 }
 ```
 
-bcrypt con costo 10; inserta el mismo hash en password y password_hash; cuenta activa. Para admin fuerza team_id null; para leader utiliza el recibido. Devuelve 201 con `id, name, email, role, team_id`. El límite de 15 usuarios existe solo en UI. No hay PUT/DELETE ni desactivación por API.
+bcrypt con costo 10; inserta únicamente password_hash; cuenta activa. Para admin fuerza team_id null; para leader utiliza el recibido. Devuelve 201 con `id, name, email, role, team_id`. El límite de 15 usuarios existe solo en UI. No hay PUT/DELETE ni desactivación por API.
 
 ### GET y POST /admin/teams
 

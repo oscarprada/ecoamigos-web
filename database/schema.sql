@@ -1,105 +1,102 @@
--- =========================
--- TABLA DE USUARIOS
--- =========================
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    role VARCHAR(20) NOT NULL CHECK (role IN ('admin', 'leader')),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+-- ESQUEMA OFICIAL UNICO DE ECOAMIGOS. PostgreSQL; solo para base vacia.
+-- No migra, no borra y no incluye datos de negocio ni credenciales.
+-- Repetir sobre una base existente falla y revierte la transaccion.
+\set ON_ERROR_STOP on
+BEGIN;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE TYPE user_role AS ENUM ('admin', 'leader');
+CREATE TYPE record_status AS ENUM ('pending', 'approved', 'rejected');
 
--- =========================
--- TABLA DE EQUIPOS
--- =========================
 CREATE TABLE teams (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    leader_id INTEGER REFERENCES users(id)
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL UNIQUE,
+  dependency VARCHAR(150) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
 );
-
--- =========================
--- TABLA DE PERIODOS
--- =========================
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(120) NOT NULL,
+  email VARCHAR(150) NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  role user_role NOT NULL,
+  team_id INT REFERENCES teams(id) ON DELETE SET NULL,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW()
+);
 CREATE TABLE periods (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100),
-    start_date DATE,
-    end_date DATE,
-    is_active BOOLEAN DEFAULT true
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(120) NOT NULL UNIQUE,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  is_active BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT NOW()
 );
-
--- =========================
--- TABLA DE RECICLAJE
--- =========================
+CREATE TABLE content_items (
+  id SERIAL PRIMARY KEY,
+  title VARCHAR(180) NOT NULL,
+  category VARCHAR(30) NOT NULL CHECK (category IN ('agua','energia','papel','residuos')),
+  type VARCHAR(20) NOT NULL CHECK (type IN ('text','image','video','file')),
+  description TEXT,
+  youtube_url TEXT, -- columna historica, no usada por los controladores
+  file_url TEXT,
+  status VARCHAR(20) DEFAULT 'published' CHECK (status IN ('draft','published')),
+  created_by INT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+-- LEGADO: compatibilidad con consultas/rutas aun presentes; no sembrar premios.
+CREATE TABLE prizes (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(150) NOT NULL,
+  description TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE TABLE points_catalog (
+  id SERIAL PRIMARY KEY,
+  source_code VARCHAR(50),
+  group_name VARCHAR(100) NOT NULL,
+  action_name VARCHAR(150) NOT NULL,
+  action_level VARCHAR(100),
+  points INTEGER NOT NULL DEFAULT 0,
+  evidence_required TEXT, -- el CSV contiene descripciones, no booleanos
+  max_frequency VARCHAR(50)
+);
 CREATE TABLE recycling_records (
-    id SERIAL PRIMARY KEY,
-    team_id INTEGER REFERENCES teams(id),
-    user_id INTEGER REFERENCES users(id),
-    material_type VARCHAR(50),
-    quantity NUMERIC,
-    unit VARCHAR(20),
-    quality_checked BOOLEAN DEFAULT false,
-    evidence_url TEXT,
-    status VARCHAR(20) DEFAULT 'pending',
-    points INTEGER DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  id SERIAL PRIMARY KEY,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  team_id INT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  period_id INT REFERENCES periods(id) ON DELETE SET NULL,
+  material_type VARCHAR(30) NOT NULL CHECK (material_type IN ('papel_carton','plastico','vidrio','metal','organico')),
+  quantity NUMERIC(10,2) NOT NULL CHECK (quantity > 0),
+  unit VARCHAR(20) NOT NULL DEFAULT 'kg',
+  quality_level VARCHAR(10) NOT NULL CHECK (quality_level IN ('alta','media','baja')),
+  criteria_count INT NOT NULL DEFAULT 0 CHECK (criteria_count >= 0),
+  notes TEXT,
+  evidence_url TEXT,
+  record_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  status record_status NOT NULL DEFAULT 'pending',
+  review_notes TEXT,
+  points_awarded INT DEFAULT 0,
+  reviewed_by INT REFERENCES users(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  catalog_group_name VARCHAR(100),
+  catalog_action_name VARCHAR(150),
+  catalog_action_level VARCHAR(100)
 );
-
--- =========================
--- TABLA DE CONTENIDO
--- =========================
-CREATE TABLE contents (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(200),
-    type VARCHAR(50),
-    url TEXT,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- LEGADO: no consultada por el backend; conservada hasta retirar dependencias.
+CREATE TABLE winner_records (
+  id SERIAL PRIMARY KEY,
+  period_id INT NOT NULL REFERENCES periods(id) ON DELETE CASCADE,
+  team_id INT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  prize_id INT REFERENCES prizes(id) ON DELETE SET NULL,
+  final_score INT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(period_id, team_id)
 );
-
--- =========================
--- TABLA DE PREMIOS
--- =========================
-CREATE TABLE rewards (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100),
-    description TEXT,
-    period_id INTEGER REFERENCES periods(id)
+-- Misma identidad normalizada que utiliza getCatalogPoints.
+CREATE UNIQUE INDEX points_catalog_identity_uidx ON points_catalog (
+  lower(trim(group_name)), lower(trim(action_name)),
+  lower(trim(coalesce(action_level, '')))
 );
-
--- =========================
--- DATOS INICIALES
--- =========================
-
--- Usuario admin
-INSERT INTO users (email, password, role)
-VALUES ('admin@ecoamigos.local', '$2b$10$hashedpassword', 'admin');
-
--- Equipos base
-INSERT INTO teams (name) VALUES
-('Administrativa'),
-('Técnica'),
-('Jurídica'),
-('Contratos'),
-('Farallones');
-
--- Periodo inicial
-INSERT INTO periods (name, start_date, end_date, is_active)
-VALUES ('Periodo Inicial', CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days', true);
-
--- =========================
--- CATÁLOGO DE PUNTOS
--- =========================
-CREATE TABLE IF NOT EXISTS points_catalog (
-    id SERIAL PRIMARY KEY,
-    source_code VARCHAR(50),
-    group_name VARCHAR(100) NOT NULL,
-    action_name VARCHAR(150) NOT NULL,
-    action_level VARCHAR(100),
-    points INTEGER NOT NULL DEFAULT 0,
-    evidence_required BOOLEAN NOT NULL DEFAULT false,
-    max_frequency VARCHAR(50)
-);
-
-
+COMMIT;

@@ -2,33 +2,32 @@
 
 [Índice](00-INDICE.md)
 
-## Verificaciones y límites de esta revisión
+## Revisión controlada D01–D10
 
-- Inspección de todas las rutas, controladores, middleware, utilidades, páginas y SQL del repositorio.
-- Comparación del comportamiento con los esquemas y CSV; catálogo con 56 filas y sin grupo institucional.
-- Comparación local bcrypt del hash del seed con la clave declarada: no coincide.
-- Build de frontend completado en la tarea de estilos y comprobado nuevamente para esta entrega documental.
-- Verificación de 12 archivos Markdown, 51 enlaces relativos válidos y cobertura de los 25 endpoints registrados.
-- Análisis de sintaxis de los 16 archivos JavaScript del backend y de 36 bloques de comandos PowerShell documentados, sin ejecutar estos últimos.
-- Comprobación de exclusiones de entorno privado, uploads y respaldos, y de que ambas plantillas `.env.example` pueden versionarse.
-- No se conectó a una base real, no se ejecutó el esquema de referencia y no se realizó prueba integral de endpoints ni validación visual con navegador.
+Los diez hallazgos se contrastaron nuevamente con código, rutas, SQL, seed y CSV antes de editar. El esquema oficial único es [database/schema.sql](../database/schema.sql); las otras dos rutas solo lo incluyen. No se modificaron frontend, rutas ni reglas de puntuación. Las secciones F01–F20, S01–S12 y T01–T28 conservan exactamente el texto anterior como registro, sin reevaluarse en esta tarea.
 
-La compilación no garantiza funcionamiento de negocio. El [SQL de referencia](sql/schema-referencia.sql) está propuesto y requiere ensayo en PostgreSQL vacío. No hay tests, lint ni CI automatizados definidos en los package.json. No se inventan porcentajes de cobertura.
+Se ejecutaron seis pruebas aprobadas en un cluster PostgreSQL 18.1 nuevo, temporal y aislado, sin leer .env ni conectar a la base de la aplicación. Se prepararon 39 consultas estáticas de controladores, se comprobó la instalación vacía, seed sin escrituras, importación de 56 filas repetida sin cambios, conflictos sin sobrescrituras, restricciones de contenido, bcrypt y alta con solo password_hash. Los únicos usuarios creados fueron fixtures de prueba en ese cluster, que quedó detenido. Ver [procedimiento](../database/README.md) y [reporte](11-CORRECCION-D01-D10.md).
 
 ## Hallazgos de instalación y datos
 
-| ID | Evidencia | Efecto / acción pendiente |
+CORREGIDO se refiere al código y la instalación nueva probados, no a una base existente migrada. No se ejecutó ninguna migración ni se borraron datos existentes.
+
+| ID | Verificación previa | Estado y evidencia posterior |
 | --- | --- | --- |
-| D01 | Dos schemas incompatibles con controladores | Definir esquema oficial y migraciones probadas |
-| D02 | createUser inserta password; backend/schema no la define | Alta puede fallar; conciliar columnas de hash |
-| D03 | content_items.category ausente y tipos antiguos | Publicación/consulta pueden fallar; migrar contenido y restricciones |
-| D04 | Referencias catalog_* ausentes en ambos modelos de registros | Registro/revisión pueden fallar; migración requerida |
-| D05 | CSV tiene evidence_required textual, schema booleano | Importación histórica puede fallar; definir contrato de evidencia |
-| D06 | CSV no tiene Dependencias institucionales | Aprobación puede asignar 0; confirmar valores oficiales |
-| D07 | Hash seed no coincide con clave comentada | Primer login histórico no funciona con esa clave |
-| D08 | Seed abril 2026, video de ejemplo y tipos tip/video | No representa campaña vigente ni contenido real listo para publicar |
-| D09 | ON CONFLICT sin unicidad aplicable en premios/contenidos | Repetir seed puede duplicar filas |
-| D10 | Importador usa ruta absoluta; CSV sin deduplicación | No portable; importaciones repetidas ambiguas |
+| D01 | Tres definiciones SQL divergentes, contando docs/sql | **PARCIAL**: única definición oficial y 39 consultas preparadas correctamente. La conciliación de una base existente requiere su esquema real y decisiones de datos; no se ofrece migración ciega. |
+| D02 | createUser duplicaba hash en password y password_hash | **CORREGIDO en código/base nueva**: esquema, controlador y bootstrap solo escriben password_hash; INSERT real y bcrypt verificados. Una columna password NOT NULL heredada requiere migración antes de usar este código allí. |
+| D03 | category ausente y tipos antiguos en backend/schema | **CORREGIDO en base nueva**: cuatro categorías y cuatro tipos actuales; restricciones verificadas contra frontend y SQL preparado. Clasificar contenido antiguo sigue siendo una decisión manual. |
+| D04 | Faltaban catálogo/referencias en esquemas históricos | **CORREGIDO en base nueva**: points_catalog y tres catalog_* definidos; SQL de crear/revisar preparado. No se infieren referencias para registros antiguos. |
+| D05 | CSV de evidencia descriptiva contra BOOLEAN | **CORREGIDO en base nueva**: evidence_required TEXT; 56 filas originales importadas. Una base con BOOLEAN necesita conciliación manual, sin conversión inventada. |
+| D06 | CSV sin Dependencias institucionales | **PENDIENTE DE DECISIÓN**: CSV intacto; no se inventan acciones/grupos/puntos institucionales. Se necesitan valores autorizados para las cinco referencias del formulario. |
+| D07 | Hash seed no coincidía con clave anunciada, comprobado otra vez | **CORREGIDO**: seed sin credenciales; bootstrap exige datos explícitos, bcrypt verificable y no sustituye cuentas. Alta probada en cluster aislado; crear/verificar admin real queda para instalación manual. |
+| D08 | Seed con periodo abril 2026, video de demostración y tipos antiguos | **CORREGIDO en instalación**: seed sin escrituras ni datos prefijados. Filas de instalaciones anteriores permanecen intactas. |
+| D09 | Repetir seed podía duplicar premios/contenidos | **CORREGIDO en instalación**: seed ejecutado dos veces sin escrituras; bootstrap repetido aborta sin cambiar cuenta. Duplicados anteriores requieren revisión manual. |
+| D10 | Importación absoluta y sin control de duplicados | **CORREGIDO**: ruta relativa desde raíz, staging, transacción y bloqueo; segunda carga no cambia filas, conflicto aborta y el índice de identidad evita duplicados nuevos. |
+
+Premios están fuera del alcance de producto; se conservaron estructuras de compatibilidad y código activo tras explicar sus dependencias, sin crear premios/ganadores ni borrar tablas existentes. [Detalle de archivos afectados por una futura retirada](../database/README.md).
+
+Las secciones siguientes permanecen sin cambios por alcance y no implican resolución de F/S/T.
 
 ## Hallazgos funcionales y técnicos
 

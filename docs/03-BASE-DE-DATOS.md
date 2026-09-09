@@ -4,18 +4,11 @@
 
 ## Fuentes y estado
 
-No existe una migración autoritativa que reproduzca todo el contrato actual. El diccionario siguiente describe columnas utilizadas por el código, conservando tipos del esquema backend donde existen. Las extensiones faltantes se identifican como propuestas en [schema-referencia.sql](sql/schema-referencia.sql).
+El único esquema oficial es [database/schema.sql](../database/schema.sql), para bases vacías. backend/schema.sql y docs/sql/schema-referencia.sql remiten a él con \ir; no contienen otra definición. El alta de usuarios almacena solo password_hash. El catálogo usa evidencia descriptiva e identidad normalizada única. No se suministran datos de negocio ni credenciales por defecto.
 
-| Fuente | Diferencias respecto al código |
-| --- | --- |
-| `database/schema.sql` | `users` sin nombre, hash ni equipo; equipos sin dependencia; reciclaje usa `points` y carece de campos de revisión; usa `contents`/`rewards` en lugar de `content_items`/`prizes` |
-| `backend/schema.sql` | Falta `users.password` que inserta createUser; falta `content_items.category`; tipos antiguos de contenido; falta catálogo y sus tres referencias en registros |
-| `backend/src/seed.sql` | Hash no coincide con clave anunciada; tipos antiguos, video de demostración y periodo fijo abril 2026; no es totalmente idempotente |
-| `database/import_points_catalog.sql` | Ruta absoluta local; CSV con texto donde el primer esquema espera booleano |
+Una base existente no se migra automáticamente: consultar [procedimiento de conciliación](../database/README.md) y el diagnóstico de solo lectura. No ejecutar CREATE TABLE para actualizar columnas ni mezclar el esquema con versiones históricas.
 
-No ejecutar ambos esquemas uno después del otro. No usar `IF NOT EXISTS` como migración. Para conocer una base existente exportar su esquema sin datos y comparar antes de planificar cambios.
-
-## Relaciones propuestas a partir del modelo backend
+## Relaciones del esquema oficial
 
 ```mermaid
 erDiagram
@@ -34,7 +27,7 @@ La asignación de equipo a usuario es opcional. `points_catalog` no tiene FK con
 
 ## Diccionario completo
 
-`SERIAL` significa entero autoincremental con clave primaria. Las fechas de creación de los esquemas son `TIMESTAMP` sin zona horaria. Ver el SQL para restricciones exactas de la propuesta.
+`SERIAL` significa entero autoincremental con clave primaria. Las fechas de creación son `TIMESTAMP` sin zona horaria. Ver el esquema oficial para las restricciones exactas.
 
 ### teams
 
@@ -52,7 +45,6 @@ La asignación de equipo a usuario es opcional. `points_catalog` no tiene FK con
 | id | SERIAL | Identificador |
 | name | VARCHAR(120) | Obligatorio |
 | email | VARCHAR(150) | Obligatorio, único; código no normaliza mayúsculas |
-| password | TEXT propuesto | Hash duplicado que inserta createUser; falta en esquema backend |
 | password_hash | TEXT | Hash bcrypt requerido por login |
 | role | user_role | `admin` o `leader` |
 | team_id | INT, nullable | FK teams; ON DELETE SET NULL |
@@ -77,8 +69,8 @@ No hay índice único parcial que garantice un solo periodo activo. La creación
 | --- | --- | --- |
 | id | SERIAL | Identificador |
 | title | VARCHAR(180) | Obligatorio |
-| category | VARCHAR(30) propuesto | `agua`, `energia`, `papel`, `residuos`; falta en esquema backend |
-| type | VARCHAR(20) | UI: `text`, `image`, `video`, `file`; SQL histórico: video/tip/guide/blog |
+| category | VARCHAR(30) | `agua`, `energia`, `papel`, `residuos` |
+| type | VARCHAR(20) | `text`, `image`, `video`, `file` |
 | description | TEXT | Texto y descripción; nullable |
 | youtube_url | TEXT | Histórico, no lo lee/escribe el controlador actual |
 | file_url | TEXT | `/uploads/content/...`; nullable |
@@ -118,28 +110,28 @@ No hay índice único parcial que garantice un solo periodo activo. La creación
 | reviewed_by | INT, nullable | FK users; ON DELETE SET NULL |
 | reviewed_at | TIMESTAMP | Fecha de última revisión; nullable |
 | created_at | TIMESTAMP | NOW() |
-| catalog_group_name | VARCHAR(100) propuesto | Texto recibido del formulario; nullable |
-| catalog_action_name | VARCHAR(150) propuesto | Texto recibido del formulario; nullable |
-| catalog_action_level | VARCHAR(100) propuesto | Texto recibido del formulario; nullable |
+| catalog_group_name | VARCHAR(100) | Texto recibido del formulario; nullable |
+| catalog_action_name | VARCHAR(150) | Texto recibido del formulario; nullable |
+| catalog_action_level | VARCHAR(100) | Texto recibido del formulario; nullable |
 
 ### points_catalog
 
 | Campo | Tipo | Regla / uso |
 | --- | --- | --- |
-| id | SERIAL | Se usa el menor id si varias filas coinciden |
+| id | SERIAL | Identificador; índice único evita identidades normalizadas repetidas en la base nueva |
 | source_code | VARCHAR(50) | Identificador textual de origen |
 | group_name | VARCHAR(100) | Obligatorio |
 | action_name | VARCHAR(150) | Obligatorio |
 | action_level | VARCHAR(100) | Nullable; null equivale a texto vacío en búsqueda |
 | points | INT | Por defecto 0; API devuelve número |
-| evidence_required | TEXT propuesto | CSV contiene instrucciones; primer esquema lo declara BOOLEAN |
+| evidence_required | TEXT | Instrucciones originales del CSV; no se convierten a booleano |
 | max_frequency | VARCHAR(50) | Texto informativo; no hay contador ni restricción automática |
 
 El CSV contiene 56 filas distribuidas en `Hogares`, `Inst. Educativas`, `Comunitario`, `Senderos PNN`. No incluye `Dependencias institucionales`. No convertir arbitrariamente grupos ni asumir que sus puntos son institucionales.
 
 ### winner_records — legado
 
-`id SERIAL`, `period_id INT NOT NULL` FK periods CASCADE, `team_id INT NOT NULL` FK teams CASCADE, `prize_id INT` FK prizes SET NULL, `final_score INT NOT NULL`, `created_at TIMESTAMP DEFAULT NOW()`, UNIQUE(period_id, team_id). No hay endpoint para registrar ni cerrar ganadores. Se conserva en la propuesta para reflejar el esquema histórico, no por uso actual.
+`id SERIAL`, `period_id INT NOT NULL` FK periods CASCADE, `team_id INT NOT NULL` FK teams CASCADE, `prize_id INT` FK prizes SET NULL, `final_score INT NOT NULL`, `created_at TIMESTAMP DEFAULT NOW()`, UNIQUE(period_id, team_id). No hay endpoint para registrar ni cerrar ganadores. Se conserva temporalmente por compatibilidad; fuera del alcance de producto, sin seed ni retirada automática.
 
 ## Inspección y consultas útiles
 

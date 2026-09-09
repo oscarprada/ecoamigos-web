@@ -86,49 +86,28 @@ Las variables `VITE_*` son públicas y quedan en el build. Reiniciar desarrollo 
 
 ## 4. Base existente o nueva
 
-**Base existente:** respaldar y comparar con el [diccionario](03-BASE-DE-DATOS.md). No ejecutar esquemas para intentar actualizarla: `CREATE TABLE IF NOT EXISTS` no migra columnas.
-
-**Base vacía:** se incluye [schema-referencia.sql](sql/schema-referencia.sql), reconstruido de consultas y formularios. No se ejecutó contra PostgreSQL en esta revisión; es una propuesta de instalación nueva, no una migración productiva.
-
-Desde la raíz:
+**Esquema oficial único: [database/schema.sql](../database/schema.sql).** Las otras rutas SQL son entradas de compatibilidad con \ir y no definen tablas alternativas. Para una base vacía:
 
 ```powershell
-psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE ecoamigos;'
-psql -h localhost -U postgres -d ecoamigos -v ON_ERROR_STOP=1 -f docs/sql/schema-referencia.sql
+psql -X -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE ecoamigos;'
+psql -X -h localhost -U postgres -d ecoamigos -f database/schema.sql
 ```
 
-No repetir la creación si existe la base. Para ensayos usar otra base. La extensión `pgcrypto` exige permisos adecuados.
+No ejecutar sobre una base existente. Respaldar e inspeccionar con [inspect_existing.sql](../database/inspect_existing.sql); resolver la migración manualmente según [database/README.md](../database/README.md). No se eliminan columnas ni datos existentes automáticamente.
 
 ## 5. Primer administrador
 
-Se verificó con bcrypt que la contraseña anunciada en el seed histórico no coincide con su hash. Además, ese seed usa contenidos antiguos. No utilizarlo como instalación actual.
-
-En la base de referencia nueva, abrir `psql`:
-
-```powershell
-psql -X -n -h localhost -U postgres -d ecoamigos
-```
-
-Las opciones `-X -n` omiten el archivo de inicio de psql y el historial de comandos, según la [documentación de psql](https://www.postgresql.org/docs/current/app-psql.html). Dentro de la sesión sustituir los ejemplos. La clave se escribe de forma visible: hacerlo en una terminal privada y no copiar esta sesión a documentación o incidencias.
-
-```sql
-INSERT INTO users (name, email, password, password_hash, role, is_active)
-SELECT 'Administrador Ecoamigos', 'REEMPLAZAR_CORREO_ADMIN', h, h, 'admin', true
-FROM (SELECT crypt('REEMPLAZAR_CLAVE_UNICA', gen_salt('bf', 10)) AS h) AS credentials;
-\q
-```
-
-Los dos campos guardan bcrypt, no texto plano. `password` es compatibilidad con `createUser`; el login usa `password_hash`. Un correo repetido causa error y no modifica una cuenta existente. Para recuperación: [operación](08-OPERACION.md).
+No hay usuario o contraseña por defecto. El seed histórico ya no inserta datos. Seguir el procedimiento de [primer administrador](../database/README.md): generar bcrypt mediante backend/scripts/hash-password.js con una clave propia y ejecutar database/create_admin.sql con nombre, correo y hash explícitos. El único campo almacenado es password_hash. Un correo repetido aborta sin modificar la cuenta.
 
 ## 6. Catálogo
 
-El [CSV histórico](../database/points_catalog_clean.csv) tiene evidencias descriptivas, no booleanas. El esquema de referencia propone `evidence_required TEXT` para conservarlas. Importar una sola vez desde la raíz:
+El CSV histórico conserva sus 56 filas originales y evidencia descriptiva. El esquema usa evidence_required TEXT. Importación optativa desde la raíz:
 
 ```powershell
-psql -h localhost -U postgres -d ecoamigos -v ON_ERROR_STOP=1 -c "\copy points_catalog(source_code,group_name,action_name,action_level,points,evidence_required,max_frequency) FROM 'database/points_catalog_clean.csv' WITH (FORMAT csv, HEADER true, ENCODING 'UTF8')"
+psql -X -h localhost -U postgres -d ecoamigos -f database/import_points_catalog.sql
 ```
 
-La importación agrega filas sin deduplicar. No contiene el grupo institucional del formulario: **importar no basta para obtener puntos**. Los responsables deben definir y cargar los valores oficiales para las cinco referencias de [reglas](06-REGLAS-Y-BACKEND.md). No se inventan valores institucionales.
+Repetir el archivo no duplica ni actualiza filas; duplicados/conflictos abortan la transacción. No contiene Dependencias institucionales: sus valores deben ser autorizados por los responsables. No se renombran grupos ni se inventan puntos.
 
 ## 7. Directorios y arranque
 

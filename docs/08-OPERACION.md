@@ -92,21 +92,21 @@ No usar `git reset --hard` como procedimiento rutinario ni aplicar SQL históric
 
 ## Recuperación administrativa de contraseña
 
-No existe flujo de recuperación en UI/API. Un responsable con autorización de base puede generar bcrypt y actualizar solo la cuenta indicada. Para el esquema de referencia, abrir `psql -X -n -h localhost -U postgres -d ecoamigos` en una terminal privada, sin historial de psql:
+No existe flujo de recuperación en UI/API. Un responsable con autorización de base puede generar bcrypt y actualizar solo la cuenta indicada. Para el esquema oficial, abrir `psql -X -n -h localhost -U postgres -d ecoamigos` en una terminal privada, sin historial de psql:
 
 ```sql
 BEGIN;
 WITH nuevo AS (
   SELECT crypt('REEMPLAZAR_CLAVE_UNICA', gen_salt('bf', 10)) AS h
 )
-UPDATE users SET password_hash = nuevo.h, password = nuevo.h
+UPDATE users SET password_hash = nuevo.h
 FROM nuevo WHERE email = 'REEMPLAZAR_CORREO'
 RETURNING id, email;
 -- Confirmar que el resultado corresponde exactamente a la cuenta prevista.
 COMMIT;
 ```
 
-Si el resultado no es el esperado, usar ROLLBACK en lugar de COMMIT. En una base existente verificar primero si tiene ambas columnas y pgcrypto. No modificar role/is_active sin una solicitud específica. Cambiar contraseña no revoca JWT emitidos; rotar JWT_SECRET invalida todas las sesiones y exige coordinación.
+Si el resultado no es el esperado, usar ROLLBACK en lugar de COMMIT. En una base existente verificar primero que dispone de password_hash y pgcrypto; no usar ni escribir password. No modificar role/is_active sin una solicitud específica. Cambiar contraseña no revoca JWT emitidos; rotar JWT_SECRET invalida todas las sesiones y exige coordinación.
 
 ## Problemas frecuentes
 
@@ -118,8 +118,8 @@ Si el resultado no es el esperado, usar ROLLBACK en lugar de COMMIT. En una base
 | ECONNREFUSED PostgreSQL | Servicio, DB_HOST, firewall y puerto fijo 5432 |
 | Authentication failed / database does not exist | DB_USER/DB_PASSWORD/DB_NAME y existencia de base |
 | Columna/relación no existe | Incompatibilidad de esquemas; comparar diccionario, no improvisar otro seed |
-| No inicia admin del seed | Hash no coincide; usar primer administrador de instalación |
-| Alta de usuario falla en password | Esquema backend histórico no tiene columna usada por createUser |
+| No hay admin tras seed | El seed no crea cuentas; seguir bootstrap con datos explícitos del responsable |
+| Alta falla por password NOT NULL heredada | El código solo escribe password_hash; la base antigua requiere migración autorizada |
 | Contenido falla por category/type | Esquema histórico carece de category y admite tipos distintos |
 | `ENOENT uploads/content` | Crear carpeta y arrancar desde backend |
 | Imagen 404 | Revisar archivo físico, getBackendUrl y VITE_API_URL terminada en /api |
