@@ -29,7 +29,11 @@ CORREGIDO se refiere al código y la instalación nueva probados, no a una base 
 
 Premios y ganadores están fuera del alcance actual del producto. Se retiraron sus páginas, rutas, enlaces, llamadas, controladores y endpoints, y `GET /public/ranking` volvió a limitarse a `currentPeriod` y `ranking`. No se modificó el cálculo de posiciones o puntos. Las tablas `prizes`, `winner_records` y `rewards` permanecen deliberadamente como legado; no se ejecutó SQL destructivo ni se modificaron datos.
 
-F04–F20, S01–S12 y T01–T28 permanecen sin resolver por alcance. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
+F05–F20, S01–S12 y T01–T28 permanecen sin resolver por alcance. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
+
+## Fuente única de puntuación — F04
+
+La utilidad `calculatePoints.js` era código muerto: ninguna ruta o controlador la importaba y aplicaba una fórmula distinta al flujo vigente. Se eliminó sin integrarla. La fuente actual continúa siendo `points_catalog.points`, consultada durante la aprobación y almacenada en `recycling_records.points_awarded`; el ranking continúa sumando ese campo para registros aprobados del periodo activo.
 
 ## Hallazgos funcionales y técnicos
 
@@ -38,7 +42,7 @@ F04–F20, S01–S12 y T01–T28 permanecen sin resolver por alcance. Las mencio
 | F01 | WinnersPage espera id/final_score/prize_name; API entrega otros campos | **CORREGIDO mediante retiro controlado**: WinnersPage, su ruta, imports y enlaces fueron eliminados |
 | F02 | winners agrega todos los equipos aprobados, no solo ganadores | **CORREGIDO mediante retiro controlado**: la agregación `winners` fue eliminada; ranking conserva únicamente el periodo activo y sus posiciones |
 | F03 | Premios públicos incluyen is_active false | **CORREGIDO mediante retiro controlado**: premios ya no se consultan ni exponen en API o frontend; tablas históricas conservadas |
-| F04 | Fórmula calculatePoints sin uso | Evitar documentación/reglas contradictorias; retirar o integrar de forma deliberada |
+| F04 | Fórmula calculatePoints sin uso | **CORREGIDO**: utilidad obsoleta eliminada; documentada y probada `points_catalog.points` como única fuente vigente |
 | F05 | Grupo/acción/nivel recibidos del cliente | Backend no garantiza relación con material/cantidad |
 | F06 | Frecuencia, rachas y evidencia del catálogo no se validan | No presentar esas reglas como automatizadas |
 | F07 | Orgánico siempre refiere a 5 kg; decimales entre límites | Alinear referencias con condiciones verificadas |

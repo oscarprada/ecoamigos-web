@@ -54,15 +54,9 @@ La interfaz admite decimales: 5.1 corresponde al segundo nivel aunque el texto d
 
 El CSV distribuido no incluye ese grupo. Se necesitan valores institucionales aprobados y coherencia de catálogo antes de validar puntajes reales. `evidence_required` y `max_frequency` se exponen como información, sin cumplimiento automático de evidencia, frecuencia o rachas. Modificar catálogo no recalcula registros ya aprobados salvo nueva revisión manual por API.
 
-## Fórmula histórica no utilizada
+## Fuente única de puntos
 
-`calculatePoints.js` sigue exportando calculatePoints y getPointsRules, pero no hay import activo desde los controladores. Conserva:
-
-```text
-points = max(round(base × cantidad × multiplicador + min(criterios, 5) × 2), 0)
-```
-
-Bases: papel_carton 8, plastico 10, vidrio 9, metal 12, organico 6; desconocido 5. Calidad alta 1.4, media 1, baja 0.5; desconocida 1. Cantidad/criterios no numéricos pasan a 0. No presentar esta fórmula como la regla productiva actual.
+F04 retiró la utilidad obsoleta `calculatePoints.js`, que no tenía imports ni participaba en rutas. La única fuente ejecutable es `points_catalog.points`: `reviewRecord` la consulta al aprobar y guarda el resultado en `recycling_records.points_awarded`. El registro nace con cero, el rechazo asigna cero y el ranking suma `points_awarded` de aprobados del periodo activo. `quality_level` y `criteria_count` se conservan como información del registro, pero no intervienen en este cálculo.
 
 ## Ranking y periodos
 

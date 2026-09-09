@@ -31,7 +31,7 @@ Frontend y backend son aplicaciones independientes. El `package.json` raíz **no
 ## Antes de instalar
 
 - El esquema oficial único es [database/schema.sql](database/schema.sql), para bases nuevas. Las rutas anteriores remiten a él; una base existente requiere [inspección y migración manual](database/README.md).
-- La puntuación vigente proviene de `points_catalog` al aprobar. La fórmula antigua de materiales y calidad permanece en una utilidad sin uso en ese flujo.
+- La puntuación vigente proviene exclusivamente de `points_catalog` al aprobar y se almacena en `recycling_records.points_awarded`.
 - El CSV tiene 56 filas y no incluye `Dependencias institucionales`, el grupo que envía el formulario. Importarlo por sí solo no resuelve la puntuación.
 - No hay credenciales ni datos de demostración predeterminados. Crear el primer administrador con datos propios siguiendo [database/README.md](database/README.md).
 
