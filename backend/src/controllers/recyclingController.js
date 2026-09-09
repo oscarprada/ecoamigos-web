@@ -1,5 +1,9 @@
 import { query } from '../config/db.js';
 import { logInfo, logError } from '../utils/logger.js';
+import {
+  CatalogReferenceValidationError,
+  validateCatalogReference,
+} from '../utils/catalogReference.js';
 
 function normalizeValue(value) {
   if (value === undefined || value === null) return null;
@@ -32,6 +36,27 @@ async function getCatalogPoints({
   return Number(result.rows[0]?.points || 0);
 }
 
+async function findCatalogEntry({
+  catalog_group_name,
+  catalog_action_name,
+  catalog_action_level,
+}) {
+  const result = await query(
+    `
+      SELECT group_name, action_name, action_level
+      FROM points_catalog
+      WHERE LOWER(TRIM(group_name)) = LOWER(TRIM($1))
+        AND LOWER(TRIM(action_name)) = LOWER(TRIM($2))
+        AND LOWER(TRIM(COALESCE(action_level, ''))) = LOWER(TRIM(COALESCE($3, '')))
+      ORDER BY id ASC
+      LIMIT 1
+    `,
+    [catalog_group_name, catalog_action_name, catalog_action_level || '']
+  );
+
+  return result.rows[0] || null;
+}
+
 export async function createRecord(req, res) {
   try {
     const {
@@ -49,6 +74,16 @@ export async function createRecord(req, res) {
     } = req.body;
 
     const evidence_url = req.file ? `/uploads/${req.file.filename}` : null;
+    const catalogReference = await validateCatalogReference({
+      materialType: material_type,
+      quantity,
+      receivedReference: {
+        catalog_group_name,
+        catalog_action_name,
+        catalog_action_level,
+      },
+      findCatalogEntry,
+    });
 
     const result = await query(
       `
@@ -87,9 +122,9 @@ export async function createRecord(req, res) {
         evidence_url,
         period_id || null,
         record_date || new Date(),
-        normalizeValue(catalog_group_name),
-        normalizeValue(catalog_action_name),
-        normalizeValue(catalog_action_level),
+        catalogReference.catalog_group_name,
+        catalogReference.catalog_action_name,
+        catalogReference.catalog_action_level,
       ]
     );
 
@@ -101,9 +136,14 @@ export async function createRecord(req, res) {
   } catch (error) {
     logError(`CREATE RECYCLING ERROR user_id=${req.user?.id}: ${error.message}`);
 
+    if (error instanceof CatalogReferenceValidationError) {
+      return res.status(400).json({
+        message: error.message,
+      });
+    }
+
     res.status(500).json({
       message: 'Error al registrar reciclaje',
-      error: error.message,
     });
   }
 }
@@ -267,5 +307,3 @@ export async function listReviewedRecords(_req, res) {
     });
   }
 }
-
-      

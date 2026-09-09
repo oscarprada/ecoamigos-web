@@ -112,9 +112,9 @@ La aplicación actual no consulta ni administra esta tabla. Se mantiene sin camb
 | reviewed_by | INT, nullable | FK users; ON DELETE SET NULL |
 | reviewed_at | TIMESTAMP | Fecha de última revisión; nullable |
 | created_at | TIMESTAMP | NOW() |
-| catalog_group_name | VARCHAR(100) | Texto recibido del formulario; nullable |
-| catalog_action_name | VARCHAR(150) | Texto recibido del formulario; nullable |
-| catalog_action_level | VARCHAR(100) | Texto recibido del formulario; nullable |
+| catalog_group_name | VARCHAR(100) | Identidad canónica validada contra points_catalog al crear; nullable por compatibilidad histórica |
+| catalog_action_name | VARCHAR(150) | Identidad canónica validada contra points_catalog al crear; nullable por compatibilidad histórica |
+| catalog_action_level | VARCHAR(100) | Identidad canónica validada contra points_catalog al crear; nullable por compatibilidad histórica |
 
 ### points_catalog
 
@@ -126,7 +126,7 @@ La aplicación actual no consulta ni administra esta tabla. Se mantiene sin camb
 | action_name | VARCHAR(150) | Obligatorio |
 | action_level | VARCHAR(100) | Nullable; null equivale a texto vacío en búsqueda |
 | points | INT | Por defecto 0; API devuelve número |
-| evidence_required | TEXT | Instrucciones originales del CSV; no se convierten a booleano |
+| evidence_required | TEXT | Instrucciones originales del CSV; no se convierten a booleano ni se validan automáticamente |
 | max_frequency | VARCHAR(50) | Texto informativo; no hay contador ni restricción automática |
 
 El CSV contiene 56 filas distribuidas en `Hogares`, `Inst. Educativas`, `Comunitario`, `Senderos PNN`. No incluye `Dependencias institucionales`. No convertir arbitrariamente grupos ni asumir que sus puntos son institucionales.

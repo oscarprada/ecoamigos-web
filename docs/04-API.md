@@ -111,6 +111,8 @@ Todas las consultas usan todos los estados y periodos. Materiales se ordenan por
 
 Array con `id, source_code, group_name, action_name, action_level, points, evidence_required, max_frequency`, ordenado por grupo y acción ASC. No hay agrupación JSON ni filtrado por grupo. `evidence_required` es TEXT en el esquema oficial; verificar compatibilidad antes de migrar una base histórica.
 
+`evidence_required` y `max_frequency` son metadatos descriptivos públicos. La API no los interpreta, no lleva contadores por ventana temporal y no implementa rachas. Su presencia en la respuesta no significa que esas condiciones se validen al registrar o aprobar.
+
 ### GET /public/content/:category
 
 Categorías del frontend: `agua`, `energia`, `papel`, `residuos`. Devuelve `id, title, category, type, description, file_url, created_at`, solo status published, orden descendente de creación. Categorías desconocidas no tienen error de validación específico: habitualmente producen `[]`. No devuelve `youtube_url`.
@@ -131,12 +133,14 @@ Usa multipart. Los roles permitidos incluyen admin, pero un admin sin equipo no 
 | notes | Opcional; trim y vacío a null |
 | period_id | Si no es verdadero, null; no valida que esté activo |
 | record_date | Si falta, fecha actual del servidor |
-| catalog_group_name | Grupo recibido del cliente, normalizado |
-| catalog_action_name | Acción recibida del cliente, normalizada |
-| catalog_action_level | Nivel recibido del cliente, normalizado |
+| catalog_group_name | Grupo enviado por compatibilidad; debe coincidir con la referencia derivada por el backend |
+| catalog_action_name | Acción enviada por compatibilidad; debe coincidir con la referencia derivada por el backend |
+| catalog_action_level | Nivel enviado por compatibilidad; debe coincidir con la referencia derivada por el backend |
 | evidence | Archivo opcional; un único campo con ese nombre |
 
-`user_id` y `team_id` salen del JWT; `status` se fija pending; `points_awarded` se fija 0. Devuelve 201 y la fila completa de recycling_records. No calcula puntos al crear ni exige evidencia aunque el catálogo la describa.
+El backend deriva grupo, acción y nivel desde `material_type` y `quantity` con la misma tabla vigente que usa el formulario. Los tres valores recibidos deben coincidir y la identidad resultante debe existir en `points_catalog`; una discrepancia o configuración ausente devuelve 400 con un mensaje controlado. La fila conserva los textos canónicos recuperados del catálogo, no los textos arbitrarios del cliente.
+
+`user_id` y `team_id` salen del JWT; `status` se fija pending; `points_awarded` se fija 0. Los campos `points` o `points_awarded` enviados adicionalmente no se usan. Devuelve 201 y la fila completa de recycling_records. No calcula puntos al crear ni exige evidencia aunque el catálogo la describa.
 
 Evidencia: hasta 20 MiB (20 × 1024 × 1024 bytes); filtro por expresión regular sobre extensión y MIME para jpeg/jpg/png/webp/mp4/mov/avi. Que una extensión esté mencionada no garantiza aceptación de todos sus MIME reales, especialmente MOV/AVI. Archivo final: `/uploads/<timestamp>-<aleatorio>.<extensión>`.
 

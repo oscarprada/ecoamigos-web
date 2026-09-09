@@ -133,4 +133,4 @@ Si el resultado no es el esperado, usar ROLLBACK en lugar de COMMIT. En una base
 
 ## Seguridad y alcance de acceso
 
-El código parametriza consultas y utiliza hashes y autorización por rol, pero eso no constituye una auditoría de seguridad. Hallazgos concretos: uploads públicos, límite ausente en contenido, token en localStorage, errores internos visibles, autenticación sin rate limit y reglas de catálogo confiadas al cliente. Prioridades detalladas en [calidad](09-CALIDAD-Y-PENDIENTES.md). Definir acceso institucional antes de un despliegue externo.
+El código parametriza consultas y utiliza hashes y autorización por rol, pero eso no constituye una auditoría de seguridad. La creación de reciclaje valida en backend su referencia contra material, cantidad y catálogo. Persisten otros hallazgos concretos: uploads públicos, límite ausente en contenido, token en localStorage, errores internos visibles en otros endpoints y autenticación sin rate limit. Prioridades detalladas en [calidad](09-CALIDAD-Y-PENDIENTES.md). Definir acceso institucional antes de un despliegue externo.

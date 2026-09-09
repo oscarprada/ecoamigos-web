@@ -29,11 +29,29 @@ CORREGIDO se refiere al código y la instalación nueva probados, no a una base 
 
 Premios y ganadores están fuera del alcance actual del producto. Se retiraron sus páginas, rutas, enlaces, llamadas, controladores y endpoints, y `GET /public/ranking` volvió a limitarse a `currentPeriod` y `ranking`. No se modificó el cálculo de posiciones o puntos. Las tablas `prizes`, `winner_records` y `rewards` permanecen deliberadamente como legado; no se ejecutó SQL destructivo ni se modificaron datos.
 
-F05–F20, S01–S12 y T01–T28 permanecen sin resolver por alcance. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
+F08–F20, S01–S12 y T01–T28 permanecen sin resolver por alcance. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
 
 ## Fuente única de puntuación — F04
 
 La utilidad `calculatePoints.js` era código muerto: ninguna ruta o controlador la importaba y aplicaba una fórmula distinta al flujo vigente. Se eliminó sin integrarla. La fuente actual continúa siendo `points_catalog.points`, consultada durante la aprobación y almacenada en `recycling_records.points_awarded`; el ranking continúa sumando ese campo para registros aprobados del periodo activo.
+
+## Autoridad de referencias de catálogo — F05
+
+El formulario conserva los tres campos `catalog_*` para compatibilidad, pero dejaron de ser autoridad. Al crear un registro, el backend deriva la referencia vigente a partir de `material_type` y `quantity`, comprueba que los tres valores enviados coincidan y exige que la identidad exista en `points_catalog`. Una combinación manipulada, incoherente o no configurada devuelve 400; el INSERT utiliza los textos canónicos leídos del catálogo y fija `points_awarded` en cero.
+
+La aprobación no cambió: `reviewRecord` obtiene `points_catalog.points`, el rechazo asigna cero y el ranking suma `points_awarded` de aprobados. No se aceptan `points` ni `points_awarded` del cliente. La protección contra referencias manipuladas está implementada, pero F05 queda **PARCIAL** porque la identidad orgánica ofrecida por la interfaz no existe en el catálogo y ahora se rechaza de forma segura. Cerrar el flujo sin regresión requiere definición funcional y valores institucionales autorizados.
+
+## Metadatos descriptivos del catálogo — F06
+
+Las 56 filas contienen `evidence_required` no vacío, con 53 instrucciones distintas que pueden exigir fotos, videos, enlaces, GPS, documentos o validaciones de sistema/historial. `max_frequency` contiene diez expresiones textuales: `Ilimitado`, `Mensual`, `Semanal`, `Trimestral`, `Semestral`, `Única vez`, `1 por visita`, `2 al mes`, `2 por semana` y `3 por semana`. No se definen ventanas, sujeto del conteo, visitas ni procedimiento de comprobación. No existe lógica ejecutable de rachas.
+
+No se implementó una interpretación incompleta. API, reglas y manual dejan explícito que evidencia de catálogo, frecuencia y rachas son metadatos informativos y no participan en creación, revisión, aprobación o puntos. Bajo el alcance original —no presentarlas como automatizadas— F06 queda **CORREGIDO**; automatizarlas sería una regla institucional futura, no una corrección deducible.
+
+## Rangos y referencia orgánica — F07
+
+Frontend y backend conservan los límites heredados `q <= 5`, `5 < q <= 15`, `15 < q <= 30` y `q > 30`. El catálogo solo aporta etiquetas descriptivas: no determina cómo tratar 5.1–5.9 ni 15.1–15.9, aunque `step="0.1"` los permite. Tampoco aclara si los 5 kg orgánicos son valor exacto, mínimo, bloque, frecuencia o descripción. La fila semejante de `Hogares` no autoriza su uso para `Dependencias institucionales`.
+
+Se documentaron y probaron estos hechos sin cambiar límites, redondear, reutilizar 40 puntos ni crear catálogo. F07 queda **PARCIAL**: la caracterización técnica está cerrada, pero requiere definición institucional de decimales y orgánico. Con F05 activo, orgánico continúa rechazado cuando su identidad no existe.
 
 ## Hallazgos funcionales y técnicos
 
@@ -43,9 +61,9 @@ La utilidad `calculatePoints.js` era código muerto: ninguna ruta o controlador 
 | F02 | winners agrega todos los equipos aprobados, no solo ganadores | **CORREGIDO mediante retiro controlado**: la agregación `winners` fue eliminada; ranking conserva únicamente el periodo activo y sus posiciones |
 | F03 | Premios públicos incluyen is_active false | **CORREGIDO mediante retiro controlado**: premios ya no se consultan ni exponen en API o frontend; tablas históricas conservadas |
 | F04 | Fórmula calculatePoints sin uso | **CORREGIDO**: utilidad obsoleta eliminada; documentada y probada `points_catalog.points` como única fuente vigente |
-| F05 | Grupo/acción/nivel recibidos del cliente | Backend no garantiza relación con material/cantidad |
-| F06 | Frecuencia, rachas y evidencia del catálogo no se validan | No presentar esas reglas como automatizadas |
-| F07 | Orgánico siempre refiere a 5 kg; decimales entre límites | Alinear referencias con condiciones verificadas |
+| F05 | Grupo/acción/nivel recibidos del cliente | **PARCIAL**: referencias manipuladas se rechazan, pero orgánico perdió el flujo anterior porque su identidad institucional no existe; cierre depende de D06/F07 |
+| F06 | Frecuencia, rachas y evidencia del catálogo no se validan | **CORREGIDO en contrato/documentación**: se demostró que son textos informativos ambiguos y que no existe automatización; no se inventaron bloqueos |
+| F07 | Orgánico siempre refiere a 5 kg; decimales entre límites | **PARCIAL**: límites heredados conservados y discrepancias documentadas/probadas; faltan definiciones institucionales para decimales y orgánico |
 | F08 | Revisión se puede repetir sin restricción y sin transacción | Última escritura reemplaza anteriores; falta auditoría/concurrencia |
 | F09 | Crear periodo activo usa UPDATE e INSERT separados | Fallos/races pueden dejar cero o varios activos |
 | F10 | Fechas/periodo activo no se validan al crear registro | API acepta escenarios bloqueados o no previstos en UI |
@@ -98,7 +116,7 @@ Usar base aislada, dos roles y datos ficticios. Registrar resultado, fecha, ento
 | T11 Registro | Material válido con evidencia PNG pequeña | 201 pending, puntos 0, archivo accesible |
 | T12 Validación | Cantidad cero, tipo inválido, archivo >20 MiB | Registrar rechazo y formato real del error; no asumir 400 uniforme |
 | T13 Catálogo | Crear referencias de prueba aprobadas para cinco niveles | Cada nivel asigna exactamente sus puntos configurados |
-| T14 Sin coincidencia | Registro con grupo inexistente y aprobación | Approved con 0 según implementación actual |
+| T14 Sin coincidencia | Intentar crear registro con grupo inexistente | 400 controlado; no se crea ni llega a aprobación |
 | T15 Límites | Cantidades 5, 5.1, 15, 15.1, 30, 30.1 y orgánico | Referencias según tabla de reglas |
 | T16 Rechazo | Revisar pending como rejected | 0 puntos, revisor, fecha y notas |
 | T17 Revisión repetida | API vuelve a revisar un aprobado | Reemplaza revisión; no hay historial inmutable |

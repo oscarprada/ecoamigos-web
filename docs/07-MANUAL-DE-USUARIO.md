@@ -53,7 +53,9 @@ El panel muestra nombre, equipo asignado, puntos, posición y conteos personales
 8. Enviar y esperar el aviso de confirmación.
 9. Consultar el historial para comprobar que figura como pendiente.
 
-La evidencia es opcional en la aplicación, aunque una política de campaña podría requerirla. El límite técnico de evidencia es 20 MiB. Si un video falla, probar un formato admitido por extensión y MIME o solicitar revisión técnica. No enviar repetidamente sin consultar historial: no hay deduplicación automática.
+La evidencia es opcional en la aplicación, aunque una política de campaña podría requerirla. Las descripciones de evidencia, frecuencia y racha del catálogo no son controles automáticos: el sistema no comprueba su contenido, no limita repeticiones y no calcula rachas. El límite técnico de evidencia es 20 MiB. Si un video falla, probar un formato admitido por extensión y MIME o solicitar revisión técnica. No enviar repetidamente sin consultar historial: no hay deduplicación automática.
+
+Los niveles actuales conservan límites técnicos `<= 5`, `> 5 y <= 15`, `> 15 y <= 30`, y `> 30`. Como la interfaz permite décimas, 5.1–5.9 y 15.1–15.9 no coinciden literalmente con los textos “6 a 15” y “16 a 30”. No redondear ni asumir una interpretación distinta sin indicación institucional. Orgánico requiere una definición y referencia institucional autorizadas; mientras falten, su registro puede ser rechazado como catálogo no configurado.
 
 Los puntos se asignan al aprobar. Calidad y criterios quedan registrados, pero no agregan puntos por sí solos en el cálculo actual. Si un aprobado queda con cero, pedir revisar la coincidencia con el catálogo institucional.
 

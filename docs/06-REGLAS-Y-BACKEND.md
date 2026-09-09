@@ -26,7 +26,7 @@ stateDiagram-v2
   rejected --> approved: API permite reemplazar revisión
 ```
 
-La UI muestra acciones solo en pendientes; la API acepta revisiones posteriores. Guarda únicamente la última revisión. Normaliza ciertos textos con trim y convierte vacíos a null; no verifica toda la coherencia entre material, cantidad, catálogo, fecha y periodo.
+La UI muestra acciones solo en pendientes; la API acepta revisiones posteriores. Guarda únicamente la última revisión. Al crear sí verifica la relación vigente entre material, cantidad y catálogo; todavía no comprueba toda la coherencia de fecha y periodo.
 
 ## Puntuación vigente
 
@@ -38,7 +38,7 @@ LOWER(TRIM(action_name)) = acción del registro normalizada
 LOWER(TRIM(COALESCE(action_level, ''))) = nivel normalizado o vacío
 ```
 
-Se usa la primera fila por id ASC. Sin grupo/acción o sin coincidencia devuelve **0**, sin error. Rechazo siempre devuelve 0. No multiplica por cantidad, calidad ni criterios; la cantidad solo influye en la referencia elegida por el frontend.
+Se usa la primera fila por id ASC. Sin grupo/acción o sin coincidencia devuelve **0**, sin error. Rechazo siempre devuelve 0. No multiplica por cantidad, calidad ni criterios; la cantidad solo influye en la referencia derivada por frontend y backend.
 
 Referencias enviadas por RegisterRecyclingPage, siempre grupo `Dependencias institucionales`:
 
@@ -50,9 +50,23 @@ Referencias enviadas por RegisterRecyclingPage, siempre grupo `Dependencias inst
 | Otros, > 15 y <= 30 | Entrega acopio | Nivel 3: Volumen alto (16 a 30 kg) |
 | Otros, > 30 | Entrega acopio | Nivel 4: Volumen masivo (+30 kg) |
 
-La interfaz admite decimales: 5.1 corresponde al segundo nivel aunque el texto diga 6. Para orgánico no verifica que se hayan producido 5 kg de abono. El backend confía en los tres textos enviados; no reconstruye el nivel a partir de quantity.
+La interfaz admite decimales: 5.1 corresponde al segundo nivel aunque el texto diga 6. Para orgánico no verifica que se hayan producido 5 kg de abono. Al crear, el backend reconstruye esta misma referencia desde `material_type` y `quantity`, exige que los tres textos recibidos coincidan y comprueba que la identidad exista en `points_catalog`. Guarda los textos canónicos del catálogo y rechaza con 400 una referencia manipulada o ausente.
 
-El CSV distribuido no incluye ese grupo. Se necesitan valores institucionales aprobados y coherencia de catálogo antes de validar puntajes reales. `evidence_required` y `max_frequency` se exponen como información, sin cumplimiento automático de evidencia, frecuencia o rachas. Modificar catálogo no recalcula registros ya aprobados salvo nueva revisión manual por API.
+El CSV distribuido no incluye ese grupo. Se necesitan valores institucionales aprobados y coherencia de catálogo antes de validar puntajes reales. En particular, un registro orgánico se rechaza si su identidad vigente no está configurada; la aplicación no inventa la fila ni sus puntos. Modificar catálogo no recalcula registros ya aprobados salvo nueva revisión manual por API.
+
+## Metadatos no automatizados del catálogo
+
+Las 56 filas tienen instrucciones no vacías en `evidence_required`: incluyen una o varias fotos, videos, enlaces, GPS, documentos, autodeclaraciones y validaciones por sistema o historial. Un archivo presente no demuestra por sí solo esas condiciones. La evidencia del formulario sigue siendo opcional y el administrador la revisa manualmente.
+
+`max_frequency` contiene diez textos: `Ilimitado` (38 filas), `Mensual` (5), `Semanal` (3), `Trimestral` (3), `1 por visita` (2), y una fila para cada uno de `2 al mes`, `2 por semana`, `3 por semana`, `Semestral` y `Única vez`. El repositorio no define inicio de ventanas, zona horaria, sujeto del conteo, significado de visita ni tratamiento de revisiones repetidas. Tampoco existe estado o algoritmo de rachas; las palabras “racha” e “historial” son parte descriptiva de algunas filas.
+
+Por tanto, `evidence_required` y `max_frequency` se exponen únicamente como información. No intervienen en creación, revisión, aprobación ni puntuación. Automatizarlos requiere reglas institucionales estructuradas; no se infieren algoritmos desde esos textos.
+
+## Ambigüedades de cantidad y orgánico
+
+Los niveles son textos descriptivos, no columnas numéricas de mínimo/máximo. El comportamiento heredado conserva `q <= 5`, `5 < q <= 15`, `15 < q <= 30` y `q > 30`. Por ello 5.1–5.9 entra al nivel rotulado “6 a 15 kg” y 15.1–15.9 al rotulado “16 a 30 kg”. El `step="0.1"` permite precisamente esos valores. No hay evidencia para redondear, prohibir decimales o cambiar los límites.
+
+Para orgánico, “5 kg de abono generado en compostera” no especifica si se trata de cantidad exacta, umbral mínimo, bloque acumulable, frecuencia o simple descripción. La única fila similar pertenece a `Hogares`, no a `Dependencias institucionales`, por lo que sus 40 puntos no se reutilizan. Hasta recibir definición y catálogo institucional autorizados, la referencia orgánica no puede crearse con la protección F05 activa.
 
 ## Fuente única de puntos
 
