@@ -29,7 +29,7 @@ CORREGIDO se refiere al código y la instalación nueva probados, no a una base 
 
 Premios y ganadores están fuera del alcance actual del producto. Se retiraron sus páginas, rutas, enlaces, llamadas, controladores y endpoints, y `GET /public/ranking` volvió a limitarse a `currentPeriod` y `ranking`. No se modificó el cálculo de posiciones o puntos. Las tablas `prizes`, `winner_records` y `rewards` permanecen deliberadamente como legado; no se ejecutó SQL destructivo ni se modificaron datos.
 
-F08–F20, S01–S12 y T01–T28 permanecen sin resolver por alcance. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
+F09–F20, S01–S12 y T01–T28 permanecen sin resolver por alcance. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
 
 ## Fuente única de puntuación — F04
 
@@ -53,6 +53,20 @@ Frontend y backend conservan los límites heredados `q <= 5`, `5 < q <= 15`, `15
 
 Se documentaron y probaron estos hechos sin cambiar límites, redondear, reutilizar 40 puntos ni crear catálogo. F07 queda **PARCIAL**: la caracterización técnica está cerrada, pero requiere definición institucional de decimales y orgánico. Con F05 activo, orgánico continúa rechazado cuando su identidad no existe.
 
+## Revisión administrativa atómica — F08
+
+Auditoría previa: `AdminReviewsPage` envía PATCH `/api/recycling/:id/review`; `recyclingRoutes` aplica `authenticateToken` (firma y expiración JWT) y `authorizeRoles('admin')` antes de `reviewRecord`. La UI solo ofrece decisiones sobre pendientes, pero el controlador permitía todas las combinaciones entre pending, approved y rejected: SELECT sin bloqueo, consulta de catálogo al aprobar y UPDATE independiente. Aprobar repetidamente recalculaba puntos; aprobar/rechazar invertía decisiones y sustituía administrador, fecha y notas. Dos solicitudes podían completar con última escritura ganadora. `getCatalogPoints` y UPDATE no compartían transacción.
+
+Ahora una conexión obtenida con `pool.connect()` ejecuta BEGIN, SELECT por ID FOR UPDATE, comprobación de pending, lectura del catálogo al aprobar, UPDATE y COMMIT antes de responder. El bloqueo se mantiene hasta terminar la transacción: otra revisión espera y comprueba el estado ya confirmado, devolviendo 409. Inexistente devuelve 404; decisión distinta de approved/rejected, 400; fallo interno, 500 sin detalles SQL. Los caminos de abandono transaccional ejecutan ROLLBACK; la conexión se libera en finally y se descarta si falla el rollback.
+
+Auditoría disponible: el esquema oficial y la migración D01 contienen `status`, `reviewed_by`, `reviewed_at`, `review_notes` y `points_awarded`; no existe `rejection_reason` separado ni tabla de historial de revisiones. `review_notes` conserva el comentario o motivo, `reviewed_by` procede del JWT y `reviewed_at` de NOW(). La prueba D01 verifica la equivalencia de columnas y restricciones de una instalación migrada temporal frente al esquema oficial. No se inspeccionó ni modificó la base real durante F08. Solo se conserva una decisión por registro; los logs de archivos no son auditoría inmutable y la FK permite perder reviewed_by si se elimina al usuario. No se reconstruyen decisiones históricas sobrescritas ni se crea una tabla nueva.
+
+Puntuación y compatibilidad: creación continúa pending con cero; aprobación conserva la consulta y normalización existentes de `points_catalog.points` (incluido el retorno cero heredado si falta referencia); rechazo fija cero. Se ignoran points/points_awarded del cliente. No se modificaron catálogo, ranking, publicController, frontend ni F05–F07. El frontend ya muestra el mensaje de error recibido para un conflicto 409.
+
+Validación: `node --test backend/tests/*.test.js` con `ECOAMIGOS_TEST_PG_BIN` apuntando a PostgreSQL 18 aprobó 45 pruebas, sin fallos ni omisiones, incluidas F01–F07, instalación y migración temporales. F08 aporta 12 subpruebas (13 contando el contenedor): transiciones, auditoría persistida, entradas manipuladas, 400/404/409/500 y error de trigger diferido después de UPDATE que revierte la decisión completa al fallar COMMIT. En cuatro combinaciones concurrentes se observó `wait_event_type='Lock'` en PostgreSQL: una respuesta 200 y otra 409, conservando exactamente la fila de la primera revisión. Las 56 filas del catálogo temporal se compararon antes/después sin diferencias. Clústeres temporales detenidos; ninguna conexión a ecoamigos.
+
+También pasaron sintaxis de los 24 archivos JavaScript del backend, build frontend (solo avisos de deprecación de Vite) y git diff --check. El test de instalación solo se adaptó para excluir BEGIN/COMMIT/ROLLBACK de PREPARE, que admite consultas preparables y no órdenes de transacción. Sin commit ni push. F09–F20 fuera de alcance.
+
 ## Hallazgos funcionales y técnicos
 
 | ID | Hallazgo | Consecuencia / prioridad de revisión |
@@ -64,7 +78,7 @@ Se documentaron y probaron estos hechos sin cambiar límites, redondear, reutili
 | F05 | Grupo/acción/nivel recibidos del cliente | **PARCIAL**: referencias manipuladas se rechazan, pero orgánico perdió el flujo anterior porque su identidad institucional no existe; cierre depende de D06/F07 |
 | F06 | Frecuencia, rachas y evidencia del catálogo no se validan | **CORREGIDO en contrato/documentación**: se demostró que son textos informativos ambiguos y que no existe automatización; no se inventaron bloqueos |
 | F07 | Orgánico siempre refiere a 5 kg; decimales entre límites | **PARCIAL**: límites heredados conservados y discrepancias documentadas/probadas; faltan definiciones institucionales para decimales y orgánico |
-| F08 | Revisión se puede repetir sin restricción y sin transacción | Última escritura reemplaza anteriores; falta auditoría/concurrencia |
+| F08 | Revisión se puede repetir sin restricción y sin transacción | **CORREGIDO**: solo pending, transacción en una conexión, SELECT FOR UPDATE, COMMIT/ROLLBACK y auditoría existente; concurrencia comprobada en PostgreSQL aislado |
 | F09 | Crear periodo activo usa UPDATE e INSERT separados | Fallos/races pueden dejar cero o varios activos |
 | F10 | Fechas/periodo activo no se validan al crear registro | API acepta escenarios bloqueados o no previstos en UI |
 | F11 | Admin puede registrar, pero normalmente no tiene equipo | Puede fallar team_id NOT NULL |

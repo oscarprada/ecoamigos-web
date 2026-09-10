@@ -21,12 +21,9 @@ stateDiagram-v2
   [*] --> pending: Crear, puntos 0
   pending --> approved: Admin aprueba, consulta catálogo
   pending --> rejected: Admin rechaza, puntos 0
-  approved --> approved: API permite volver a revisar
-  approved --> rejected: API permite reemplazar revisión
-  rejected --> approved: API permite reemplazar revisión
 ```
 
-La UI muestra acciones solo en pendientes; la API acepta revisiones posteriores. Guarda únicamente la última revisión. Al crear sí verifica la relación vigente entre material, cantidad y catálogo; todavía no comprueba toda la coherencia de fecha y periodo.
+La UI muestra acciones solo en pendientes; la API exige pending bajo bloqueo de fila dentro de una transacción PostgreSQL. Las revisiones posteriores devuelven 409. Guarda una decisión con reviewed_by, reviewed_at y review_notes; no hay historial inmutable. Al crear sí verifica la relación vigente entre material, cantidad y catálogo; todavía no comprueba toda la coherencia de fecha y periodo.
 
 ## Puntuación vigente
 
@@ -52,7 +49,7 @@ Referencias enviadas por RegisterRecyclingPage, siempre grupo `Dependencias inst
 
 La interfaz admite decimales: 5.1 corresponde al segundo nivel aunque el texto diga 6. Para orgánico no verifica que se hayan producido 5 kg de abono. Al crear, el backend reconstruye esta misma referencia desde `material_type` y `quantity`, exige que los tres textos recibidos coincidan y comprueba que la identidad exista en `points_catalog`. Guarda los textos canónicos del catálogo y rechaza con 400 una referencia manipulada o ausente.
 
-El CSV distribuido no incluye ese grupo. Se necesitan valores institucionales aprobados y coherencia de catálogo antes de validar puntajes reales. En particular, un registro orgánico se rechaza si su identidad vigente no está configurada; la aplicación no inventa la fila ni sus puntos. Modificar catálogo no recalcula registros ya aprobados salvo nueva revisión manual por API.
+El CSV distribuido no incluye ese grupo. Se necesitan valores institucionales aprobados y coherencia de catálogo antes de validar puntajes reales. En particular, un registro orgánico se rechaza si su identidad vigente no está configurada; la aplicación no inventa la fila ni sus puntos. Modificar catálogo no recalcula registros ya aprobados; F08 impide repetir su revisión por API.
 
 ## Metadatos no automatizados del catálogo
 

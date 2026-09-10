@@ -1,4 +1,4 @@
-import { query } from '../config/db.js';
+import { query, pool } from '../config/db.js';
 import { logInfo, logError } from '../utils/logger.js';
 import {
   CatalogReferenceValidationError,
@@ -11,7 +11,7 @@ function normalizeValue(value) {
   return trimmed.length ? trimmed : null;
 }
 
-async function getCatalogPoints({
+async function getCatalogPoints(client, {
   catalog_group_name,
   catalog_action_name,
   catalog_action_level,
@@ -20,7 +20,7 @@ async function getCatalogPoints({
     return 0;
   }
 
-  const result = await query(
+  const result = await client.query(
     `
       SELECT points
       FROM points_catalog
@@ -204,6 +204,9 @@ export async function listPendingRecords(_req, res) {
 }
 
 export async function reviewRecord(req, res) {
+  let client;
+  let transactionOpen = false;
+  let releaseError;
   try {
     const { id } = req.params;
     const { status, review_notes } = req.body;
@@ -218,12 +221,17 @@ export async function reviewRecord(req, res) {
       });
     }
 
-    const current = await query(
-      `SELECT * FROM recycling_records WHERE id = $1`,
+    client = await pool.connect();
+    await client.query('BEGIN');
+    transactionOpen = true;
+    const current = await client.query(
+      `SELECT * FROM recycling_records WHERE id = $1 FOR UPDATE`,
       [id]
     );
 
     if (!current.rows[0]) {
+      await client.query('ROLLBACK');
+      transactionOpen = false;
       logInfo(
         `Intento de validar registro inexistente: record_id=${id} | admin_id=${req.user.id}`
       );
@@ -234,18 +242,23 @@ export async function reviewRecord(req, res) {
     }
 
     const record = current.rows[0];
+    if (record.status !== 'pending') {
+      await client.query('ROLLBACK');
+      transactionOpen = false;
+      return res.status(409).json({ message: 'El registro ya fue revisado' });
+    }
 
     let points = 0;
 
     if (status === 'approved') {
-      points = await getCatalogPoints({
+      points = await getCatalogPoints(client, {
         catalog_group_name: record.catalog_group_name,
         catalog_action_name: record.catalog_action_name,
         catalog_action_level: record.catalog_action_level,
       });
     }
 
-    const result = await query(
+    const result = await client.query(
       `
         UPDATE recycling_records
         SET
@@ -260,20 +273,30 @@ export async function reviewRecord(req, res) {
       [status, normalizeValue(review_notes), req.user.id, points, id]
     );
 
-    logInfo(
+    await client.query('COMMIT');
+    transactionOpen = false;
+    try { logInfo(
       `Registro validado: record_id=${id} | status=${status} | points=${points} | admin_id=${req.user.id}`
-    );
+    ); } catch { /* La decision confirmada no depende del archivo de log. */ }
 
     res.json(result.rows[0]);
   } catch (error) {
-    logError(
+    if (transactionOpen) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackError) {
+        releaseError = rollbackError;
+      }
+    }
+    try { logError(
       `REVIEW RECORD ERROR record_id=${req.params?.id} admin_id=${req.user?.id}: ${error.message}`
-    );
+    ); } catch { /* Mantener la respuesta controlada aunque falle el log. */ }
 
     res.status(500).json({
       message: 'Error al validar registro',
-      error: error.message,
     });
+  } finally {
+    if (client) client.release(releaseError);
   }
 }
 

@@ -164,7 +164,7 @@ Filtra approved/rejected. Fila del registro más `leader_name, team_name, period
 
 `status` solo admite approved o rejected; otro valor causa 400. ID inexistente: 404. `review_notes` opcional se normaliza a null si vacío. Aprobación consulta catálogo; rechazo fija puntos 0. Guarda reviewed_by desde JWT y reviewed_at NOW(). Devuelve fila completa.
 
-No exige que el estado anterior sea pending. Una nueva llamada puede reemplazar la revisión y recalcular puntos con el catálogo actual. No se conserva una tabla de revisiones anteriores.
+Solo admite pending → approved/rejected. Una segunda revisión devuelve 409 con `message: "El registro ya fue revisado"`, sin sobrescribir decisión, puntos ni auditoría. Usa BEGIN, SELECT FOR UPDATE, consulta de catálogo y UPDATE en la misma conexión, y COMMIT; ante fallo, ROLLBACK. Error interno: 500 con mensaje genérico, sin SQL ni detalles PostgreSQL. No se conserva una tabla de revisiones anteriores.
 
 ## Administración
 
