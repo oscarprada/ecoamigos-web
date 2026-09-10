@@ -43,6 +43,8 @@ export default function App() {
             {/* Líder */}
             <Route element={<ProtectedRoute roles={['leader', 'admin']} />}>
               <Route path="/leader" element={<LeaderDashboard />} />
+            </Route>
+            <Route element={<ProtectedRoute roles={['leader']} />}>
               <Route
                 path="/leader/register"
                 element={<RegisterRecyclingPage />}

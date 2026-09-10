@@ -33,7 +33,7 @@ No hay contrato uniforme para errores de Multer, JSON inválido o rutas desconoc
 | GET | `/public/stats` | Público | general, status, materials, teams, periods, indicators |
 | GET | `/public/points-catalog` | Público | Catálogo completo |
 | GET | `/public/content/:category` | Público | Contenido publicado |
-| POST | `/recycling` | leader, admin | Registro creado |
+| POST | `/recycling` | leader | Registro creado; requiere equipo válido en JWT |
 | GET | `/recycling/mine` | leader, admin | Historial del usuario |
 | GET | `/recycling/pending` | admin | Registros pendientes |
 | GET | `/recycling/reviewed` | admin | Registros revisados |
@@ -121,7 +121,9 @@ Categorías del frontend: `agua`, `energia`, `papel`, `residuos`. Devuelve `id, 
 
 ### POST /recycling
 
-Usa multipart. Los roles permitidos incluyen admin, pero un admin sin equipo no satisface `team_id NOT NULL` del esquema backend.
+Usa multipart. Solo role=leader puede crear: admin y cualquier otro rol (incluido supervisor, que no existe en el esquema oficial) reciben 403 antes de procesar archivos. El formulario /leader/register también está restringido a líderes.
+
+El equipo procede exclusivamente de team_id del JWT firmado al iniciar sesión. Debe ser un entero positivo válido para PostgreSQL y existir en teams. Ausente, inválido o inexistente devuelve 403 con mensaje controlado; no se asigna uno automáticamente ni se usa team_id del body como sustituto. La existencia se comprueba con SELECT FOR KEY SHARE dentro de la transacción F10, impidiendo eliminar el equipo antes del INSERT. NOT NULL y FK de recycling_records.team_id son defensa adicional. Se conserva la semántica de identidad del JWT; auth/me refresca la interfaz pero no reescribe el token, y la revocación/actualización de identidad sigue fuera de F11.
 
 | Campo | Uso / normalización |
 | --- | --- |

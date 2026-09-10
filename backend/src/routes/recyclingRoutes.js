@@ -21,7 +21,7 @@ router.use(authenticateToken);
 
 router.post(
   '/',
-  authorizeRoles('leader', 'admin'),
+  authorizeRoles('leader'),
   upload.single('evidence'),
   createRecord
 );

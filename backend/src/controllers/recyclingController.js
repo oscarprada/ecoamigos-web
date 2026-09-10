@@ -63,6 +63,10 @@ export async function createRecord(req, res) {
   let transactionOpen = false;
   let releaseError;
   try {
+    const teamId = req.user?.team_id;
+    if (!Number.isInteger(teamId) || teamId <= 0 || teamId > 2147483647) {
+      return res.status(403).json({ message: 'Necesitas un equipo valido asignado para registrar reciclaje' });
+    }
     const {
       material_type,
       quantity,
@@ -124,6 +128,12 @@ export async function createRecord(req, res) {
       return res.status(400).json({ message: !currentPeriod.in_period
         ? 'record_date debe estar dentro del periodo activo (incluidos inicio y fin)'
         : 'record_date no puede ser futura' });
+    }
+    const team = await client.query('SELECT id FROM teams WHERE id = $1 FOR KEY SHARE', [teamId]);
+    if (!team.rows[0]) {
+      await client.query('ROLLBACK');
+      transactionOpen = false;
+      return res.status(403).json({ message: 'El equipo asignado ya no existe; solicita actualizar tu asignacion' });
     }
     const result = await client.query(
       `

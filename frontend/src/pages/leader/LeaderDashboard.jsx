@@ -38,9 +38,9 @@ export default function LeaderDashboard() {
           </p>
         </div>
 
-        <Link to="/leader/register" style={styles.primaryButton}>
+        {user?.role === 'leader' && <Link to="/leader/register" style={styles.primaryButton}>
           Registrar reciclaje
-        </Link>
+        </Link>}
       </section>
 
       <section style={styles.statsGrid}>
@@ -375,4 +375,3 @@ const styles = {
     textDecoration: 'none',
   },
 };
-

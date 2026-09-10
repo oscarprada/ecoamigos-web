@@ -53,6 +53,8 @@ El panel muestra nombre, equipo asignado, puntos, posición y conteos personales
 8. Enviar y esperar el aviso de confirmación.
 9. Consultar el historial para comprobar que figura como pendiente.
 
+Solo el líder puede registrar. El administrador gestiona y revisa, pero no registra en nombre de un equipo; supervisor no es un rol disponible. Si no tienes equipo válido asignado, el servidor rechaza el alta: solicita revisar tu asignación y vuelve a iniciar sesión para obtener la identidad actualizada. No puedes seleccionar otro equipo modificando la solicitud; el equipo procede de tu sesión autenticada.
+
 El servidor exige un período activo. Si cambió mientras completabas el formulario, el envío se rechaza: actualiza la página y comprueba el período antes de reenviar. No puedes asociar un registro a otro período modificando la solicitud.
 
 Indica la fecha en la que realizaste la actividad de reciclaje reportada. Debe ser una fecha real YYYY-MM-DD, dentro del período activo incluyendo inicio y fin, y no posterior al día actual de PostgreSQL. Puedes reportar una actividad anterior si pertenece al activo. Una fecha futura se rechaza aunque esté dentro del período; una fecha de otro período también se rechaza. El formulario sugiere el día local y permite editarlo, pero el servidor valida. Si se deja vacía usa CURRENT_DATE de PostgreSQL y comprueba igualmente el rango.

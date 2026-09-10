@@ -29,7 +29,7 @@ CORREGIDO se refiere al código y la instalación nueva probados, no a una base 
 
 Premios y ganadores están fuera del alcance actual del producto. Se retiraron sus páginas, rutas, enlaces, llamadas, controladores y endpoints, y `GET /public/ranking` volvió a limitarse a `currentPeriod` y `ranking`. No se modificó el cálculo de posiciones o puntos. Las tablas `prizes`, `winner_records` y `rewards` permanecen deliberadamente como legado; no se ejecutó SQL destructivo ni se modificaron datos.
 
-F11–F20, S01–S12 y T01–T28 permanecen sin resolver por alcance. F10 está corregido según la regla autorizada descrita abajo. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
+F12–F20, S01–S12 y T01–T28 permanecen sin resolver por alcance. F10 y F11 están corregidos según lo descrito abajo. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
 
 ## Fuente única de puntuación — F04
 
@@ -101,6 +101,20 @@ Suite completa: **78 pruebas aprobadas, cero fallos/omisiones**, incluidas F01�
 
 F10: **CORREGIDO**. La regla funcional autorizada está implementada y probada desde backend con comparación DATE y CURRENT_DATE de PostgreSQL. Los estados de F05/F06/F07/F08/F09 se conservan.
 
+## Rol y equipo del registro — F11 CORREGIDO
+
+Auditoría: el enum oficial/D01 contiene admin y leader; supervisor no existe como rol (la mención operativa de supervisor de procesos no es un rol de usuario). JWT conserva id/role/team_id al login y el middleware verifica firma/expiración; authorizeRoles controla rutas. Antes, POST /recycling permitía leader/admin. App.jsx permitía ambos en /leader y /leader/register; aunque la navegación admin apunta a /admin y AdminDashboard no ofrece registro, un admin podía abrir /leader directamente y usar el enlace incondicional de LeaderDashboard. ProtectedRoute redirige roles excluidos a /. Navbar solo ofrece panel líder a leader; AppLayout dirige admin a su panel. No hay selector de equipo en RegisterRecyclingPage.
+
+createRecord toma user_id y team_id del JWT, no del body ni de auth/me. auth/me lee la identidad actual para la UI pero no modifica claims del token. Un team_id ausente llegaba al INSERT y fallaba NOT NULL con 500; uno inexistente fallaba por FK. recycling_records.team_id es INT NOT NULL con FK a teams ON DELETE CASCADE; users.team_id es nullable. El alta de usuarios fuerza null para admin; AdminUsersPage deshabilita su selector de equipo, y create_admin.sql no inserta team_id. Los seeds no aportan administradores con equipos; no se consultó la base real ni se afirma el estado de usuarios reales. No hay edición de usuarios ni registro en nombre de otro equipo.
+
+Evidencia funcional: README dice “registro por líderes”; el manual ubica “Registrar reciclaje” bajo Líder y describe administradores sin asignación de equipo; el diagrama de secuencia de arquitectura identifica al Líder como registrador. No se encontró catálogo RF numerado ni requisito funcional que habilite registro administrativo por representación. El permiso ampliado del código y su descripción en API eran la anomalía F11, no una función de selección de equipo. Regla respaldada A: solo líder registra, con equipo válido. No hace falta una decisión funcional adicional.
+
+Corrección: POST exige authorizeRoles('leader') antes de upload, sin cambiar permisos de otros endpoints. Admin y cualquier otro rol, incluido un claim supervisor firmado, reciben 403 incluso si tienen equipo. createRecord valida team_id JWT como entero positivo dentro de INT, devuelve 403 si falta/es inválido, y comprueba existencia con SELECT FOR KEY SHARE dentro de la transacción F10 antes de insertar. Equipo inexistente devuelve 403 y rollback; el bloqueo impide eliminarlo entre comprobación y COMMIT. No se acepta equipo del body, no se asigna ninguno automáticamente y se conservan NOT NULL/FK. La política general de claims JWT y su eventual obsolescencia no cambia en F11.
+
+Frontend: /leader/register solo admite leader; el panel /leader conserva leader/admin y oculta su botón de registro a los demás. Navegación directa no autorizada usa el redirect existente a /. Sin rediseño ni cambios de navegación general F17. F05, validación de período/fecha y bloqueos F10 se conservan; creación sigue pending/0.
+
+Validación: **87 pruebas aprobadas, cero fallos/omisiones**, incluidas 8 subpruebas F11 (9 contando contenedor), F01–F10, instalación, migraciones D01/F09 y concurrencia F08/F09/F10. F11 ejercita POST HTTP local con ruta, JWT, middleware y controlador reales contra PostgreSQL temporal (solo se sustituye almacenamiento de archivos, no hay adjuntos): líder válido, admin/supervisor 403, identidad sin equipo/inválida/inexistente 403, sin token 401, body sin autoridad, F05 y F10 preservados. El acceso/enlace frontend se verifica estáticamente. Las 56 filas originales de catálogo se comparan intactas; la identidad institucional adicional es fixture aislada para F05. Sintaxis de 28 archivos backend, build frontend y git diff --check correctos; build solo avisos de deprecación. Clústeres aislados detenidos. No se modificó ecoamigos real, esquema, puntos ni estados anteriores. Sin commit/push; F12–F20 fuera de alcance.
+
 ## Hallazgos funcionales y técnicos
 
 | ID | Hallazgo | Consecuencia / prioridad de revisión |
@@ -115,7 +129,7 @@ F10: **CORREGIDO**. La regla funcional autorizada está implementada y probada d
 | F08 | Revisión se puede repetir sin restricción y sin transacción | **CORREGIDO**: solo pending, transacción en una conexión, SELECT FOR UPDATE, COMMIT/ROLLBACK y auditoría existente; concurrencia comprobada en PostgreSQL aislado |
 | F09 | Crear periodo activo usa UPDATE e INSERT separados | **CORREGIDO**: transacción, bloqueo de escritores, rollback e índice único parcial; cero activos permitido, schema/D01/migración incremental probados en PostgreSQL aislado |
 | F10 | Fechas/periodo activo no se validan al crear registro | **CORREGIDO**: activo e ID protegidos frente a F09; fecha de actividad válida dentro del rango inclusivo y no posterior a CURRENT_DATE, comprobada por PostgreSQL |
-| F11 | Admin puede registrar, pero normalmente no tiene equipo | Puede fallar team_id NOT NULL |
+| F11 | Admin puede registrar, pero normalmente no tiene equipo | **CORREGIDO**: POST y formulario solo líder; equipo JWT válido y existente comprobado; 403 controlado sin equipo y sin aceptar suplantación por body |
 | F12 | Límite de 15 solo frontend | No se cumple si se usa API directamente |
 | F13 | Estadísticas suman todos los estados/unidades | Indicadores no equivalen a reciclaje aprobado en kg |
 | F14 | Factores ambientales sin fuente trazable en repositorio | Requieren revisión metodológica antes de uso institucional |
