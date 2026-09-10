@@ -61,7 +61,9 @@ La asignación de equipo a usuario es opcional. `points_catalog` no tiene FK con
 | is_active | BOOLEAN | Por defecto false en SQL backend; UI inicia true |
 | created_at | TIMESTAMP | NOW() |
 
-No hay índice único parcial que garantice un solo periodo activo. La creación activa desactiva otros mediante una consulta separada.
+F09 garantiza **máximo un período activo**, permitiendo cero, con `CREATE UNIQUE INDEX periods_one_active_uidx ON public.periods (is_active) WHERE is_active = true`. Protege tanto INSERT como UPDATE, incluso fuera del backend. La creación activa desactiva los anteriores e inserta dentro de una transacción con bloqueo de escritores; los lectores siguen viendo el estado confirmado.
+
+La instalación nueva y la migración D01 actualizada incluyen ese índice. Para una instalación que ya ejecutó D01 antes de F09, se preparó [20260909_f09_periods_one_active.sql](../database/20260909_f09_periods_one_active.sql): aplicar una sola vez con psql y ON_ERROR_STOP, sin volver a ejecutar D01. Bloquea escritores, detecta varios activos y aborta sin elegir ninguno ni cambiar filas. Cero activos es válido. Si el índice ya existe, el script falla de forma segura; no omite silenciosamente un índice homónimo de definición desconocida. No se ejecutó sobre la base real.
 
 ### content_items
 

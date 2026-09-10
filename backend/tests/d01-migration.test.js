@@ -126,7 +126,7 @@ test('D01: migración histórica transaccional y sin pérdida', {
     started = true;
     admin = new pg.Client({ host: '127.0.0.1', port, user: 'postgres', database: 'postgres' });
     await admin.connect();
-    for (const database of ['d01_official', 'd01_detected', 'd01_boolean', 'd01_unsafe']) {
+    for (const database of ['d01_official', 'd01_detected', 'd01_boolean', 'd01_unsafe', 'd01_multiple_active']) {
       await admin.query(`CREATE DATABASE ${database}`);
     }
     const psql = (database, file) => run('psql', [
@@ -211,6 +211,9 @@ test('D01: migración histórica transaccional y sin pérdida', {
         const migratedColumns = (await migrated.query(columnSql, [tables])).rows
           .filter(row => officialNames.has(`${row.table_name}.${row.column_name}`));
         assert.deepEqual(migratedColumns, officialColumns);
+        const indexSql = "SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='periods_one_active_uidx'";
+        assert.deepEqual((await migrated.query(indexSql)).rows, (await official.query(indexSql)).rows);
+        await assert.rejects(migrated.query("INSERT INTO periods(name,start_date,end_date,is_active) VALUES ('Segundo activo','2026-01-01','2026-12-31',true)"), { code: '23505' });
 
         const constraintSql = `SELECT conrelid::regclass::text AS table_name,conname,pg_get_constraintdef(oid) AS definition
           FROM pg_constraint WHERE connamespace='public'::regnamespace
@@ -229,6 +232,20 @@ test('D01: migración histórica transaccional y sin pérdida', {
         await official.end();
         await migrated.end();
       }
+    });
+
+    await t.test('F09: D01 aborta sin cambios con varios periodos activos', async () => {
+      const client = await connect('d01_multiple_active');
+      try {
+        await seedHistorical(client, hash);
+        await client.query("INSERT INTO periods(name,start_date,end_date,is_active) VALUES ('Otro activo','2026-01-01','2026-12-31',true)");
+        const before = (await client.query('SELECT * FROM periods ORDER BY id')).rows;
+        const result = psql('d01_multiple_active', migration);
+        assert.notEqual(result.status, 0);
+        assert.match(result.stderr, /varios periodos activos/);
+        assert.deepEqual((await client.query('SELECT * FROM periods ORDER BY id')).rows, before);
+        assert.equal((await client.query("SELECT 1 FROM pg_type WHERE typname='user_role' AND typnamespace='public'::regnamespace")).rowCount, 0);
+      } finally { await client.end(); }
     });
 
     await t.test('aborta y revierte ante un password histórico no seguro', async () => {

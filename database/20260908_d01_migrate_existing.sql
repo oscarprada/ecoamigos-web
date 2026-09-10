@@ -472,4 +472,15 @@ BEGIN
 END
 $legacy_inventory$;
 
+-- F09: misma garantia que la instalacion nueva, sin reconciliar datos.
+LOCK TABLE public.periods IN SHARE ROW EXCLUSIVE MODE;
+DO $f09$
+BEGIN
+  IF (SELECT count(*) FROM public.periods WHERE is_active = true) > 1 THEN
+    RAISE EXCEPTION 'F09 abortada: varios periodos activos; requiere decision institucional, sin correccion automatica.';
+  END IF;
+END
+$f09$;
+CREATE UNIQUE INDEX periods_one_active_uidx ON public.periods (is_active) WHERE is_active = true;
+
 COMMIT;

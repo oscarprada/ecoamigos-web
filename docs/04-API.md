@@ -198,7 +198,9 @@ GET: filas completas, start_date DESC. POST:
 { "name": "Periodo de prueba", "start_date": "2026-09-01", "end_date": "2026-09-30", "is_active": true }
 ```
 
-Enviar booleanos JSON, no cadenas. Si is_active es verdadero desactiva todos los periodos antes de insertar. Devuelve fila completa con 201. No hay transacción, activación de un periodo existente ni validación de orden de fechas.
+Enviar booleanos JSON, no cadenas (estas devuelven 400). Se conserva la aceptación de is_active omitido/null como no activo. Si is_active es true, desactiva todos los períodos antes de insertar, dentro de una sola transacción con `LOCK TABLE periods IN SHARE ROW EXCLUSIVE MODE`. Devuelve la fila completa con 201 después de COMMIT. ROLLBACK conserva el anterior si falla el INSERT. Dos creaciones activas concurrentes se serializan y pueden devolver ambas 201: queda activo el período de la última operación serializada, nunca ambos. Un índice único parcial protege también las escrituras SQL externas.
+
+Errores: 400 para campos obligatorios nulos, fechas no representables por PostgreSQL, longitud excedida o is_active de tipo inválido; 409 para unicidad (nombre duplicado o múltiples activos) o conflicto transaccional; 500 para fallo interno. Solo se devuelve message, sin detalles SQL. No existe operación por ID que requiera 404, activación de un período existente ni desactivación independiente. No se añade validación del orden de fechas ni de record_date. Cero activos sigue siendo válido.
 
 ### GET /admin/content
 

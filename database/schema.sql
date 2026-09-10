@@ -31,6 +31,8 @@ CREATE TABLE periods (
   is_active BOOLEAN DEFAULT false,
   created_at TIMESTAMP DEFAULT NOW()
 );
+-- F09: cero activos es valido; nunca mas de uno.
+CREATE UNIQUE INDEX periods_one_active_uidx ON public.periods (is_active) WHERE is_active = true;
 CREATE TABLE content_items (
   id SERIAL PRIMARY KEY,
   title VARCHAR(180) NOT NULL,

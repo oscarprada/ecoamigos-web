@@ -73,7 +73,7 @@ F04 retiró la utilidad obsoleta `calculatePoints.js`, que no tenía imports ni 
 
 Ranking elige periodo is_active por fecha inicial DESC e id DESC, sin comprobar que hoy esté dentro de las fechas. Sin activo devuelve ranking vacío. Incluye todos los equipos con suma de aprobados del periodo; empates por nombre y posiciones consecutivas, no compartidas.
 
-Crear periodo activo primero desactiva todos y después inserta, sin transacción. Si el INSERT falla puede no quedar ninguno activo; solicitudes simultáneas pueden dejar estados inconsistentes. Premios y ganadores no forman parte de la API actual; sus tablas históricas no participan en este cálculo.
+F09 conserva la regla de máximo un período activo, con cero permitido. Crear uno activo desactiva todos y luego inserta en una conexión dedicada: BEGIN, LOCK TABLE periods IN SHARE ROW EXCLUSIVE MODE, UPDATE, INSERT, COMMIT. El bloqueo serializa escritores incluso con tabla vacía, evita carreras sin depender de que exista una fila activa y permite SELECT ordinarios. Se eligió junto con un índice único parcial: el bloqueo coordina el reemplazo y el índice impide múltiples activos incluso en escrituras externas que no sigan el controlador. Como contrapartida, las creaciones inactivas también esperan a otros escritores de periods; es una operación administrativa breve. Ante fallo se ejecuta ROLLBACK y se conserva el anterior. Los consumidores ven el estado confirmado anterior o posterior, sin la desactivación intermedia. No hay activación de existentes ni desactivación independiente. Premios y ganadores no forman parte de la API actual; sus tablas históricas no participan en este cálculo.
 
 ## Estadísticas e indicadores
 

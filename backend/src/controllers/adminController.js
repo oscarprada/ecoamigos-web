@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 
-import { query } from '../config/db.js';
+import { query, pool } from '../config/db.js';
 import { logInfo, logError } from '../utils/logger.js';
 
 export async function getDashboard(_req, res) {
@@ -163,39 +163,49 @@ export async function listPeriods(_req, res) {
 }
 
 export async function createPeriod(req, res) {
+  let client;
+  let transactionOpen = false;
+  let releaseError;
   try {
     const { name, start_date, end_date, is_active } = req.body;
-
-    if (is_active) {
-      await query(`UPDATE periods SET is_active = false`);
+    if (is_active != null && typeof is_active !== 'boolean') {
+      return res.status(400).json({ message: 'is_active debe ser booleano' });
     }
-
-    const result = await query(
-      `
-        INSERT INTO periods (
-          name,
-          start_date,
-          end_date,
-          is_active
-        )
-        VALUES ($1,$2,$3,$4)
-        RETURNING *
-      `,
+    client = await pool.connect();
+    await client.query('BEGIN');
+    transactionOpen = true;
+    // Serializes writers even when there is no active row; ordinary readers continue.
+    await client.query('LOCK TABLE periods IN SHARE ROW EXCLUSIVE MODE');
+    if (is_active === true) {
+      await client.query('UPDATE periods SET is_active = false');
+    }
+    const result = await client.query(
+      `INSERT INTO periods (name, start_date, end_date, is_active)
+       VALUES ($1,$2,$3,$4) RETURNING *`,
       [name, start_date, end_date, is_active]
     );
-
-    logInfo(
-      `Periodo creado: ${name} | activo=${is_active} | admin_id=${req.user.id}`
-    );
-
-    res.status(201).json(result.rows[0]);
+    await client.query('COMMIT');
+    transactionOpen = false;
+    try {
+      logInfo(`Periodo creado: ${name} | activo=${is_active} | admin_id=${req.user.id}`);
+    } catch { /* A committed decision must not depend on file logging. */ }
+    return res.status(201).json(result.rows[0]);
   } catch (error) {
-    logError(`CREATE PERIOD ERROR: ${error.message}`);
-
-    res.status(500).json({
-      message: 'Error al crear periodo',
-      error: error.message,
-    });
+    if (transactionOpen) {
+      try { await client.query('ROLLBACK'); }
+      catch (rollbackError) { releaseError = rollbackError; }
+    }
+    try { logError(`CREATE PERIOD ERROR: ${error.message}`); }
+    catch { /* Preserve the controlled response if logging fails. */ }
+    if (error.code === '23505' || error.code === '40001' || error.code === '40P01') {
+      return res.status(409).json({ message: 'Conflicto al crear periodo' });
+    }
+    if (['23502', '22007', '22008', '22001'].includes(error.code)) {
+      return res.status(400).json({ message: 'Datos de periodo invalidos' });
+    }
+    return res.status(500).json({ message: 'Error al crear periodo' });
+  } finally {
+    if (client) client.release(releaseError);
   }
 }
 

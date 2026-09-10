@@ -29,7 +29,7 @@ CORREGIDO se refiere al código y la instalación nueva probados, no a una base 
 
 Premios y ganadores están fuera del alcance actual del producto. Se retiraron sus páginas, rutas, enlaces, llamadas, controladores y endpoints, y `GET /public/ranking` volvió a limitarse a `currentPeriod` y `ranking`. No se modificó el cálculo de posiciones o puntos. Las tablas `prizes`, `winner_records` y `rewards` permanecen deliberadamente como legado; no se ejecutó SQL destructivo ni se modificaron datos.
 
-F09–F20, S01–S12 y T01–T28 permanecen sin resolver por alcance. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
+F10–F20, S01–S12 y T01–T28 permanecen sin resolver por alcance. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
 
 ## Fuente única de puntuación — F04
 
@@ -67,6 +67,22 @@ Validación: `node --test backend/tests/*.test.js` con `ECOAMIGOS_TEST_PG_BIN` a
 
 También pasaron sintaxis de los 24 archivos JavaScript del backend, build frontend (solo avisos de deprecación de Vite) y git diff --check. El test de instalación solo se adaptó para excluir BEGIN/COMMIT/ROLLBACK de PREPARE, que admite consultas preparables y no órdenes de transacción. Sin commit ni push. F09–F20 fuera de alcance.
 
+## Regla comprobada antes de corregir F09
+
+La regla existente es máximo un período activo, con cero permitido: el esquema instala vacío y usa false como valor predeterminado; POST permite crear inactivos; getRanking devuelve currentPeriod null y ranking vacío sin activo. AdminSettingsPage solo crea/lista períodos; no existen endpoints de activación de períodos existentes, edición ni desactivación independiente. Crear uno activo desactiva los anteriores. Las fechas no activan ni vencen períodos automáticamente. El formulario de reciclaje consume currentPeriod desde ranking y bloquea el envío sin activo; el backend de registros acepta period_id o null, asunto que permanece para F10.
+
+Antes de F09, createPeriod ejecuta UPDATE de todos los períodos y luego INSERT mediante consultas independientes. Un INSERT fallido deja el anterior inactivo y las solicitudes concurrentes pueden dejar varios activos. Ni schema.sql ni D01 incluyen unicidad parcial de is_active. Ranking oculta esa multiplicidad con ORDER BY y LIMIT 1; la interfaz de ranking y el formulario de registro dependen de ese resultado único.
+
+### Resultado F09 — CORREGIDO
+
+`POST /api/admin/periods`, protegido por JWT y rol admin, es la única ruta que escribe períodos. Ahora utiliza una conexión dedicada con BEGIN, LOCK TABLE periods IN SHARE ROW EXCLUSIVE MODE, UPDATE si se crea activo, INSERT y COMMIT. Ante fallo ejecuta ROLLBACK; finally libera la conexión y la descarta si falla el rollback. No se agregaron endpoints. Los logs no condicionan una confirmación ya persistida. Se conserva 201 y la fila creada; errores controlados 400/409/500, sin SQL al cliente. No corresponde 404 porque no hay operación sobre un período existente por ID.
+
+El bloqueo serializa los escritores incluso cuando no hay filas, sin bloquear lecturas ordinarias. El índice único parcial `periods_one_active_uidx` sobre is_active WHERE is_active = true impide más de un activo incluso desde SQL externo. Cero activos continúa permitido. schema.sql y D01 actualizado incluyen la misma definición. Para instalaciones ya migradas con D01 anterior se preparó `database/20260909_f09_periods_one_active.sql`, de una sola aplicación. Ambas migraciones detectan múltiples activos bajo bloqueo y abortan toda la transacción sin reconciliar datos. No se ejecutaron sobre ecoamigos real.
+
+Validación F09: 10 subpruebas específicas (11 contando su contenedor) en PostgreSQL 18 temporal comprueban creación activa/inactiva, reemplazo, cero activos, errores 400/409/500, rollback después de desactivar, protección de INSERT/UPDATE SQL, migración compatible y aborto ante múltiples activos. Dos pruebas concurrentes —tabla vacía y con activo previo— observaron espera real `wait_event_type='Lock'`: ambas solicitudes respondieron 201 en orden serializado y solo el segundo período quedó activo. Durante la pausa posterior al UPDATE, getRanking siguió leyendo el estado confirmado anterior. La prueba D01 adicional verifica aborto íntegro por múltiples activos y la comparación de índices confirma equivalencia con la instalación nueva.
+
+Suite completa `node --test backend/tests/*.test.js`, con `ECOAMIGOS_TEST_PG_BIN` definido: **57 pruebas aprobadas, cero fallos y cero omisiones**, incluidas F01–F08, instalación y migración. F08 conserva sus cuatro pruebas concurrentes y rollback. Sintaxis de 25 archivos JavaScript del backend, build frontend y git diff --check correctos; build solo emitió avisos de deprecación de Vite. Las 56 filas del catálogo temporal permanecieron idénticas antes/después de F09 y su CSV no cambió. Clústeres aislados detenidos. Sin cambios en ranking, reciclaje, puntos, indicadores ni reglas F05–F07; sin commit ni push. F10–F20 permanecen fuera de alcance.
+
 ## Hallazgos funcionales y técnicos
 
 | ID | Hallazgo | Consecuencia / prioridad de revisión |
@@ -79,7 +95,7 @@ También pasaron sintaxis de los 24 archivos JavaScript del backend, build front
 | F06 | Frecuencia, rachas y evidencia del catálogo no se validan | **CORREGIDO en contrato/documentación**: se demostró que son textos informativos ambiguos y que no existe automatización; no se inventaron bloqueos |
 | F07 | Orgánico siempre refiere a 5 kg; decimales entre límites | **PARCIAL**: límites heredados conservados y discrepancias documentadas/probadas; faltan definiciones institucionales para decimales y orgánico |
 | F08 | Revisión se puede repetir sin restricción y sin transacción | **CORREGIDO**: solo pending, transacción en una conexión, SELECT FOR UPDATE, COMMIT/ROLLBACK y auditoría existente; concurrencia comprobada en PostgreSQL aislado |
-| F09 | Crear periodo activo usa UPDATE e INSERT separados | Fallos/races pueden dejar cero o varios activos |
+| F09 | Crear periodo activo usa UPDATE e INSERT separados | **CORREGIDO**: transacción, bloqueo de escritores, rollback e índice único parcial; cero activos permitido, schema/D01/migración incremental probados en PostgreSQL aislado |
 | F10 | Fechas/periodo activo no se validan al crear registro | API acepta escenarios bloqueados o no previstos en UI |
 | F11 | Admin puede registrar, pero normalmente no tiene equipo | Puede fallar team_id NOT NULL |
 | F12 | Límite de 15 solo frontend | No se cumple si se usa API directamente |

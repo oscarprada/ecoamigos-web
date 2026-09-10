@@ -72,7 +72,7 @@ test('D01-D10: instalación en un cluster PostgreSQL nuevo y aislado', {
         for (const match of source.matchAll(/query\(\s*(?:`([^`]+)`|'([^']+)'|"([^"]+)")/g)) {
           const sql = match[1] || match[2] || match[3];
           // Transaction commands are exercised by F08; PREPARE accepts DML only.
-          if (/^(BEGIN|COMMIT|ROLLBACK)$/.test(sql)) continue;
+          if (/^(BEGIN|COMMIT|ROLLBACK)$/.test(sql) || /^LOCK TABLE /i.test(sql)) continue;
           assert.ok(!sql.includes('${'), 'Revisar SQL dinámico antes de preparar');
           await client.query(`PREPARE installation_query_${count++} AS ${sql}`);
         }
