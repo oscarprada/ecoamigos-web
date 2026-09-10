@@ -107,7 +107,7 @@ La aplicación actual no consulta ni administra esta tabla. Se mantiene sin camb
 | criteria_count | INT | >= 0; por defecto 0; SQL no limita máximo a 5 |
 | notes | TEXT | Observación del líder; nullable |
 | evidence_url | TEXT | Ruta de archivo; nullable |
-| record_date | DATE | Fecha declarada; por defecto CURRENT_DATE |
+| record_date | DATE | Fecha de realización de la actividad de reciclaje reportada; por defecto CURRENT_DATE |
 | status | record_status | pending, approved, rejected |
 | review_notes | TEXT | Comentario administrativo; nullable |
 | points_awarded | INT | Por defecto 0; fijado en revisión |
@@ -117,6 +117,8 @@ La aplicación actual no consulta ni administra esta tabla. Se mantiene sin camb
 | catalog_group_name | VARCHAR(100) | Identidad canónica validada contra points_catalog al crear; nullable por compatibilidad histórica |
 | catalog_action_name | VARCHAR(150) | Identidad canónica validada contra points_catalog al crear; nullable por compatibilidad histórica |
 | catalog_action_level | VARCHAR(100) | Identidad canónica validada contra points_catalog al crear; nullable por compatibilidad histórica |
+
+F10 no cambia el esquema ni los datos históricos: period_id sigue nullable con FK ON DELETE SET NULL, pero el alta por API exige el activo y comprueba la coincidencia del ID recibido dentro de una transacción. record_date es la fecha de realización de la actividad; created_at es el timestamp de creación. La API valida calendario y formato YYYY-MM-DD y usa CURRENT_DATE de PostgreSQL si falta. La regla autorizada exige `start_date <= record_date <= end_date` y `record_date <= CURRENT_DATE`, evaluadas en PostgreSQL con semántica DATE bajo el bloqueo transaccional de periods. start_date y end_date son NOT NULL; ambos extremos están incluidos, siempre que la fecha no sea futura. No se añadió un constraint ni se alteraron fechas históricas.
 
 ### points_catalog
 

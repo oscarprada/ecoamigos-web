@@ -53,6 +53,10 @@ El panel muestra nombre, equipo asignado, puntos, posición y conteos personales
 8. Enviar y esperar el aviso de confirmación.
 9. Consultar el historial para comprobar que figura como pendiente.
 
+El servidor exige un período activo. Si cambió mientras completabas el formulario, el envío se rechaza: actualiza la página y comprueba el período antes de reenviar. No puedes asociar un registro a otro período modificando la solicitud.
+
+Indica la fecha en la que realizaste la actividad de reciclaje reportada. Debe ser una fecha real YYYY-MM-DD, dentro del período activo incluyendo inicio y fin, y no posterior al día actual de PostgreSQL. Puedes reportar una actividad anterior si pertenece al activo. Una fecha futura se rechaza aunque esté dentro del período; una fecha de otro período también se rechaza. El formulario sugiere el día local y permite editarlo, pero el servidor valida. Si se deja vacía usa CURRENT_DATE de PostgreSQL y comprueba igualmente el rango.
+
 La evidencia es opcional en la aplicación, aunque una política de campaña podría requerirla. Las descripciones de evidencia, frecuencia y racha del catálogo no son controles automáticos: el sistema no comprueba su contenido, no limita repeticiones y no calcula rachas. El límite técnico de evidencia es 20 MiB. Si un video falla, probar un formato admitido por extensión y MIME o solicitar revisión técnica. No enviar repetidamente sin consultar historial: no hay deduplicación automática.
 
 Los niveles actuales conservan límites técnicos `<= 5`, `> 5 y <= 15`, `> 15 y <= 30`, y `> 30`. Como la interfaz permite décimas, 5.1–5.9 y 15.1–15.9 no coinciden literalmente con los textos “6 a 15” y “16 a 30”. No redondear ni asumir una interpretación distinta sin indicación institucional. Orgánico requiere una definición y referencia institucional autorizadas; mientras falten, su registro puede ser rechazado como catálogo no configurado.

@@ -131,8 +131,8 @@ Usa multipart. Los roles permitidos incluyen admin, pero un admin sin equipo no 
 | quality_level | alta, media, baja; trim o null |
 | criteria_count | Número de criterios marcados; no hay máximo validado en API |
 | notes | Opcional; trim y vacío a null |
-| period_id | Si no es verdadero, null; no valida que esté activo |
-| record_date | Si falta, fecha actual del servidor |
+| period_id | Obligatorio como entero o su cadena decimal canónica; debe coincidir con el único activo consultado por backend. Se inserta el ID leído de PostgreSQL |
+| record_date | Fecha de realización de la actividad, YYYY-MM-DD válido (años 0001–9999), dentro del activo y no futura; omitido/null/vacío usa CURRENT_DATE de PostgreSQL, sujeto al mismo rango |
 | catalog_group_name | Grupo enviado por compatibilidad; debe coincidir con la referencia derivada por el backend |
 | catalog_action_name | Acción enviada por compatibilidad; debe coincidir con la referencia derivada por el backend |
 | catalog_action_level | Nivel enviado por compatibilidad; debe coincidir con la referencia derivada por el backend |
@@ -141,6 +141,10 @@ Usa multipart. Los roles permitidos incluyen admin, pero un admin sin equipo no 
 El backend deriva grupo, acción y nivel desde `material_type` y `quantity` con la misma tabla vigente que usa el formulario. Los tres valores recibidos deben coincidir y la identidad resultante debe existir en `points_catalog`; una discrepancia o configuración ausente devuelve 400 con un mensaje controlado. La fila conserva los textos canónicos recuperados del catálogo, no los textos arbitrarios del cliente.
 
 `user_id` y `team_id` salen del JWT; `status` se fija pending; `points_awarded` se fija 0. Los campos `points` o `points_awarded` enviados adicionalmente no se usan. Devuelve 201 y la fila completa de recycling_records. No calcula puntos al crear ni exige evidencia aunque el catálogo la describa.
+
+F10: fecha inválida devuelve 400; ausencia de activo devuelve 409; period_id distinto, inexistente, inactivo, omitido o manipulado devuelve 409 con indicación de actualizar el formulario. Se exige coincidencia para evitar reasignar silenciosamente un formulario abierto antes de un cambio de período. La validación F05 se conserva y también puede rechazar previamente una referencia de catálogo no configurada. Fallo interno devuelve 500 genérico sin SQL.
+
+La creación usa BEGIN, LOCK TABLE periods IN SHARE MODE, consulta/validación del activo y fecha PostgreSQL, INSERT y COMMIT en una conexión. ROLLBACK ante fallo. El bloqueo impide que F09 cambie el activo entre consulta y confirmación. `record_date` representa la fecha de realización de la actividad de reciclaje reportada. PostgreSQL evalúa `COALESCE($1::date, CURRENT_DATE) BETWEEN start_date AND end_date` y `COALESCE($1::date, CURRENT_DATE) <= CURRENT_DATE`. Ambos extremos están incluidos; actividades anteriores se admiten solo dentro del activo. Una fecha fuera del rango o futura devuelve **400**, sin INSERT: mensaje de rango si falla el rango (también si además es futura), o mensaje de fecha futura si solo falla esa condición. Omitir la fecha no evade la validación. No se convierten fechas a timestamps; CURRENT_DATE usa la fecha de transacción y zona de sesión PostgreSQL, no la del proceso Node. F10 queda CORREGIDO.
 
 Evidencia: hasta 20 MiB (20 × 1024 × 1024 bytes); filtro por expresión regular sobre extensión y MIME para jpeg/jpg/png/webp/mp4/mov/avi. Que una extensión esté mencionada no garantiza aceptación de todos sus MIME reales, especialmente MOV/AVI. Archivo final: `/uploads/<timestamp>-<aleatorio>.<extensión>`.
 

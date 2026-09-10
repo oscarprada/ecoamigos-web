@@ -1,5 +1,6 @@
 import { query, pool } from '../config/db.js';
 import { logInfo, logError } from '../utils/logger.js';
+import { isValidRecordDate } from '../utils/recordDate.js';
 import {
   CatalogReferenceValidationError,
   validateCatalogReference,
@@ -58,6 +59,9 @@ async function findCatalogEntry({
 }
 
 export async function createRecord(req, res) {
+  let client;
+  let transactionOpen = false;
+  let releaseError;
   try {
     const {
       material_type,
@@ -73,6 +77,10 @@ export async function createRecord(req, res) {
       catalog_action_level,
     } = req.body;
 
+    const declaredDate = record_date == null || record_date === '' ? null : record_date;
+    if (declaredDate !== null && !isValidRecordDate(declaredDate)) {
+      return res.status(400).json({ message: 'record_date debe ser una fecha valida YYYY-MM-DD' });
+    }
     const evidence_url = req.file ? `/uploads/${req.file.filename}` : null;
     const catalogReference = await validateCatalogReference({
       materialType: material_type,
@@ -85,7 +93,39 @@ export async function createRecord(req, res) {
       findCatalogEntry,
     });
 
-    const result = await query(
+    client = await pool.connect();
+    await client.query('BEGIN');
+    transactionOpen = true;
+    // Compatible with other registrations; conflicts with F09's writer lock.
+    // Lock periods first, before reading the active row or inserting its FK.
+    await client.query('LOCK TABLE periods IN SHARE MODE');
+    const active = await client.query(
+      `SELECT id, CURRENT_DATE::text AS today,
+              COALESCE($1::date, CURRENT_DATE) BETWEEN start_date AND end_date AS in_period,
+              COALESCE($1::date, CURRENT_DATE) <= CURRENT_DATE AS not_future
+       FROM periods WHERE is_active = true`,
+      [declaredDate]
+    );
+    if (active.rows.length !== 1) {
+      await client.query('ROLLBACK');
+      transactionOpen = false;
+      return res.status(409).json({ message: active.rows.length === 0
+        ? 'No existe un periodo activo' : 'Configuracion de periodos activos inconsistente' });
+    }
+    const currentPeriod = active.rows[0];
+    if (!['string', 'number'].includes(typeof period_id) || String(period_id) !== String(currentPeriod.id)) {
+      await client.query('ROLLBACK');
+      transactionOpen = false;
+      return res.status(409).json({ message: 'period_id no coincide con el periodo activo; actualiza el formulario' });
+    }
+    if (!currentPeriod.in_period || !currentPeriod.not_future) {
+      await client.query('ROLLBACK');
+      transactionOpen = false;
+      return res.status(400).json({ message: !currentPeriod.in_period
+        ? 'record_date debe estar dentro del periodo activo (incluidos inicio y fin)'
+        : 'record_date no puede ser futura' });
+    }
+    const result = await client.query(
       `
         INSERT INTO recycling_records (
           user_id,
@@ -120,21 +160,28 @@ export async function createRecord(req, res) {
         criteria_count,
         normalizeValue(notes),
         evidence_url,
-        period_id || null,
-        record_date || new Date(),
+        currentPeriod.id,
+        declaredDate ?? currentPeriod.today,
         catalogReference.catalog_group_name,
         catalogReference.catalog_action_name,
         catalogReference.catalog_action_level,
       ]
     );
 
-    logInfo(
+    await client.query('COMMIT');
+    transactionOpen = false;
+    try { logInfo(
       `Registro de reciclaje creado: record_id=${result.rows[0].id} | user_id=${req.user.id} | team_id=${req.user.team_id} | material=${material_type} | cantidad=${quantity}${unit}`
-    );
+    ); } catch { /* A committed record must not depend on file logging. */ }
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    logError(`CREATE RECYCLING ERROR user_id=${req.user?.id}: ${error.message}`);
+    if (transactionOpen) {
+      try { await client.query('ROLLBACK'); }
+      catch (rollbackError) { releaseError = rollbackError; }
+    }
+    try { logError(`CREATE RECYCLING ERROR user_id=${req.user?.id}: ${error.message}`); }
+    catch { /* Preserve the controlled response if logging fails. */ }
 
     if (error instanceof CatalogReferenceValidationError) {
       return res.status(400).json({
@@ -145,6 +192,8 @@ export async function createRecord(req, res) {
     res.status(500).json({
       message: 'Error al registrar reciclaje',
     });
+  } finally {
+    if (client) client.release(releaseError);
   }
 }
 

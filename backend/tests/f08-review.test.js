@@ -52,6 +52,7 @@ test('F08: revision transaccional PostgreSQL aislado', {
     source = source.replace("import { query, pool } from '../config/db.js';", 'const pool = globalThis.__f08Pool; const query = (...args) => pool.query(...args);');
     source = source.replace("import { logInfo, logError } from '../utils/logger.js';", 'const logInfo = () => {}; const logError = () => {};');
     source = source.replace("'../utils/catalogReference.js'", JSON.stringify(pathToFileURL(path.join(root,'backend/src/utils/catalogReference.js')).href));
+    source = source.replace("'../utils/recordDate.js'", JSON.stringify(pathToFileURL(path.join(root,'backend/src/utils/recordDate.js')).href));
     globalThis.__f08Pool = testPool;
     const {reviewRecord} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
     delete globalThis.__f08Pool;

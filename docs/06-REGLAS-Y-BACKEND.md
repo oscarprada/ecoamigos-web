@@ -23,7 +23,11 @@ stateDiagram-v2
   pending --> rejected: Admin rechaza, puntos 0
 ```
 
-La UI muestra acciones solo en pendientes; la API exige pending bajo bloqueo de fila dentro de una transacción PostgreSQL. Las revisiones posteriores devuelven 409. Guarda una decisión con reviewed_by, reviewed_at y review_notes; no hay historial inmutable. Al crear sí verifica la relación vigente entre material, cantidad y catálogo; todavía no comprueba toda la coherencia de fecha y periodo.
+La UI muestra acciones solo en pendientes; la API exige pending bajo bloqueo de fila dentro de una transacción PostgreSQL. Las revisiones posteriores devuelven 409. Guarda una decisión con reviewed_by, reviewed_at y review_notes; no hay historial inmutable. Al crear verifica la relación vigente entre material, cantidad y catálogo. F10 exige un activo y coincidencia del period_id recibido con el consultado, y valida record_date como fecha de realización de la actividad, dentro del rango inclusivo del activo y no futura.
+
+F10 adquiere LOCK TABLE periods IN SHARE MODE antes de leer el activo e insertar el registro, y mantiene el bloqueo hasta COMMIT/ROLLBACK. Permite altas simultáneas y es incompatible con el SHARE ROW EXCLUSIVE de F09. Ambos flujos toman primero el bloqueo de periods antes de sus escrituras; F10 no intenta convertirlo en un bloqueo de escritura de periods. Si el alta obtiene el bloqueo primero, se confirma con el activo anterior y luego F09 puede sustituirlo; si F09 llega primero, el alta lee el nuevo activo y rechaza un ID obsoleto. No se cambia F09 ni se exige que un registro histórico permanezca asociado a un período activo para siempre.
+
+record_date representa la fecha en que se realizó la actividad de reciclaje reportada. Se valida YYYY-MM-DD y calendario gregoriano, incluidos bisiestos, sin usar Date de Node. La regla autorizada es `start_date <= record_date <= end_date` y `record_date <= CURRENT_DATE`. Se comprueba con BETWEEN inclusivo y comparación DATE en PostgreSQL, dentro de la transacción, antes del INSERT. Se admite actividad pasada dentro del activo; se rechaza 400 fuera del rango o futura, aun si cae dentro del período. El fin se admite únicamente si no es futuro. Si está omitida/null/vacía se usa CURRENT_DATE, sometido también al rango. PostgreSQL determina el día según la transacción y su zona de sesión. El formulario conserva la sugerencia local y la edición; el backend es la autoridad y no utiliza conversiones UTC/timestamp.
 
 ## Puntuación vigente
 

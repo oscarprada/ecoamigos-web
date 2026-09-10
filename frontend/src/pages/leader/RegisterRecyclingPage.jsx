@@ -52,6 +52,11 @@ function getCatalogReference(materialType, quantityValue) {
   };
 }
 
+function localCalendarDate() {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+}
+
 export default function RegisterRecyclingPage() {
   const { showToast } = useToast();
 
@@ -67,7 +72,7 @@ export default function RegisterRecyclingPage() {
     quality_level: 'media',
     notes: '',
     period_id: '',
-    record_date: new Date().toISOString().slice(0, 10),
+    record_date: localCalendarDate(),
     evidence: null,
   });
 
@@ -166,7 +171,7 @@ export default function RegisterRecyclingPage() {
         quality_level: 'media',
         notes: '',
         period_id: period?.id || '',
-        record_date: new Date().toISOString().slice(0, 10),
+        record_date: localCalendarDate(),
         evidence: null,
       });
 
