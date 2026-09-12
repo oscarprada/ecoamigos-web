@@ -49,7 +49,6 @@ test('F09: revision transaccional PostgreSQL aislado', {
       source = source.replace(/import \{ query(?:, pool)? \} from '..\/config\/db.js';/, 'const pool = globalThis.__f09Pool; const query = async (...args) => { const c = await pool.connect(); try { return await c.query(...args); } finally { c.release(); } };');
       source = source.replace("import { logInfo, logError } from '../utils/logger.js';", 'const logInfo = () => {}; const logError = () => {};');
       source = source.replace("import bcrypt from 'bcrypt';", 'const bcrypt = null;');
-      source = source.replace("'../utils/environmentalIndicators.js'", JSON.stringify(pathToFileURL(path.join(root,'backend/src/utils/environmentalIndicators.js')).href));
       globalThis.__f09Pool = testPool;
       try { return await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64')); }
       finally { delete globalThis.__f09Pool; }

@@ -20,13 +20,7 @@ export default function AdminDashboard() {
     materials: [],
     teams: [],
     periods: [],
-    indicators: {
-      totalQuantity: 0,
-      estimatedTreesSaved: 0,
-      estimatedWaterSaved: 0,
-      estimatedCo2Reduction: 0,
-      estimatedEnergySaved: 0,
-    },
+
   });
 
   useEffect(() => {
@@ -106,7 +100,8 @@ export default function AdminDashboard() {
         <p style={styles.description}>
           Histórico de todos los períodos: registros y puntos acumulados por equipos.
           El reciclaje aprobado suma solo cantidades declaradas en kg. Otras unidades
-          quedan fuera; los indicadores estiman el impacto del papel/cartón aprobado en kg.
+          quedan fuera. Los indicadores ambientales equivalentes se encuentran en revisión
+          metodológica y no se muestran hasta contar con factores técnicamente validados.
         </p>
         <div style={styles.exportContainer}>
         <button
@@ -130,29 +125,7 @@ export default function AdminDashboard() {
         <StatCard title="Pendientes" value={statusSummary.pending} />
         <StatCard title="Aprobados" value={statusSummary.approved} />
         <StatCard title="Rechazados" value={statusSummary.rejected} />
-        <StatCard title="Reciclaje aprobado (kg declarados)" value={Number(publicStats.general?.total_quantity || 0)} />
-      </section>
-
-      <section style={styles.statsGrid}>
-        <StatCard
-          title="Árboles salvados (estimación)"
-          value={formatIndicator(publicStats.indicators?.estimatedTreesSaved)}
-        />
-
-        <StatCard
-          title="Agua ahorrada (L)"
-          value={formatIndicator(publicStats.indicators?.estimatedWaterSaved)}
-        />
-
-        <StatCard
-          title="CO₂ reducido (kg)"
-          value={formatIndicator(publicStats.indicators?.estimatedCo2Reduction)}
-        />
-
-        <StatCard
-          title="Energía ahorrada (kWh)"
-          value={formatIndicator(publicStats.indicators?.estimatedEnergySaved)}
-        />
+        <StatCard title="Cantidad total reciclada aprobada (kg)" value={Number(publicStats.general?.total_quantity || 0)} />
       </section>
 
       <section style={styles.chartsGrid}>
@@ -252,10 +225,6 @@ export default function AdminDashboard() {
       </section>
     </div>
   );
-}
-
-function formatIndicator(value) {
-  return Number(value || 0).toLocaleString('es-CO', { maximumFractionDigits: 2 });
 }
 
 function StatCard({ title, value }) {
@@ -501,5 +470,3 @@ const styles = {
     margin: 0,
   },
 };
-
-

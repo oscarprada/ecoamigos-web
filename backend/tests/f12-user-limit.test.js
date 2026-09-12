@@ -56,7 +56,6 @@ test('F12: revision transaccional PostgreSQL aislado', {
       source = source.replace(/import \{ query(?:, pool)? \} from '..\/config\/db.js';/, 'const pool = globalThis.__f12Pool; const query = async (...args) => { const c = await pool.connect(); try { return await c.query(...args); } finally { c.release(); } };');
       source = source.replace("import { logInfo, logError } from '../utils/logger.js';", 'const logInfo = () => {}; const logError = () => {};');
       source = source.replace("'bcrypt'", JSON.stringify(pathToFileURL(require.resolve('bcrypt')).href));
-      source = source.replace("'../utils/environmentalIndicators.js'", JSON.stringify(pathToFileURL(path.join(root,'backend/src/utils/environmentalIndicators.js')).href));
       for (const util of ['catalogReference', 'recordDate']) source = source.replace("'../utils/"+util+".js'", JSON.stringify(pathToFileURL(path.join(root,'backend/src/utils',util+'.js')).href));
       globalThis.__f12Pool = testPool;
       try { const url='data:text/javascript;base64,'+Buffer.from(source).toString('base64'); globalThis.__f12ControllerUrl=url; return await import(url); }

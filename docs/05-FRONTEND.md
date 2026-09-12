@@ -50,7 +50,7 @@ El formulario de registro incluye cinco materiales, cantidad numérica (min 0.1,
 
 ### Administración
 
-Dashboard combina cuatro contadores privados con estadísticas públicas, hasta cinco equipos/materiales, indicadores ambientales y barras calculadas con CSS. Exporta como blob, crea enlace temporal, dispara descarga y revoca URL.
+Dashboard combina cuatro contadores privados con estadísticas públicas, hasta cinco equipos/materiales, total reciclado aprobado en kg y barras calculadas con CSS. F14 retiró las cuatro tarjetas de equivalencias ambientales. Exporta como blob, crea enlace temporal, dispara descarga y revoca URL.
 
 Usuarios carga usuarios/equipos en paralelo; calcula administradores/líderes/cupos; exige equipo para líderes; muestra el límite de 15 cuentas totales, incluidos administradores e inactivos. El backend garantiza el cupo transaccionalmente; ante 409/USER_LIMIT_REACHED la pantalla muestra el mensaje y actualiza el listado. No permite editar ni borrar usuarios.
 

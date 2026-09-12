@@ -75,7 +75,6 @@ Estas son versiones solicitadas, no necesariamente las instaladas. Cada lockfile
 | `src/middleware/authMiddleware.js` | Firma de token y lista de roles permitidos |
 | `src/middleware/uploadMiddleware.js` | Evidencias; carpeta, nombres, filtro y límite |
 | `src/utils/logger.js` | Escritura síncrona a logs locales |
-| `src/utils/environmentalIndicators.js` | Indicadores estimados sobre cantidades |
 | `src/seed.sql` | Aviso sin escrituras: no hay datos predeterminados |
 | `uploads/`, `uploads/content/`, `logs/` | Datos generados, no código distribuido |
 

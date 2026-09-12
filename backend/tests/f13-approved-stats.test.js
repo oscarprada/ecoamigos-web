@@ -54,7 +54,6 @@ test('F13: estadísticas aprobadas en kg por HTTP y PostgreSQL aislado', {
     // Substitute only DB transport; public router, SQL and calculations remain real.
     let source = fs.readFileSync(path.join(root, 'backend/src/controllers/publicController.js'), 'utf8');
     source = source.replace("import { query } from '../config/db.js';", 'const pool = globalThis.__f13Pool; const query = (...args) => pool.query(...args);');
-    source = source.replace("'../utils/environmentalIndicators.js'", JSON.stringify(pathToFileURL(path.join(root, 'backend/src/utils/environmentalIndicators.js')).href));
     const controllerUrl = 'data:text/javascript;base64,' + Buffer.from(source).toString('base64');
     let routes = fs.readFileSync(path.join(root, 'backend/src/routes/publicRoutes.js'), 'utf8');
     routes = routes.replace("'express'", JSON.stringify(pathToFileURL(require.resolve('express')).href));
@@ -81,19 +80,17 @@ test('F13: estadísticas aprobadas en kg por HTTP y PostgreSQL aislado', {
     );
     const assertQuantity = (body, expected) => {
       closeTo(body.general.total_quantity, expected);
-      closeTo(body.indicators.totalQuantity, expected);
       closeTo(body.materials.reduce((sum, row) => sum + Number(row.total_quantity), 0), expected);
     };
 
     await t.test('vacío: contrato HTTP completo, ceros y listas coherentes', async () => {
       const body = await get();
-      assert.deepEqual(Object.keys(body).sort(), ['general', 'indicators', 'materials', 'periods', 'status', 'teams']);
+      assert.deepEqual(Object.keys(body).sort(), ['general', 'materials', 'periods', 'status', 'teams']);
       assertQuantity(body, 0);
       assert.equal(body.general.total_records, 0);
       assert.equal(body.general.total_points, 0);
       assert.deepEqual(body.materials, []);
       assert.deepEqual(body.status, []);
-      assert.ok(Object.values(body.indicators).every(value => value === 0));
     });
     for (const status of ['approved', 'pending', 'rejected']) {
       await t.test(`${status}: solo approved suma kg; conteo operativo permanece`, async () => {
@@ -103,7 +100,6 @@ test('F13: estadísticas aprobadas en kg por HTTP y PostgreSQL aislado', {
         assert.equal(body.general.total_records, 1);
         assert.deepEqual(body.status, [{ status, total: 1 }]);
         assert.equal(body.materials[0].total, 1);
-        if (status !== 'approved') assert.ok(Object.values(body.indicators).every(value => value === 0));
       });
     }
     await t.test('mezcla de estados por cada material: cantidad aprobada y actividad separadas', async () => {
@@ -134,20 +130,15 @@ test('F13: estadísticas aprobadas en kg por HTTP y PostgreSQL aislado', {
       const body = await get();
       assertQuantity(body, 0);
       assert.equal(body.general.total_records, 40);
-      assert.ok(Object.values(body.indicators).every(value => value === 0));
     });
-    await t.test('decimales: SQL conserva centésimas y factores no redondean anticipadamente', async () => {
+    await t.test('decimales: SQL conserva centésimas sin redondeo adicional', async () => {
       await reset(); await insert({ quantity: '0.10' }); await insert({ quantity: '0.20' });
       const body = await get();
       assert.equal(body.general.total_quantity, '0.30');
       assert.equal(body.materials[0].total_quantity, '0.30');
       assertQuantity(body, 0.30);
-      closeTo(body.indicators.estimatedTreesSaved, 0.0051);
-      closeTo(body.indicators.estimatedWaterSaved, 7.95);
-      closeTo(body.indicators.estimatedCo2Reduction, 0.30);
-      closeTo(body.indicators.estimatedEnergySaved, 1.23);
     });
-    await t.test('indicadores: solo papel aprobado en kg alimenta los cuatro factores originales', async () => {
+    await t.test('F14 HTTP: total aprobado correcto sin equivalencias ambientales', async () => {
       await reset(); await insert({ quantity: '2.25' });
       await insert({ quantity: '500', unit: 'L' });
       await insert({ quantity: '500', status: 'pending' });
@@ -155,10 +146,8 @@ test('F13: estadísticas aprobadas en kg por HTTP y PostgreSQL aislado', {
       for (const material of materialTypes.slice(1)) await insert({ material, quantity: '10' });
       const body = await get();
       assertQuantity(body, 42.25);
-      closeTo(body.indicators.estimatedTreesSaved, 0.03825);
-      closeTo(body.indicators.estimatedWaterSaved, 59.625);
-      closeTo(body.indicators.estimatedCo2Reduction, 2.25);
-      closeTo(body.indicators.estimatedEnergySaved, 9.225);
+      assert.equal('indicators' in body, false);
+      assert.doesNotMatch(JSON.stringify(body), /trees|water|co2|energy|estimated/i);
     });
     await t.test('histórico: incluye activo, inactivo y sin período; ranking conserva solo activo aprobado', async () => {
       await reset();
@@ -195,12 +184,10 @@ test('F13: estadísticas aprobadas en kg por HTTP y PostgreSQL aislado', {
       assert.equal(body.periods.find(row => row.id === 2).total_records, 1);
       assert.equal(Number((await get('ranking')).ranking[0].total_points), 40);
     });
-    await t.test('frontend explica histórico, kg declarados e indicadores y solo formatea al presentar', () => {
+    await t.test('frontend conserva histórico y total aprobado en kg', () => {
       const ui = fs.readFileSync(path.join(root, 'frontend/src/pages/admin/AdminDashboard.jsx'), 'utf8');
       assert.match(ui, /Histórico de todos los períodos/);
-      assert.match(ui, /Reciclaje aprobado \(kg declarados\)/);
-      assert.match(ui, /papel\/cartón aprobado en kg/);
-      assert.match(ui, /maximumFractionDigits: 2/);
+      assert.match(ui, /Cantidad total reciclada aprobada \(kg\)/);
     });
     assert.equal(catalogBefore.length, 56);
     assert.deepEqual((await client.query('SELECT * FROM points_catalog ORDER BY id')).rows, catalogBefore);

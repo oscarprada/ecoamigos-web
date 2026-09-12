@@ -30,7 +30,7 @@ No hay contrato uniforme para errores de Multer, JSON inválido o rutas desconoc
 | POST | `/auth/login` | Público | token, user |
 | GET | `/auth/me` | Autenticado | Usuario actual |
 | GET | `/public/ranking` | Público | currentPeriod, ranking |
-| GET | `/public/stats` | Público | general, status, materials, teams, periods, indicators |
+| GET | `/public/stats` | Público | general, status, materials, teams, periods |
 | GET | `/public/points-catalog` | Público | Catálogo completo |
 | GET | `/public/content/:category` | Público | Contenido publicado |
 | POST | `/recycling` | leader | Registro creado; requiere equipo válido en JWT |
@@ -103,13 +103,12 @@ La respuesta se limita al periodo vigente y la clasificación. No consulta ni de
 | materials[] | material_type, total, total_quantity, total_points |
 | teams[] | id, name, dependency, total_records, total_points |
 | periods[] | id, name, total_records, total_points |
-| indicators | totalQuantity, estimatedTreesSaved, estimatedWaterSaved, estimatedCo2Reduction, estimatedEnergySaved |
 
-F13: `general.total_quantity`, `materials[].total_quantity` e `indicators.totalQuantity` representan exclusivamente cantidades aprobadas declaradas en kg: `status = 'approved' AND lower(btrim(unit)) = 'kg'`. Se conservan las claves y los NUMERIC SQL como cadenas decimales. No se convierten litros, gramos, toneladas, unidades, bloques ni textos alternativos como `kilogramos`; no se infiere unidad desde material o catálogo. Los cinco materiales del esquema pueden contribuir si su fila declara kg, incluido orgánico sin interpretar la etiqueta de 5 kg. Materiales con actividad pero sin kg aprobados permanecen con `total_quantity = 0`.
+F13: `general.total_quantity` y `materials[].total_quantity` representan exclusivamente cantidades aprobadas declaradas en kg: `status = 'approved' AND lower(btrim(unit)) = 'kg'`. Se conservan las claves y los NUMERIC SQL como cadenas decimales. No se convierten litros, gramos, toneladas, unidades, bloques ni textos alternativos como `kilogramos`; no se infiere unidad desde material o catálogo. Los cinco materiales del esquema pueden contribuir si su fila declara kg, incluido orgánico sin interpretar la etiqueta de 5 kg. Materiales con actividad pero sin kg aprobados permanecen con `total_quantity = 0`.
 
-Los conteos `total_records`, `materials[].total` y `status[]` siguen midiendo actividad de todos los estados, y las sumas de puntos conservan su contrato; no se filtran por unidad. No equivalen al total de kg aprobados. Todas estas métricas son históricas, sin filtro de período activo: general/materiales/equipos/indicadores incluyen también registros sin período; `periods[]` agrupa solo registros asociados a cada período. Materiales se ordenan por número de registros descendente; equipos por puntos DESC, registros DESC y nombre ASC; períodos por id DESC. Las categorías de estado ausentes no necesariamente aparecen con cero.
+Los conteos `total_records`, `materials[].total` y `status[]` siguen midiendo actividad de todos los estados, y las sumas de puntos conservan su contrato; no se filtran por unidad. No equivalen al total de kg aprobados. Todas estas métricas son históricas, sin filtro de período activo: general/materiales/equipos incluyen también registros sin período; `periods[]` agrupa solo registros asociados a cada período. Materiales se ordenan por número de registros descendente; equipos por puntos DESC, registros DESC y nombre ASC; períodos por id DESC. Las categorías de estado ausentes no necesariamente aparecen con cero.
 
-Los cuatro indicadores ambientales usan únicamente papel/cartón aprobado declarado en kg y conservan los factores existentes. El backend no redondea los resultados de los factores; son números JavaScript con su precisión de coma flotante. La presentación limita a dos decimales. Sin base aprobada compatible, cantidades e indicadores devuelven cero, nunca null/NaN. Este endpoint público alimenta también el dashboard administrativo; no hay un cálculo ambiental administrativo alternativo. Ranking y exportación mantienen su contrato. Fórmulas y límites: [reglas](06-REGLAS-Y-BACKEND.md).
+F14: se retiró el objeto indicators completo de /public/stats, incluidos totalQuantity y los cuatro campos estimated*. No se devuelven equivalencias ni ceros sustitutos. El total permanece exclusivamente en general.total_quantity (NUMERIC SQL); los subtotales por material permanecen en materials[].total_quantity. Se conserva el SQL F13, sin conversión ni redondeo adicional. Sin registros compatibles el total real es cero. Ranking, conteos y puntos conservan su contrato. Consumidores anteriores deben usar general.total_quantity y retirar las cuatro equivalencias. Ver [motivo y trazabilidad histórica](12-METODOLOGIA-INDICADORES.md).
 
 ### GET /public/points-catalog
 

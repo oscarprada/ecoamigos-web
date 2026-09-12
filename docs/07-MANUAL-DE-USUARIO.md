@@ -46,7 +46,7 @@ El panel muestra nombre, equipo asignado, puntos, posición y conteos personales
 1. Confirmar que tienes equipo asignado y que existe periodo activo.
 2. Pulsar Registrar reciclaje.
 3. Elegir material: papel/cartón, plástico, vidrio, metal u orgánico.
-4. Escribir cantidad y unidad. Para coherencia con los niveles e indicadores actuales, trabajar en kg; la interfaz permite otras unidades, pero no convierte valores.
+4. Escribir cantidad y unidad. Para coherencia con los niveles y el total aprobado actual, trabajar en kg; la interfaz permite otras unidades, pero no convierte valores.
 5. Seleccionar calidad alta, media o baja.
 6. Revisar los criterios: limpio, seco, separado correctamente, sin contaminantes y evidencia clara. Material limpio aparece marcado inicialmente.
 7. Indicar fecha, observaciones y, si corresponde, adjuntar foto o video.
@@ -117,9 +117,11 @@ Tipos: Texto, Imagen, Video y Archivo. El selector admite imágenes, videos, PDF
 
 ### Dashboard y Excel
 
-En `/admin`, los conteos de registros, estados y materiales muestran actividad histórica de todos los estados. Los puntos por equipo también son históricos; no equivalen al ranking del período activo. “Reciclaje aprobado (kg declarados)” suma únicamente filas aprobadas cuya unidad sea kg, incluidos los cinco materiales; admite mayúsculas y espacios exteriores. Otras unidades no se convierten ni se suman a kg. En orgánico solo se usa la cantidad/unidad declarada, nunca se deducen bloques de 5 kg desde el catálogo; F07 sigue pendiente.
+En `/admin`, los conteos de registros, estados y materiales muestran actividad histórica de todos los estados. Los puntos por equipo también son históricos; no equivalen al ranking del período activo. “Cantidad total reciclada aprobada (kg)” suma únicamente filas aprobadas cuya unidad sea kg, incluidos los cinco materiales; admite mayúsculas y espacios exteriores. Otras unidades no se convierten ni se suman a kg. En orgánico solo se usa la cantidad/unidad declarada, nunca se deducen bloques de 5 kg desde el catálogo; F07 sigue pendiente.
 
-Las cantidades e indicadores abarcan todos los períodos, incluso registros sin período. Los cuatro indicadores ambientales usan solo papel/cartón aprobado declarado en kg; son estimaciones del código, no mediciones certificadas. F13 corrige los datos que entran al cálculo, conserva los factores y muestra los indicadores con hasta dos decimales. Si no hay kg aprobados compatibles, el total y los indicadores son cero aunque existan registros enviados.
+La cantidad total reciclada aprobada (kg) abarca todos los períodos, incluso registros sin período. Solo suma registros aprobados declarados en kg. Si no hay filas compatibles, el total es cero.
+
+Los indicadores ambientales equivalentes se encuentran en revisión metodológica y no se muestran hasta contar con factores técnicamente validados. Las cuatro tarjetas fueron retiradas, sin valores ni ceros sustitutos. La [metodología histórica](12-METODOLOGIA-INDICADORES.md) explica la decisión; no se muestran fórmulas antiguas en el dashboard.
 
 Pulsar la acción de exportar para descargar `Reporte_Ecoamigos.xlsx`. Incluye todos los registros y nueve columnas, con filtros y encabezado fijo. Contiene nombres de personas/equipos; almacenarlo según las reglas internas y fuera del repositorio Git.
 

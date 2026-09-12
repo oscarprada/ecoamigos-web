@@ -15,6 +15,7 @@ La fuente principal es el árbol de trabajo actual, incluyendo ajustes visuales 
 | Instalar | [Instalación](01-INSTALACION.md), [Base de datos](03-BASE-DE-DATOS.md), [Pendientes](09-CALIDAD-Y-PENDIENTES.md) |
 | Desarrollar | [Arquitectura](02-ARQUITECTURA.md), [API](04-API.md), [Frontend](05-FRONTEND.md), [Reglas](06-REGLAS-Y-BACKEND.md) |
 | Capacitar usuarios | [Manual](07-MANUAL-DE-USUARIO.md) |
+| Interpretar indicadores ambientales | [Metodología y trazabilidad F14](12-METODOLOGIA-INDICADORES.md) |
 | Administrar servidor | [Operación](08-OPERACION.md), [Calidad](09-CALIDAD-Y-PENDIENTES.md) |
 | Publicar código | [GitHub](10-GITHUB.md) |
 

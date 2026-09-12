@@ -29,7 +29,7 @@ CORREGIDO se refiere al código y la instalación nueva probados, no a una base 
 
 Premios y ganadores están fuera del alcance actual del producto. Se retiraron sus páginas, rutas, enlaces, llamadas, controladores y endpoints, y `GET /public/ranking` volvió a limitarse a `currentPeriod` y `ranking`. No se modificó el cálculo de posiciones o puntos. Las tablas `prizes`, `winner_records` y `rewards` permanecen deliberadamente como legado; no se ejecutó SQL destructivo ni se modificaron datos.
 
-F14–F20 y S01–S12 permanecen sin resolver por alcance. F10–F13 están corregidos según lo descrito abajo; la matriz T01–T28 conserva sus comprobaciones manuales con T20 actualizado para F13. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
+F15–F20 y S01–S12 permanecen sin resolver por alcance. F10–F14 están corregidos según lo descrito abajo; la matriz T01–T28 conserva sus comprobaciones manuales con T20 actualizado para F13. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
 
 ## Fuente única de puntuación — F04
 
@@ -175,6 +175,24 @@ Validación: **109 pruebas aprobadas, cero fallos/omisiones**, incluidas 13 F13 
 
 Regresión F01–F12, instalación, migraciones D01/F09 y concurrencias F08/F09/F09-F10/F12 aprobadas; F05 y acceso F11 preservados. Sintaxis de 30 archivos backend y build frontend correctos (solo avisos de deprecación); git diff --check correcto. Las 56 filas de points_catalog se compararon idénticas antes/después en el clúster aislado, y el CSV original no cambió. No se modificaron ranking, reglas de puntos, F05/F07, factores ni exportación. Clústeres temporales detenidos; ninguna conexión a ecoamigos real. Sin migración, commit ni push. F14 no trabajado. No queda decisión de unidad pendiente para F13: se utiliza exclusivamente la unidad declarada, con exclusión explícita de cualquier texto distinto de kg.
 
+## Metodología de indicadores ambientales — F14 CORREGIDO por retiro
+
+Decisión autorizada del 12 de septiembre de 2026: retirar las cuatro equivalencias, sus factores, utility e indicadores API y tarjetas. No se devuelven valores ni ceros sustitutos. Solo permanece general.total_quantity con el SQL F13 approved+kg. Cierre por eliminación del uso activo de factores no demostrados, no por validación científica. Cambio local sin commit sobre 91178e0. La metodología 12 conserva fuentes y condiciones obligatorias para reintroducción.
+
+Validación final del retiro: **112 pruebas aprobadas, cero fallos/omisiones**, incluidas F14 estáticas y HTTP F13 con contrato sin indicators. Total mixto 42.25 kg correcto; pending/rejected y otras unidades no suman; decimales, ranking y puntos preservados. F01–F12, instalación, migraciones D01/F09 y concurrencias F08/F09/F10/F12 pasan. Sintaxis de 30 archivos, build frontend (avisos de deprecación) y git diff --check correctos. Sin coincidencias de factores equivalentes ni sus consumidores en backend/src y frontend/src; las menciones de agua/energía como categorías educativas no son cálculos. Las 56 filas del catálogo temporal permanecieron idénticas y el CSV no cambió. No hubo conexión a ecoamigos real, commit ni push.
+
+### Auditoría histórica y primera mitigación (sustituidas por el retiro)
+
+Auditoría completada antes de modificar comentarios/interfaz. git log --follow, blame y show identificaron da6ab9a (2026-05-12) como introducción de fórmulas preliminares y 308f070 (2026-07-09) como sustitución por 0.017, 26.5, 1.0 y 4.1 solo sobre papel. Este último añadió comentarios EPA sin fuente bibliográfica. F13 (91178e0) conservó factores. El repositorio no contenía enlaces WARM ni fuente técnica por indicador. No se puede reconstruir desde git la procedencia científica de los valores.
+
+La [metodología completa](12-METODOLOGIA-INDICADORES.md) contiene tabla por indicador, fórmulas/unidades, ubicación de fuentes verificadas externamente, comparación con preliminares y conversiones matemáticas condicionales no implementadas. EPA/NPS divulgan equivalencias por ton para árboles/agua/energía, pero no demuestran los factores por kg actuales y su aplicabilidad a papel/cartón. WARM compara escenarios; Paper Products §3.2, Exhibit 3-7, distingue materiales y emisiones netas por short ton. Energy Impacts §7.3 exige también escenarios. No se encontró respaldo exacto al 1.0 de CO₂e. No se certificó ninguno por coincidencia temática o numérica.
+
+Los cuatro indicadores quedan NO SUSTENTADO / pendientes de validación institucional; árboles/agua/energía tienen pistas divulgativas parciales, no trazabilidad suficiente del factor exacto. Se mantienen números y fórmulas, con cada tarjeta marcada estimación no validada y advertencia de no uso como ahorro acreditado en informes institucionales. CO₂ se etiqueta CO₂e conforme a la unidad prevista en el comentario heredado, sin afirmar que el factor esté validado. Comentarios de backend remiten a metodología y retiran atribución indebida a EPA. Contratos numéricos, filtros F13, totalQuantity, puntos/ranking y F05/F07 intactos; ninguna conversión ni migración nueva.
+
+Pendientes concretos: fuente técnica con unidad/alcance/material que derive 0.017 árboles/kg, balance que derive 26.5 L/kg, escenario/GEI/GWP que derive 1.0 kg CO₂e/kg y proceso/energía que derive 4.1 kWh/kg (o reemplazos inequívocamente justificados), más aplicabilidad institucional. No se cierra F14 con bibliografía general.
+
+Validación de software: **114 pruebas aprobadas, cero fallos/omisiones**, incluidas cinco F14 que congelan resultados de 0, 1, 0.25 y 80 kg y verifican las cuatro etiquetas/unidades y advertencia. F13 mantiene HTTP/SQL reales approved+kg, precisión e histórico; F01–F12, instalación, migraciones D01/F09 y concurrencias F08/F09/F10/F12 pasan. Sintaxis de 31 archivos backend, build frontend (solo avisos de deprecación) y git diff --check correctos. Estas pruebas no son validación científica. F05, ranking y puntos intactos; las 56 filas del catálogo temporal se compararon idénticas y CSV original sin cambios. Clústeres temporales detenidos; ecoamigos real no conectada ni modificada. Sin commit/push; F15 no trabajado.
+
 ## Hallazgos funcionales y técnicos
 
 | ID | Hallazgo | Consecuencia / prioridad de revisión |
@@ -192,7 +210,7 @@ Regresión F01–F12, instalación, migraciones D01/F09 y concurrencias F08/F09/
 | F11 | Admin puede registrar, pero normalmente no tiene equipo | **CORREGIDO**: POST y formulario solo líder; equipo JWT válido y existente comprobado; 403 controlado sin equipo y sin aceptar suplantación por body |
 | F12 | Límite de 15 solo frontend | **CORREGIDO**: máximo 15 cuentas totales, incluidos admins/inactivos; API y bootstrap transaccionales con bloqueo, conflicto 409 y concurrencia real probada |
 | F13 | Estadísticas suman todos los estados/unidades | **CORREGIDO**: cantidades e indicadores solo approved con unit kg; conteos operativos/puntos e histórico preservados; factores intactos |
-| F14 | Factores ambientales sin fuente trazable en repositorio | Requieren revisión metodológica antes de uso institucional |
+| F14 | Factores ambientales sin fuente trazable en repositorio | **CORREGIDO** por retiro: cuatro equivalencias fuera de cálculo/API/UI; total approved+kg intacto; metodología histórica conservada |
 | F15 | Solo contenido tiene CRUD completo | No hay edición/baja de usuarios, equipos o periodos |
 | F16 | Sin endpoint de recuperación/cambio de contraseña | Soporte requiere intervención autorizada |
 | F17 | Algunas promesas UI sin catch y sin 404 SPA | Errores pueden verse como vacíos o páginas sin contenido |
