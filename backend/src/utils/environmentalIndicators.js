@@ -1,3 +1,5 @@
+// Input contract: total_quantity contains only approved quantities declared in kg.
+// Filtering happens in getPublicStats, before grouping by material. No conversions.
 export function calculateEnvironmentalIndicators(materials = []) {
   let totalQuantity = 0;
 
@@ -34,21 +36,21 @@ export function calculateEnvironmentalIndicators(materials = []) {
   });
 
   return {
-    // Cantidad total reciclada (todos los materiales)
-    totalQuantity: Number(totalQuantity.toFixed(2)),
+    // Cantidad aprobada declarada en kg (todos los materiales).
+    totalQuantity,
 
     // EPA: 17 árboles por tonelada de papel reciclado
     // 17 / 1000 = 0.017 árboles por kg
-    estimatedTreesSaved: Number((paperKg * 0.017).toFixed(2)),
+    estimatedTreesSaved: paperKg * 0.017,
 
     // EPA: 26.5 litros de agua ahorrados por kg de papel reciclado
-    estimatedWaterSaved: Number((paperKg * 26.5).toFixed(2)),
+    estimatedWaterSaved: paperKg * 26.5,
 
     // EPA (valor conservador): 1 kg CO₂e evitado por kg de papel reciclado
-    estimatedCo2Reduction: Number((paperKg * 1.0).toFixed(2)),
+    estimatedCo2Reduction: paperKg * 1.0,
 
     // EPA: 4.1 kWh ahorrados por kg de papel reciclado
-    estimatedEnergySaved: Number((paperKg * 4.1).toFixed(2)),
+    estimatedEnergySaved: paperKg * 4.1,
   };
 }
 

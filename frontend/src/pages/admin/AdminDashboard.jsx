@@ -104,8 +104,9 @@ export default function AdminDashboard() {
         <p style={styles.kicker}>Administración Ecoamigos</p>
         <h2 style={styles.title}>PANEL EJECUTIVO </h2>
         <p style={styles.description}>
-          Visualiza el estado general de la campaña, participación por equipos,
-          materiales registrados, avance institucional e indicadores ambientales.
+          Histórico de todos los períodos: registros y puntos acumulados por equipos.
+          El reciclaje aprobado suma solo cantidades declaradas en kg. Otras unidades
+          quedan fuera; los indicadores estiman el impacto del papel/cartón aprobado en kg.
         </p>
         <div style={styles.exportContainer}>
         <button
@@ -129,33 +130,33 @@ export default function AdminDashboard() {
         <StatCard title="Pendientes" value={statusSummary.pending} />
         <StatCard title="Aprobados" value={statusSummary.approved} />
         <StatCard title="Rechazados" value={statusSummary.rejected} />
-        <StatCard title="Cantidad registrada (kg)" value={Number(publicStats.general?.total_quantity || 0)} />
+        <StatCard title="Reciclaje aprobado (kg declarados)" value={Number(publicStats.general?.total_quantity || 0)} />
       </section>
 
       <section style={styles.statsGrid}>
         <StatCard
-          title="Árboles salvados"
-          value={publicStats.indicators?.estimatedTreesSaved || 0}
+          title="Árboles salvados (estimación)"
+          value={formatIndicator(publicStats.indicators?.estimatedTreesSaved)}
         />
 
         <StatCard
           title="Agua ahorrada (L)"
-          value={publicStats.indicators?.estimatedWaterSaved || 0}
+          value={formatIndicator(publicStats.indicators?.estimatedWaterSaved)}
         />
 
         <StatCard
           title="CO₂ reducido (kg)"
-          value={publicStats.indicators?.estimatedCo2Reduction || 0}
+          value={formatIndicator(publicStats.indicators?.estimatedCo2Reduction)}
         />
 
         <StatCard
           title="Energía ahorrada (kWh)"
-          value={publicStats.indicators?.estimatedEnergySaved || 0}
+          value={formatIndicator(publicStats.indicators?.estimatedEnergySaved)}
         />
       </section>
 
       <section style={styles.chartsGrid}>
-        <ChartCard title="Ranking de equipos por puntos">
+        <ChartCard title="Equipos por puntos históricos">
           {topTeams.length === 0 ? (
             <EmptyText text="Aún no hay datos de equipos." />
           ) : (
@@ -251,6 +252,10 @@ export default function AdminDashboard() {
       </section>
     </div>
   );
+}
+
+function formatIndicator(value) {
+  return Number(value || 0).toLocaleString('es-CO', { maximumFractionDigits: 2 });
 }
 
 function StatCard({ title, value }) {
@@ -496,6 +501,5 @@ const styles = {
     margin: 0,
   },
 };
-
 
 

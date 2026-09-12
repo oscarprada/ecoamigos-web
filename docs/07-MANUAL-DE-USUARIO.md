@@ -117,7 +117,9 @@ Tipos: Texto, Imagen, Video y Archivo. El selector admite imágenes, videos, PDF
 
 ### Dashboard y Excel
 
-En `/admin`, consultar conteos, actividad por equipo/material e indicadores. Las estadísticas abarcan todos los estados y periodos; no son necesariamente iguales al ranking activo. Los indicadores son estimaciones del código, no mediciones certificadas.
+En `/admin`, los conteos de registros, estados y materiales muestran actividad histórica de todos los estados. Los puntos por equipo también son históricos; no equivalen al ranking del período activo. “Reciclaje aprobado (kg declarados)” suma únicamente filas aprobadas cuya unidad sea kg, incluidos los cinco materiales; admite mayúsculas y espacios exteriores. Otras unidades no se convierten ni se suman a kg. En orgánico solo se usa la cantidad/unidad declarada, nunca se deducen bloques de 5 kg desde el catálogo; F07 sigue pendiente.
+
+Las cantidades e indicadores abarcan todos los períodos, incluso registros sin período. Los cuatro indicadores ambientales usan solo papel/cartón aprobado declarado en kg; son estimaciones del código, no mediciones certificadas. F13 corrige los datos que entran al cálculo, conserva los factores y muestra los indicadores con hasta dos decimales. Si no hay kg aprobados compatibles, el total y los indicadores son cero aunque existan registros enviados.
 
 Pulsar la acción de exportar para descargar `Reporte_Ecoamigos.xlsx`. Incluye todos los registros y nueve columnas, con filtros y encabezado fijo. Contiene nombres de personas/equipos; almacenarlo según las reglas internas y fuera del repositorio Git.
 

@@ -97,17 +97,23 @@ F09 conserva la regla de máximo un período activo, con cero permitido. Crear u
 
 ## Estadísticas e indicadores
 
-`getPublicStats` suma todos los estados y periodos. No convierte unidades. Aunque la UI suele usar kg, unit es editable y la suma de quantity puede mezclar magnitudes.
+F13 define reciclaje aprobado como registros con `status = 'approved'`. Las sumas denominadas kg (`general.total_quantity`, `materials[].total_quantity` e `indicators.totalQuantity`) aplican además `lower(btrim(unit)) = 'kg'`. Pending/rejected y cualquier otra unidad quedan fuera de esas cantidades, sin alterar registros ni convertir unidades. Los conteos operativos y las sumas de puntos conservan su contrato anterior: actividad de todos los estados, independiente de la unidad.
+
+`quantity` es NUMERIC(10,2), cantidad positiva en la unidad declarada por separado en `unit` (texto libre, predeterminado kg). Esto se aplica a papel/cartón, plástico, vidrio, metal y orgánico, los únicos materiales admitidos por esquema y F05. El formulario etiqueta por separado Cantidad y Unidad; no impone kg. El manual recomienda kg, pero no demuestra que toda fila lo use. Por tanto, cada uno de los cinco materiales entra al total únicamente si su fila declara kg; `KG` y espacios exteriores se normalizan solo para comparar. Litros, unidades, bloques, gramos, toneladas, unidad vacía/desconocida y otros textos quedan excluidos, sin equivalencias inventadas.
+
+En orgánico no se deducen kg desde “5 kg de abono generado en compostera”, ni se multiplica quantity por 5, ni se presume que representa bloques. Una fila orgánica aprobada con unit kg aporta exactamente su quantity declarada; una con unit bloques no aporta kg. Esto no valida la metodología orgánica ni cambia F05/F07: la falta de catálogo institucional sigue bloqueando las altas correspondientes y requiere su decisión independiente. El CSV contiene actividades en litros, unidades y kg de otros grupos, pero no una tabla de conversión de recycling_records. Seeds no aportan registros de negocio; las pruebas anteriores en kg son fixtures, no evidencia sobre datos reales.
+
+Alcance histórico: general, materiales, equipos e indicadores incluyen todos los períodos y filas sin período. periods agrupa por período existente; no hay filtro de activo. El dashboard administrativo consume `/public/stats`, por lo que comparte exactamente la base pública. `GET /admin/dashboard` y los conteos personales siguen mostrando actividad, no kg. El ranking mantiene aprobados del período activo; no se modifica su SQL ni la puntuación. Excel conserva filas de todos los estados con cantidad/unidad separadas, sin sumatoria.
 
 | Indicador | Cálculo implementado |
 | --- | --- |
-| totalQuantity | Suma quantity de todos los materiales |
+| totalQuantity | Suma quantity aprobada declarada en kg de los cinco materiales |
 | estimatedTreesSaved | papel_carton × 0.017 |
 | estimatedWaterSaved | papel_carton × 26.5 |
 | estimatedCo2Reduction | papel_carton × 1.0 |
 | estimatedEnergySaved | papel_carton × 4.1 |
 
-Se redondea a dos decimales. Los comentarios del código atribuyen factores a EPA, pero el repositorio no aporta una fuente técnica verificable ni validación metodológica; aquí se documenta la fórmula, no se certifica su precisión ambiental. Plástico, vidrio y metal se acumulan en variables internas sin alimentar esos cuatro factores. Orgánico solo contribuye al total.
+En las cuatro fórmulas, papel_carton significa únicamente su cantidad aprobada declarada en kg. PostgreSQL suma NUMERIC sin redondeo adicional; los factores se calculan como números JavaScript sin toFixed en backend (precisión de coma flotante). El dashboard formatea solo al presentar a dos decimales. Los comentarios del código atribuyen factores a EPA, pero el repositorio no aporta una fuente técnica verificable ni validación metodológica; aquí se documenta la fórmula, no se certifica su precisión ambiental. F13 no cambia factores ni bibliografía: eso permanece en F14. Plástico, vidrio y metal se acumulan en variables internas sin alimentar esos cuatro factores. Orgánico solo contribuye al total si declara kg.
 
 ## Archivos
 

@@ -71,7 +71,9 @@ export async function getPublicStats(_req, res) {
         SELECT
           material_type,
           COUNT(*)::int AS total,
-          COALESCE(SUM(quantity), 0)::numeric AS total_quantity,
+          COALESCE(SUM(quantity) FILTER (
+            WHERE status = 'approved' AND lower(btrim(unit)) = 'kg'
+          ), 0)::numeric AS total_quantity,
           COALESCE(SUM(points_awarded), 0)::int AS total_points
         FROM recycling_records
         GROUP BY material_type
@@ -113,7 +115,9 @@ export async function getPublicStats(_req, res) {
         SELECT
           COUNT(*)::int AS total_records,
           COALESCE(SUM(points_awarded), 0)::int AS total_points,
-          COALESCE(SUM(quantity), 0)::numeric AS total_quantity
+          COALESCE(SUM(quantity) FILTER (
+            WHERE status = 'approved' AND lower(btrim(unit)) = 'kg'
+          ), 0)::numeric AS total_quantity
         FROM recycling_records
       `
     );

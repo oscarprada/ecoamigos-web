@@ -29,7 +29,7 @@ CORREGIDO se refiere al código y la instalación nueva probados, no a una base 
 
 Premios y ganadores están fuera del alcance actual del producto. Se retiraron sus páginas, rutas, enlaces, llamadas, controladores y endpoints, y `GET /public/ranking` volvió a limitarse a `currentPeriod` y `ranking`. No se modificó el cálculo de posiciones o puntos. Las tablas `prizes`, `winner_records` y `rewards` permanecen deliberadamente como legado; no se ejecutó SQL destructivo ni se modificaron datos.
 
-F13–F20, S01–S12 y T01–T28 permanecen sin resolver por alcance. F10–F12 están corregidos según lo descrito abajo. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
+F14–F20 y S01–S12 permanecen sin resolver por alcance. F10–F13 están corregidos según lo descrito abajo; la matriz T01–T28 conserva sus comprobaciones manuales con T20 actualizado para F13. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
 
 ## Fuente única de puntuación — F04
 
@@ -129,6 +129,52 @@ Pruebas: **96 aprobadas, cero fallos/omisiones**, incluidas 8 subpruebas F12 (9 
 
 Sintaxis de 29 archivos backend, build frontend y git diff --check correctos; build solo avisos de deprecación. Clústeres temporales detenidos, ninguna conexión a ecoamigos real. No se añadió migración, no se cambiaron estados anteriores, no hubo commit/push. No hace falta otra decisión funcional. F13–F20 fuera de alcance.
 
+## Estadísticas de reciclaje aprobado — F13 CORREGIDO
+
+### Inventario previo a la corrección
+
+Fuentes auditadas: controladores/rutas, todas las agregaciones SUM/COUNT y reduce del frontend, dashboards, ranking público, exportación, esquema oficial/aliases/D01, seed, CSV, README, docs y pruebas. No se encontró otra estadística dinámica pública ni métrica de cumplimiento derivada de recycling_records. El texto educativo público de árboles/agua es contenido fijo, no una consulta de registros, y no se cambia en F13.
+
+En la tabla, RR = recycling_records; “todos” los materiales son papel_carton, plastico, vidrio, metal y organico. Cantidad real = quantity expresada en unit (columna libre independiente), no kg garantizados. Todas las filas son históricas salvo donde se indica período activo.
+
+| Nombre visible / campo API | Endpoint y consulta/campos | Estado previo (incluye pending/rejected) | Material | Unidad mostrada / unidad real de quantity | Mezcla incompatible previa | Alimenta indicadores |
+| --- | --- | --- | --- | --- | --- | --- |
+| Usuarios / Equipos | admin/dashboard; COUNT users / teams | No aplica | No aplica | Cuentas/equipos; sin quantity | No | No |
+| Registros / Pendientes privados | admin/dashboard; COUNT RR / WHERE status=pending | Todos / solo pending | Todos | Registros; sin quantity | No | No |
+| Registros / Puntos acumulados | public/stats.general; COUNT RR, SUM points_awarded | Todos, sí | Todos | Registros/puntos; sin quantity | No | No |
+| Cantidad registrada (kg) / general.total_quantity | public/stats; SUM RR.quantity | Todos, sí | Todos | kg / unit libre | Sí | No directamente; duplica la base del total ambiental |
+| Pendientes, Aprobados, Rechazados / Estado de validaciones | public/stats.status; COUNT RR GROUP BY status | Cada estado separado | Todos | Registros; sin quantity | No | No |
+| Materiales más registrados / materials.total | public/stats; COUNT RR GROUP BY material_type | Todos, sí | Cada material | Registros; sin quantity | No | No |
+| materials.total_quantity / total_points (API) | public/stats; SUM quantity / points_awarded GROUP BY material_type | Todos, sí | Cada material | Cantidad sin unidad explícita / unit libre; puntos | Sí en quantity, incluso dentro del mismo material | quantity sí |
+| Ranking de equipos por puntos / teams | public/stats; teams LEFT JOIN RR, COUNT rr.id, SUM points_awarded | Todos, sí | Todos | Puntos/registros; sin quantity | No | No |
+| periods (API, sin gráfico consumidor) | public/stats; periods LEFT JOIN RR, COUNT rr.id, SUM points_awarded | Todos, sí | Todos | Puntos/registros; sin quantity | No; agrupado por período, excluye filas sin período | No |
+| indicators.totalQuantity (API) | public/stats → calculateEnvironmentalIndicators; suma materials.total_quantity | Todos, sí | Todos | Total interpretado en kg / unit libre | Sí | Es el total ambiental |
+| Árboles salvados | public/stats.indicators; papel quantity × 0.017 | Todos, sí | Papel/cartón | Árboles estimados / quantity asumida kg | Sí | Sí |
+| Agua ahorrada (L) | Mismo cálculo; papel quantity × 26.5 | Todos, sí | Papel/cartón | Litros estimados / quantity asumida kg | Sí | Sí |
+| CO₂ reducido (kg) | Mismo cálculo; papel quantity × 1.0 | Todos, sí | Papel/cartón | kg CO₂ estimados / quantity asumida kg | Sí | Sí |
+| Energía ahorrada (kWh) | Mismo cálculo; papel quantity × 4.1 | Todos, sí | Papel/cartón | kWh estimados / quantity asumida kg | Sí | Sí |
+| Ranking público / Posición actual / Puntaje del equipo | public/ranking; SUM RR.points_awarded por team_id | Solo approved y período activo | Todos | Puntos/posición; sin quantity | No | No |
+| Respaldo personal del puntaje | recycling/mine → LeaderDashboard.reduce(points_awarded) si falta equipo en ranking | Todos, sí; personal histórico | Todos | Puntos; sin quantity | No; alcance distinto ya documentado, no se cambia en F13 | No |
+| Registros enviados / estados del líder | recycling/mine; filas WHERE user_id y conteos frontend | Todos o separados por status | Todos | Registros; sin suma quantity | No | No |
+| Historial personal / revisión administrativa | recycling/mine, pending, reviewed; filas RR | Personal todos; revisión pending o approved/rejected | Todos | quantity junto a unit por fila | No | No |
+| Excel: Cantidad, Unidad, Estado, Puntos, Período | admin/export/excel; RR JOIN users/teams LEFT JOIN periods | Todos, sí | Todos | Cantidad y unidad independientes por fila | No; no hay SUM ni total kg | No |
+
+### Decisión e implementación
+
+Evidencia: schema.sql declara quantity NUMERIC(10,2) positiva y unit VARCHAR(20) con default kg, sin enum de unidad. RegisterRecyclingPage tiene dos campos “Cantidad” y “Unidad”, inicia kg pero permite texto libre. createRecord conserva quantity y normaliza texto unit, sin conversión. F05 valida material/cantidad/referencia, no kg. El manual recomienda kg; los fixtures anteriores usan kg, pero ninguno demuestra que todas las filas reales sean kg. CSV ofrece actividades de distintos grupos en kg, litros, unidades, etc.; no una equivalencia universal. No se consultaron datos reales.
+
+Para cada uno de papel/cartón, plástico, vidrio, metal y orgánico, quantity representa su cantidad declarada en unit. No existe otro material admitido por el esquema actual. No puede afirmarse que un material siempre sea kg, unidades, volumen o bloques. Orgánico no convierte la etiqueta “5 kg de abono generado en compostera” en multiplicador ni unidad: F07 y la referencia institucional faltante permanecen intactos.
+
+Regla explícita F13: SUM(quantity) FILTER (WHERE status = 'approved' AND lower(btrim(unit)) = 'kg') en los agregados general y por material. Así los cinco materiales contribuyen únicamente por filas aprobadas que declaran kg; unit distinta, vacía o no reconocida no contribuye. Se aceptan KG y espacios exteriores como el mismo símbolo, sin convertir magnitudes ni interpretar sinónimos. Las cantidades orgánicas declaradas en kg cuentan literalmente, no como bloques de 5; las declaradas en bloques quedan excluidas. No hace falta decidir F07 para distinguir estas unidades explícitas.
+
+Se conservan claves API, puntos, conteos de actividad, listados, ordenamientos y ranking. materials.total sigue contando todos los registros (su gráfico dice “más registrados”), mientras total_quantity expresa solo kg aprobados; un material sin kg aprobados conserva cantidad cero. general/materials/teams/indicators son históricos, incluyendo filas sin período. periods agrupa por período existente. No se impone filtro activo ni se cambian registros, revisiones, F05/F07 o catálogo. No hay migración.
+
+Los indicadores reciben los agregados ya filtrados. Los cuatro factores siguen siendo 0.017, 26.5, 1.0 y 4.1 sobre papel/cartón; los demás materiales solo contribuyen al total compatible. F13 no cambia bibliografía ni factores (F14 sigue pendiente). SQL conserva NUMERIC; se retira toFixed del backend para no redondear prematuramente los resultados JavaScript, y el frontend formatea indicadores a dos decimales. Dashboard aclara histórico, kg declarados, unidades excluidas y base de papel/cartón. El título de equipos aclara puntos históricos. Sin rediseño.
+
+Validación: **109 pruebas aprobadas, cero fallos/omisiones**, incluidas 13 F13 (12 subpruebas más contenedor), con router público real, HTTP local, SQL e indicadores reales en PostgreSQL temporal. Incluye estados aislados y mezclados por los cinco materiales, unidades incompatibles, orgánico sin inferencia de bloques, precisión decimal, cuatro factores originales, cero aprobados, histórico/activo/sin período, puntos/ranking y lecturas sin mutación. Caso concreto: cinco materiales con 2.75 kg approved, 100 pending y 200 rejected cada uno dejan 13.75 kg aprobados y 15 registros operativos. Cuarenta filas en otras unidades aportan cero kg. Papel 0.10 + 0.20 devuelve NUMERIC '0.30' y árboles 0.0051 sin redondeo de backend.
+
+Regresión F01–F12, instalación, migraciones D01/F09 y concurrencias F08/F09/F09-F10/F12 aprobadas; F05 y acceso F11 preservados. Sintaxis de 30 archivos backend y build frontend correctos (solo avisos de deprecación); git diff --check correcto. Las 56 filas de points_catalog se compararon idénticas antes/después en el clúster aislado, y el CSV original no cambió. No se modificaron ranking, reglas de puntos, F05/F07, factores ni exportación. Clústeres temporales detenidos; ninguna conexión a ecoamigos real. Sin migración, commit ni push. F14 no trabajado. No queda decisión de unidad pendiente para F13: se utiliza exclusivamente la unidad declarada, con exclusión explícita de cualquier texto distinto de kg.
+
 ## Hallazgos funcionales y técnicos
 
 | ID | Hallazgo | Consecuencia / prioridad de revisión |
@@ -145,7 +191,7 @@ Sintaxis de 29 archivos backend, build frontend y git diff --check correctos; bu
 | F10 | Fechas/periodo activo no se validan al crear registro | **CORREGIDO**: activo e ID protegidos frente a F09; fecha de actividad válida dentro del rango inclusivo y no posterior a CURRENT_DATE, comprobada por PostgreSQL |
 | F11 | Admin puede registrar, pero normalmente no tiene equipo | **CORREGIDO**: POST y formulario solo líder; equipo JWT válido y existente comprobado; 403 controlado sin equipo y sin aceptar suplantación por body |
 | F12 | Límite de 15 solo frontend | **CORREGIDO**: máximo 15 cuentas totales, incluidos admins/inactivos; API y bootstrap transaccionales con bloqueo, conflicto 409 y concurrencia real probada |
-| F13 | Estadísticas suman todos los estados/unidades | Indicadores no equivalen a reciclaje aprobado en kg |
+| F13 | Estadísticas suman todos los estados/unidades | **CORREGIDO**: cantidades e indicadores solo approved con unit kg; conteos operativos/puntos e histórico preservados; factores intactos |
 | F14 | Factores ambientales sin fuente trazable en repositorio | Requieren revisión metodológica antes de uso institucional |
 | F15 | Solo contenido tiene CRUD completo | No hay edición/baja de usuarios, equipos o periodos |
 | F16 | Sin endpoint de recuperación/cambio de contraseña | Soporte requiere intervención autorizada |
@@ -198,7 +244,7 @@ Usar base aislada, dos roles y datos ficticios. Registrar resultado, fecha, ento
 | T17 Revisión repetida | API vuelve a revisar un aprobado | Reemplaza revisión; no hay historial inmutable |
 | T18 Historial personal | Dos líderes de mismo equipo | mine solo devuelve registros del usuario actual |
 | T19 Ranking | Aprobados/pending de dos periodos y empate | Solo aprobados del activo; empate por nombre |
-| T20 Estadísticas | Registros de estados/unidades distintos | Suma global; dejar constancia de limitación |
+| T20 Estadísticas | Registros de estados/unidades distintos | Kg e indicadores solo approved con unit kg; conteos de actividad conservan estados; sin conversión ni filtro de período activo |
 | T21 Contenido | Crear cuatro tipos por categoría, draft/published | Público solo devuelve publicados |
 | T22 Editar/eliminar | Editar sin/con archivo, después borrar | Conserva/sustituye URL; archivo viejo permanece |
 | T23 Ganadores | Consultar winners con datos | Detectar incompatibilidad de campos y alcance |
