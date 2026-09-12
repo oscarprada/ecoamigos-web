@@ -89,7 +89,7 @@ No hay pantalla para editar un periodo existente ni cargar catálogo. Evitar per
 4. Para líder seleccionar equipo; para admin no se asigna equipo.
 5. Crear y comprobar el nuevo usuario en el listado.
 
-La UI permite hasta 15 cuentas totales. No hay gestión de baja, edición, cambio de clave ni activación desde esta pantalla. Entregar credenciales por un canal privado, no por comentarios o issues públicos.
+Se permiten hasta 15 cuentas totales almacenadas en toda la aplicación, incluidos administradores e inactivos. Desactivar o reactivar no cambia el cupo. El servidor también lo comprueba: si otro administrador ocupa el último lugar mientras completas el formulario, el alta se rechaza con un mensaje y la pantalla actualiza el conteo. No hay gestión de baja, edición, cambio de clave ni activación desde esta pantalla. Entregar credenciales por un canal privado, no por comentarios o issues públicos.
 
 ### Validar registros
 

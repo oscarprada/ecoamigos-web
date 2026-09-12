@@ -54,12 +54,26 @@ export async function listUsers(_req, res) {
 }
 
 export async function createUser(req, res) {
+  let client;
+  let transactionOpen = false;
+  let releaseError;
   try {
     const { name, email, password, role, team_id } = req.body;
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const result = await query(
+    client = await pool.connect();
+    await client.query('BEGIN');
+    transactionOpen = true;
+    // Hash before locking; serialize only the short count/insert on users.
+    await client.query('LOCK TABLE users IN SHARE ROW EXCLUSIVE MODE');
+    const count = await client.query('SELECT COUNT(*)::int AS total FROM users');
+    if (count.rows[0].total >= 15) {
+      await client.query('ROLLBACK');
+      transactionOpen = false;
+      return res.status(409).json({ message: 'Se alcanzo el maximo de 15 usuarios totales', code: 'USER_LIMIT_REACHED' });
+    }
+    const result = await client.query(
       `
         INSERT INTO users (
           name,
@@ -81,18 +95,26 @@ export async function createUser(req, res) {
       ]
     );
 
-    logInfo(
+    await client.query('COMMIT');
+    transactionOpen = false;
+    try { logInfo(
       `Usuario creado: ${email} | rol=${role} | admin_id=${req.user.id}`
-    );
+    ); } catch { /* A committed user must not depend on file logging. */ }
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    logError(`CREATE USER ERROR: ${error.message}`);
+    if (transactionOpen) {
+      try { await client.query('ROLLBACK'); }
+      catch (rollbackError) { releaseError = rollbackError; }
+    }
+    try { logError(`CREATE USER ERROR: ${error.message}`); }
+    catch { /* Preserve the controlled response if logging fails. */ }
 
     res.status(500).json({
       message: 'Error al crear usuario',
-      error: error.message,
     });
+  } finally {
+    if (client) client.release(releaseError);
   }
 }
 
@@ -368,4 +390,3 @@ export async function deleteContent(req, res) {
     });
   }
 }
-

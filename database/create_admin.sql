@@ -23,6 +23,15 @@ CREATE TEMP TABLE bootstrap_admin_input (
 ) ON COMMIT DROP;
 INSERT INTO bootstrap_admin_input VALUES (:'admin_name', :'admin_email', :'admin_password_hash');
 -- Conflictos no actualizan claves, roles ni identidad; se informa y se aborta.
+-- F12: mismo bloqueo y conteo que POST /admin/users; incluye inactivos y admins.
+LOCK TABLE users IN SHARE ROW EXCLUSIVE MODE;
+DO $user_limit$
+BEGIN
+  IF (SELECT count(*) FROM users) >= 15 THEN
+    RAISE EXCEPTION 'F12: maximo de 15 usuarios totales alcanzado. No se creo ninguna cuenta.';
+  END IF;
+END
+$user_limit$;
 INSERT INTO users (name, email, password_hash, role, is_active)
 SELECT name, email, password_hash, 'admin', true FROM bootstrap_admin_input
 RETURNING id, name, email, role;

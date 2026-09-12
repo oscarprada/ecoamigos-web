@@ -29,7 +29,7 @@ CORREGIDO se refiere al código y la instalación nueva probados, no a una base 
 
 Premios y ganadores están fuera del alcance actual del producto. Se retiraron sus páginas, rutas, enlaces, llamadas, controladores y endpoints, y `GET /public/ranking` volvió a limitarse a `currentPeriod` y `ranking`. No se modificó el cálculo de posiciones o puntos. Las tablas `prizes`, `winner_records` y `rewards` permanecen deliberadamente como legado; no se ejecutó SQL destructivo ni se modificaron datos.
 
-F12–F20, S01–S12 y T01–T28 permanecen sin resolver por alcance. F10 y F11 están corregidos según lo descrito abajo. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
+F13–F20, S01–S12 y T01–T28 permanecen sin resolver por alcance. F10–F12 están corregidos según lo descrito abajo. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
 
 ## Fuente única de puntuación — F04
 
@@ -115,6 +115,20 @@ Frontend: /leader/register solo admite leader; el panel /leader conserva leader/
 
 Validación: **87 pruebas aprobadas, cero fallos/omisiones**, incluidas 8 subpruebas F11 (9 contando contenedor), F01–F10, instalación, migraciones D01/F09 y concurrencia F08/F09/F10. F11 ejercita POST HTTP local con ruta, JWT, middleware y controlador reales contra PostgreSQL temporal (solo se sustituye almacenamiento de archivos, no hay adjuntos): líder válido, admin/supervisor 403, identidad sin equipo/inválida/inexistente 403, sin token 401, body sin autoridad, F05 y F10 preservados. El acceso/enlace frontend se verifica estáticamente. Las 56 filas originales de catálogo se comparan intactas; la identidad institucional adicional es fixture aislada para F05. Sintaxis de 28 archivos backend, build frontend y git diff --check correctos; build solo avisos de deprecación. Clústeres aislados detenidos. No se modificó ecoamigos real, esquema, puntos ni estados anteriores. Sin commit/push; F12–F20 fuera de alcance.
 
+## Cupo total de usuarios — F12 CORREGIDO
+
+Evidencia exacta: AdminUsersPage declara MAX_USERS=15, totalUsers=users.length, remainingSlots=Math.max(MAX_USERS-totalUsers,0), canCreateMore=totalUsers<MAX_USERS; detiene handleSubmit al agotarse y deshabilita el alta. listUsers consulta users sin WHERE ni filtros de actividad/equipo/rol, con LEFT JOIN teams que no excluye usuarios sin equipo. El manual especifica “15 cuentas totales”. La frase visual “habilitados para la campaña” no corresponde a un filtro de activos ni a una relación users/periods: se aclaró el texto conforme al conteo real y manual. No se encontró requisito RF numerado diferente.
+
+Regla C: máximo 15 usuarios totales almacenados en toda la aplicación. Cuentan admins y líderes, activos e inactivos, con o sin equipo. No es por equipo, por campaña, solo líderes ni un acumulado histórico de altas eliminadas. No hay DELETE, edición, activación o reactivación de usuarios en rutas; cambios de is_active no alteran el conteo total. Un admin puede crear otro admin o líder; UI/enum admiten esos dos roles. Esquema y migraciones no tenían límite, y seeds no crean usuarios. Antes, la API aceptaba INSERT sin conteo: solicitudes directas o dos formularios obsoletos podían exceder 15. La otra vía de alta distribuida es database/create_admin.sql.
+
+Backend: createUser calcula bcrypt costo 10 antes del bloqueo, obtiene una conexión y ejecuta BEGIN → LOCK TABLE users IN SHARE ROW EXCLUSIVE MODE → SELECT COUNT(*)::int AS total FROM users → INSERT → COMMIT. Con total >=15 hace ROLLBACK y devuelve 409 con code USER_LIMIT_REACHED y mensaje controlado. Errores revierten y devuelven 500 genérico sin SQL; finally libera la conexión y la descarta si falla rollback. Conserva password_hash como única columna de clave, role, cuenta activa, equipo recibido para líder y null forzado para admin. El bootstrap SQL usa idéntico bloqueo/conteo dentro de su transacción y aborta al agotarse el cupo.
+
+El bloqueo se limita a escritores de users durante conteo/INSERT; lectores y comprobaciones FK ordinarias continúan. A diferencia de un advisory lock, coordina también los escritores SQL del repositorio sin depender de una clave compartida. No se adquieren bloqueos de periods/reciclaje ni se altera F08–F11. No requiere migración/estructura nueva. SQL administrativo arbitrario que omita el control sigue pudiendo exceder el máximo; API y bootstrap quedan protegidos. Instalaciones previamente excedidas rechazan altas sin eliminar, desactivar ni cambiar usuarios. Frontend conserva su indicación preventiva y, ante 409/USER_LIMIT_REACHED, muestra el mensaje y recarga el listado para actualizar cupos.
+
+Pruebas: **96 aprobadas, cero fallos/omisiones**, incluidas 8 subpruebas F12 (9 contando contenedor), F01–F11, instalación, migraciones D01/F09 y concurrencia F08/F09/F10. F12 usa HTTP local con router admin, JWT, middleware, controlador y bcrypt reales contra PostgreSQL temporal. Con 14 usuarios mixtos (admin/líderes e inactivos), dos POST simultáneos observaron wait_event_type='Lock': resultados 201/409 y total final exactamente 15. Se probó 15 válido/16 rechazado, rollback por unicidad y trigger diferido al COMMIT, conservación de hashes/equipos/roles, desactivación/reactivación sin cambio de cupo (fixtures SQL, no endpoints nuevos), bootstrap 14→15 y aborto posterior, y estado previo excedido sin corrección silenciosa. F05 y F08–F11 conservan protecciones y pruebas. Las 56 filas originales de points_catalog permanecieron idénticas antes/después.
+
+Sintaxis de 29 archivos backend, build frontend y git diff --check correctos; build solo avisos de deprecación. Clústeres temporales detenidos, ninguna conexión a ecoamigos real. No se añadió migración, no se cambiaron estados anteriores, no hubo commit/push. No hace falta otra decisión funcional. F13–F20 fuera de alcance.
+
 ## Hallazgos funcionales y técnicos
 
 | ID | Hallazgo | Consecuencia / prioridad de revisión |
@@ -130,7 +144,7 @@ Validación: **87 pruebas aprobadas, cero fallos/omisiones**, incluidas 8 subpru
 | F09 | Crear periodo activo usa UPDATE e INSERT separados | **CORREGIDO**: transacción, bloqueo de escritores, rollback e índice único parcial; cero activos permitido, schema/D01/migración incremental probados en PostgreSQL aislado |
 | F10 | Fechas/periodo activo no se validan al crear registro | **CORREGIDO**: activo e ID protegidos frente a F09; fecha de actividad válida dentro del rango inclusivo y no posterior a CURRENT_DATE, comprobada por PostgreSQL |
 | F11 | Admin puede registrar, pero normalmente no tiene equipo | **CORREGIDO**: POST y formulario solo líder; equipo JWT válido y existente comprobado; 403 controlado sin equipo y sin aceptar suplantación por body |
-| F12 | Límite de 15 solo frontend | No se cumple si se usa API directamente |
+| F12 | Límite de 15 solo frontend | **CORREGIDO**: máximo 15 cuentas totales, incluidos admins/inactivos; API y bootstrap transaccionales con bloqueo, conflicto 409 y concurrencia real probada |
 | F13 | Estadísticas suman todos los estados/unidades | Indicadores no equivalen a reciclaje aprobado en kg |
 | F14 | Factores ambientales sin fuente trazable en repositorio | Requieren revisión metodológica antes de uso institucional |
 | F15 | Solo contenido tiene CRUD completo | No hay edición/baja de usuarios, equipos o periodos |
@@ -172,7 +186,7 @@ Usar base aislada, dos roles y datos ficticios. Registrar resultado, fecha, ento
 | T05 Autorización | Sin token / JWT vencido / líder en admin | 401 / 403 / 403 |
 | T06 Persistencia | Recargar con JWT válido, luego cerrar sesión | Recupera usuario; logout limpia token |
 | T07 Alta de equipo/líder | Crear equipo y usuario vinculado | 201 y visible en listado; comprobar columnas hash |
-| T08 Cupo | Llegar a 15 cuentas de prueba | UI impide alta; documentar ausencia de control API |
+| T08 Cupo | Llegar a 15 cuentas de prueba | UI impide alta; API devuelve 409/USER_LIMIT_REACHED; dos altas con 14 dejan exactamente 15 |
 | T09 Periodo | Crear activo; consultar ranking | Nuevo activo seleccionado y anterior inactivo |
 | T10 Sin periodo | Formulario con ranking sin activo | Botón enviar deshabilitado |
 | T11 Registro | Material válido con evidencia PNG pequeña | 201 pending, puntos 0, archivo accesible |

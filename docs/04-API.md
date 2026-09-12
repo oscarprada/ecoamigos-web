@@ -190,7 +190,9 @@ POST JSON:
 { "name": "Líder de ejemplo", "email": "lider@ejemplo.test", "password": "CLAVE_UNICA", "role": "leader", "team_id": 2 }
 ```
 
-bcrypt con costo 10; inserta únicamente password_hash; cuenta activa. Para admin fuerza team_id null; para leader utiliza el recibido. Devuelve 201 con `id, name, email, role, team_id`. El límite de 15 usuarios existe solo en UI. No hay PUT/DELETE ni desactivación por API.
+bcrypt con costo 10; inserta únicamente password_hash; cuenta activa. Para admin fuerza team_id null; para leader utiliza el recibido. Devuelve 201 con `id, name, email, role, team_id` después de COMMIT. F12 limita a 15 cuentas totales almacenadas en toda la aplicación: cuentan admin, leader e inactivos, sin filtro de equipo o período. Desactivar/reactivar no cambia el total; no existen endpoints para esas operaciones ni para eliminar usuarios.
+
+Con 15 o más filas devuelve 409 con `{ "message": "Se alcanzo el maximo de 15 usuarios totales", "code": "USER_LIMIT_REACHED" }`, sin modificar usuarios. El backend calcula bcrypt antes del bloqueo y ejecuta BEGIN, LOCK TABLE users IN SHARE ROW EXCLUSIVE MODE, COUNT(*), INSERT y COMMIT en una conexión. ROLLBACK ante fallo o cupo agotado. Error interno: 500 genérico sin SQL. Dos altas con el último cupo se serializan: una obtiene 201 y la otra 409. El frontend muestra el mensaje y refresca el conteo. No se modifica el contrato de otros endpoints.
 
 ### GET y POST /admin/teams
 

@@ -96,6 +96,9 @@ export default function AdminUsersPage() {
       await load();
     } catch (err) {
       setError(err.response?.data?.message || 'No fue posible crear el usuario.');
+      if (err.response?.status === 409 && err.response?.data?.code === 'USER_LIMIT_REACHED') {
+        await load();
+      }
     } finally {
       setSubmitting(false);
     }
@@ -109,7 +112,7 @@ export default function AdminUsersPage() {
           <h2 style={styles.title}>Gestión de usuarios</h2>
           <p style={styles.description}>
             Desde aquí puedes crear líderes y administradores, asignar equipos y
-            controlar el límite máximo de usuarios habilitados para la campaña.
+            consultar el límite de 15 cuentas totales, incluidos administradores e inactivos.
           </p>
         </div>
       </div>

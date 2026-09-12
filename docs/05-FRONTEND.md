@@ -52,7 +52,7 @@ El formulario de registro incluye cinco materiales, cantidad numérica (min 0.1,
 
 Dashboard combina cuatro contadores privados con estadísticas públicas, hasta cinco equipos/materiales, indicadores ambientales y barras calculadas con CSS. Exporta como blob, crea enlace temporal, dispara descarga y revoca URL.
 
-Usuarios carga usuarios/equipos en paralelo; calcula administradores/líderes/cupos; exige equipo para líderes; fija límite de 15 solamente en frontend. No permite editar ni borrar usuarios.
+Usuarios carga usuarios/equipos en paralelo; calcula administradores/líderes/cupos; exige equipo para líderes; muestra el límite de 15 cuentas totales, incluidos administradores e inactivos. El backend garantiza el cupo transaccionalmente; ante 409/USER_LIMIT_REACHED la pantalla muestra el mensaje y actualiza el listado. No permite editar ni borrar usuarios.
 
 Revisiones carga pendientes e historial en paralelo. Las pestañas, búsqueda por líder/equipo y filtro de material se resuelven localmente. Muestra evidencia, comentarios y revisor. Los botones de aprobar/rechazar aparecen solo en pendientes. Si no se escribe comentario, envía un texto predeterminado.
 
