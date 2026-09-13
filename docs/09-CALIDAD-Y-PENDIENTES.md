@@ -29,7 +29,7 @@ CORREGIDO se refiere al código y la instalación nueva probados, no a una base 
 
 Premios y ganadores están fuera del alcance actual del producto. Se retiraron sus páginas, rutas, enlaces, llamadas, controladores y endpoints, y `GET /public/ranking` volvió a limitarse a `currentPeriod` y `ranking`. No se modificó el cálculo de posiciones o puntos. Las tablas `prizes`, `winner_records` y `rewards` permanecen deliberadamente como legado; no se ejecutó SQL destructivo ni se modificaron datos.
 
-F18–F20 y S01–S12 permanecen sin resolver por alcance. F17 está corregido según su bloque final. F16 se detalla en su bloque de recuperación. F10–F15 están corregidos según lo descrito abajo; la matriz T01–T28 conserva sus comprobaciones manuales con T20 actualizado para F13. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
+F19–F20 y S01–S12 permanecen sin resolver por alcance. F18 está corregido según su verificación formal. F17 está corregido según su bloque final. F16 se detalla en su bloque de recuperación. F10–F15 están corregidos según lo descrito abajo; la matriz T01–T28 conserva sus comprobaciones manuales con T20 actualizado para F13. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
 
 ## Fuente única de puntuación — F04
 
@@ -235,7 +235,7 @@ Pruebas: backend/tests/f15-admin-scope.test.js conserva el arnés PostgreSQL des
 | F15 | Mantenimiento administrativo limitado y autorizado | **CORREGIDO**: usuarios editables y activables; equipos editables; períodos solo alta/listado; sin borrados físicos, con referencias preservadas y pruebas HTTP/regresión aprobadas |
 | F16 | Recuperación de contraseña | **CORREGIDO técnicamente**: token temporal hasheado de un uso, bcrypt y flujo público; sin cambio voluntario. Entrega de correo institucional pendiente |
 | F17 | Promesas UI y 404 SPA | **CORREGIDO**: errores persistentes separados de vacío/carga, reintento, mensajes controlados y catch-all; pruebas aprobadas, smoke visual pendiente |
-| F18 | showToast cambia identidad, depende efecto de registro | Posibles consultas repetidas al actualizar avisos |
+| F18 | Identidad del toast y consultas por efectos | **CORREGIDO**: useCallback de F17 verificado con ReactDOM; value estabilizado con useMemo en F18; avisos no repiten carga del período |
 | F19 | Input file no se limpia explícitamente tras registro | Revisar coherencia visual entre archivo elegido y estado reiniciado |
 | F20 | Modal sin focus trap/Escape; menú oculto | Accesibilidad y navegación móvil requieren QA |
 
@@ -334,7 +334,7 @@ Clasificación final:
 | C: no relevante | Helpers síncronos, render, enlaces, archivos sin llamadas asíncronas | Sin promesa de red que corregir; no se refactorizan |
 | D: pendiente real de promesas UI | Ninguno identificado en los flujos ejecutables auditados | Limitaciones visuales y de infraestructura separadas abajo |
 
-Educación descarta respuestas de una categoría anterior al cambiar categoría/desmontar; no se aplica cancelación global. En ToastContext el único cambio incidental es useCallback para estabilizar showToast, dependencia del efecto de carga de período. Impide que un aviso provoque otra carga por cambio de identidad. **F18 no se trabajó formalmente ni se declara corregido**; revisar este antecedente al abordar F18, sin ampliar ahora gestión de temporizadores o notificaciones.
+Educación descarta respuestas de una categoría anterior al cambiar categoría/desmontar; no se aplica cancelación global. En ToastContext el único cambio incidental es useCallback para estabilizar showToast, dependencia del efecto de carga de período. Impide que un aviso provoque otra carga por cambio de identidad. **Al cerrar F17, F18 no se había trabajado formalmente ni se declaró corregido**. La verificación posterior está en el bloque F18; se conserva este antecedente sin atribuir ese cierre a F17.
 
 NotFoundPage usa clases existentes y enlace al inicio. path="*" se encuentra dentro de AppLayout, fuera de grupos ProtectedRoute: rutas inexistentes públicas, /admin y /leader muestran 404, igual que /winners y /prizes. Las rutas válidas conservan sus permisos: sin sesión → /login, sin rol autorizado → /. Navbar, AppLayout y ProtectedRoute sin cambios. No se añadió ErrorBoundary: no se identificó un crash de render que exigiera ampliarlo para F17. No se modifica servidor/hosting ni se restaura funcionalidad retirada.
 
@@ -343,3 +343,34 @@ Validación: **26 pruebas F17 aprobadas**, con el transformador JSX de Vite exis
 Regresión completa: **135 pruebas backend aprobadas**, cero fallos/omisiones (161 sumando F17). Incluye F01–F16, instalación con 51 consultas preparadas, D01 y migraciones/concurrencias F08/F09/F09-F10/F12/F16. F15 y forgot/reset intactos; F12 mantiene 15 cuentas; F09 preserva el activo anterior ante rollback; F10 valida período/fecha; F13 approved+kg; F14 sin equivalencias retiradas. Backend y base/migraciones no tienen cambios F17. Algoritmo de ranking y puntos conservado. Las 56 filas del catálogo temporal se comparan idénticas y el original no cambia. Clústeres temporales detenidos, sin conexión ni modificación de ecoamigos real. Sintaxis de 36 archivos JS (34 backend + utilidad/prueba frontend), build Vite y git diff --check correctos; solo avisos de deprecación Vite.
 
 Smoke manual pendiente: apariencia responsive de 404/errores, clics en navegador real, recarga completa y estados con red interrumpida, navegación rápida entre categorías. Routing automatizado usa páginas sustitutas para las rutas válidas y un layout Outlet; no valida visualmente Navbar/AppLayout. Los efectos se prueban con hooks controlados, no un DOM de navegador. El hosting debe servir index.html al abrir URLs SPA directamente; la 404 React no configura ese fallback ni cambia el código HTTP del servidor. Sin commit/push; detenido antes de F18.
+
+
+## Identidad del toast y efectos — F18 CORREGIDO
+
+F17 ya había corregido la causa de las consultas repetidas: showToast usa useCallback con [], y solo captura setToast (setter estable). Usa sus argumentos actuales, sin leer estado toast ni capturar valores obsoletos. No existen otras funciones públicas equivalentes en el contexto. Duración 3500 ms, API y estilos originales conservados.
+
+F18 requirió un ajuste adicional mínimo: value={{ showToast }} creaba un objeto en cada render de ToastProvider, notificando innecesariamente a consumidores aunque la función fuera estable. Se añadió useMemo(() => ({ showToast }), [showToast]). Esto estabiliza el objeto de contexto; no es un cambio necesario para detener el GET original, que F17 ya había estabilizado, sino para evitar propagación innecesaria demostrada en la prueba. Ninguna dependencia fue eliminada y no se añadieron librerías.
+
+| Consumidor | Clasificación | Efectos/consultas |
+| --- | --- | --- |
+| RegisterRecyclingPage | A: avisos de éxito/error del handler de registro; B: showToast en efecto de carga | useEffect [showToast], GET /public/ranking para obtener currentPeriod; catch informa fallo. El efecto mantiene exactamente su dependencia |
+| AdminReviewsPage | A: éxito/error del handler de revisión; D: aviso dentro de load, invocado al montar y tras revisar | Efecto de montaje [] existente; GET /recycling/pending y /recycling/reviewed. No depende del objeto de contexto ni se repite por avisos |
+| Contexto | C: función pública memorizada; D: temporizador de ocultación | showToast con useCallback []; value con useMemo [showToast]. No hace HTTP |
+
+La búsqueda completa de useToast/showToast y useEffect no encontró más consumidores ni otro efecto vulnerable. Ranking público y paneles consultan en sus efectos de montaje y no consumen este contexto. El único efecto cuyo array incluye showToast está en frontend/src/pages/leader/RegisterRecyclingPage.jsx. Antes una actualización del estado del aviso recreaba la función y repetía ese GET; ahora solo mostrar, actualizar u ocultar el toast no cambia la dependencia.
+
+Prueba conductual con React y ReactDOM reales: frontend/tests/f18-toast.test.js compila el Provider y RegisterRecyclingPage del workspace mediante Vite, los monta y ejecuta sus hooks/efectos con act. frontend/tests/helpers/minimalDom.js aporta únicamente el host DOM mínimo; no simula useState/useEffect/useCallback. API sustituida por un contador de invocaciones GET y temporizadores controlados (se comprueba 3500 ms). No se conecta a la aplicación real.
+
+| Variante probada | Montaje | Mostrar | Cambiar texto | Ocultar | Rerender del Provider |
+| --- | --- | --- | --- | --- | --- |
+| Conducta anterior a F17 reconstruida sin useCallback | 1 | 2 | 3 | 4 | 5 |
+| F17: función estable, value nuevo | 1 | 1 | 1 | 1 | 1 |
+| F18: función y value estables | 1 | 1 | 1 | 1 | 1 |
+
+Cifras acumuladas de llamadas a GET /public/ranking sin StrictMode. En esa secuencia F17 genera cinco objetos de contexto distintos; F18 solo uno. Las identidades de función permanecen únicas en F17/F18. Un consumidor de prueba con dependencia funcional periodKey demuestra que React vuelve a ejecutar el efecto cuando esta cambia; no se añade esa propiedad al formulario real, cuyo efecto depende solo de showToast. Los montajes/remontajes reales pueden consultar y la doble ejecución de desarrollo de StrictMode no se elimina ni se confunde con este defecto.
+
+El toast aparece con el texto solicitado, se actualiza y se oculta al ejecutar su temporizador. Un rechazo de la carga del período muestra aviso y error persistente F17 con Reintentar, termina loading y mantiene una sola petición incluso al ocultar el aviso/rerenderizar. No se amplió gestión de temporizadores ni se añadió cierre manual: se mantiene el comportamiento previo.
+
+Resultados: **4 pruebas F18 y 26 F17 aprobadas** (30 frontend), **135 pruebas F01–F16/backend aprobadas**, cero fallos/omisiones; total 165. Incluye instalación, D01, migraciones y concurrencias existentes. F17 conserva 404, errores y reintento exitoso probado; F16/forgot/reset intactos. Build Vite correcto, solo avisos de deprecación; sintaxis de los archivos nuevos y git diff --check correctos. Backend, bases/migraciones, registro/revisión, cálculo de ranking/puntos y catálogo distribuido sin modificaciones F18. Las 56 filas del catálogo temporal se comparan idénticas antes/después. Clústeres aislados detenidos; ecoamigos real no conectada ni modificada.
+
+El navegador integrado no estaba disponible (lista de navegadores vacía); no se certifica prueba visual en navegador. El host DOM de prueba comprueba contenido y ejecución React, no geometría, accesibilidad o interacción nativa. Archivos cambiados: ToastContext.jsx, f18-toast.test.js, helpers/minimalDom.js y este documento. No se trabajó F19 ni se ejecutaron commit/push.
