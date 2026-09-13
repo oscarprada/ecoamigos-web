@@ -29,7 +29,7 @@ CORREGIDO se refiere al código y la instalación nueva probados, no a una base 
 
 Premios y ganadores están fuera del alcance actual del producto. Se retiraron sus páginas, rutas, enlaces, llamadas, controladores y endpoints, y `GET /public/ranking` volvió a limitarse a `currentPeriod` y `ranking`. No se modificó el cálculo de posiciones o puntos. Las tablas `prizes`, `winner_records` y `rewards` permanecen deliberadamente como legado; no se ejecutó SQL destructivo ni se modificaron datos.
 
-F16–F20 y S01–S12 permanecen sin resolver por alcance. F10–F15 están corregidos según lo descrito abajo; la matriz T01–T28 conserva sus comprobaciones manuales con T20 actualizado para F13. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
+F17–F20 y S01–S12 permanecen sin resolver por alcance. F16 se detalla en su bloque de recuperación. F10–F15 están corregidos según lo descrito abajo; la matriz T01–T28 conserva sus comprobaciones manuales con T20 actualizado para F13. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
 
 ## Fuente única de puntuación — F04
 
@@ -233,7 +233,7 @@ Pruebas: backend/tests/f15-admin-scope.test.js conserva el arnés PostgreSQL des
 | F13 | Estadísticas suman todos los estados/unidades | **CORREGIDO**: cantidades e indicadores solo approved con unit kg; conteos operativos/puntos e histórico preservados; factores intactos |
 | F14 | Factores ambientales sin fuente trazable en repositorio | **CORREGIDO** por retiro: cuatro equivalencias fuera de cálculo/API/UI; total approved+kg intacto; metodología histórica conservada |
 | F15 | Mantenimiento administrativo limitado y autorizado | **CORREGIDO**: usuarios editables y activables; equipos editables; períodos solo alta/listado; sin borrados físicos, con referencias preservadas y pruebas HTTP/regresión aprobadas |
-| F16 | Sin endpoint de recuperación/cambio de contraseña | Soporte requiere intervención autorizada |
+| F16 | Recuperación de contraseña | **CORREGIDO técnicamente**: token temporal hasheado de un uso, bcrypt y flujo público; sin cambio voluntario. Entrega de correo institucional pendiente |
 | F17 | Algunas promesas UI sin catch y sin 404 SPA | Errores pueden verse como vacíos o páginas sin contenido |
 | F18 | showToast cambia identidad, depende efecto de registro | Posibles consultas repetidas al actualizar avisos |
 | F19 | Input file no se limpia explícitamente tras registro | Revisar coherencia visual entre archivo elegido y estado reiniciado |
@@ -302,3 +302,16 @@ git diff --check
 ```
 
 El control de sintaxis no ejecuta consultas. Vite emitió avisos de deprecación por opciones usadas por el plugin React; el build finalizó. Cualquier actualización de dependencias debe tratarse como una tarea independiente con pruebas, no como parte implícita de la documentación.
+
+
+## Recuperación de contraseña — F16 CORREGIDO técnicamente
+
+Estado previo: solo login/me, password_hash y bcrypt costo 10; login sin revocación de JWT ni rate limit, UI sin recuperación y soporte SQL excepcional. No se encontró proveedor de correo ni política fuerte de contraseñas. La decisión autoriza recuperación, no cambio voluntario de contraseña ni asignación directa por admin.
+
+Se implementan forgot/reset públicos, cuerpo cerrado, email validado con trim y comparación exacta como login, respuesta genérica independiente de cuenta/actividad/entrega. Token crypto.randomBytes(32), SHA-256 persistido, 30 minutos, un uso y reemplazo de enlaces anteriores. Reset usa transacción y bloqueos users→token; consume token y cambia solo password_hash con bcrypt 10. Inactivos no emiten ni consumen tokens. Contraseñas no vacías hasta 72 bytes UTF-8 evitan truncamiento; política fuerte pendiente de seguridad.
+
+Nueva tabla y migración incremental separada de D01, FK restrictiva y verificación de lectura. Frontend añade enlace login y pantallas públicas mínimas; no muestra cuenta ni tokens y no añade cambio de clave desde perfil. El adaptador de entrega está desacoplado y sin proveedor: **no hay envío real de correo**. Ningún token se devuelve por HTTP, tampoco en desarrollo/producción; la captura existe solo como dependencia inyectada por el test aislado. CLIENT_URL existente construirá enlaces HTTPS en producción; no se añaden variables ni credenciales.
+
+Límites abiertos: S01/S02 (JWT previos siguen válidos después del reset, comprobado), S03 (sin límite de intentos/emisión ni garantía de tiempo constante), configuración institucional de correo y política robusta de contraseñas. No se certifica resolución de estos hallazgos. No se añade limpieza automática de tokens ni se ejecuta migración real.
+
+Pruebas F16: HTTP con authRoutes/controladores reales y PostgreSQL temporal; cuentas existentes/inexistentes/inactivas, validaciones, aleatoriedad/hash/expiración, enlace anterior/reutilización, login nuevo/anterior, bcrypt, datos privados ausentes, rollback diferido, consumo simultáneo, producción sin token, entrega fallida, migración con datos previos/repetición segura/FK/índices y catálogo intacto. Resultado final: **135 pruebas aprobadas, cero fallos y cero omisiones**, incluidas once subpruebas F16 y su contenedor. Pasan F01–F15, instalación (51 consultas SQL preparadas), D01, migración F09, concurrencias F08/F09/F09-F10/F12 y migración F16. La prueba de FK se ajustó al SQLSTATE RESTRICT de PostgreSQL, sin cambiar la restricción. Sintaxis de 34 archivos backend correcta, build frontend correcto (solo avisos Vite de deprecación), git diff --check correcto. La UI se verificó por revisión de código/build, no mediante navegador interactivo. F15 sigue correcto; F12 conserva quince cuentas; F09 mantiene el período anterior ante rollback; F10 valida período/fecha; F13 approved+kg y F14 sin indicadores no sustentados. Algoritmo de ranking/puntos y catálogo original sin cambios; 56 filas del catálogo aislado idénticas antes/después. Solo clústeres temporales, detenidos al finalizar; ecoamigos real no conectada ni modificada. F16 se cierra técnicamente según el criterio autorizado, con entrega automática institucional aún pendiente. No se trabajó F17, ni se hizo commit/push.

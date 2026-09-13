@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 export default function LoginPage() {
@@ -30,7 +30,7 @@ export default function LoginPage() {
         </label>
         {error && <p className="error">{error}</p>}
         <button className="button primary" type="submit">Ingresar</button>
-        <p className="helper">La recuperación de contraseña puede implementarse como siguiente mejora.</p>
+        <Link className="helper" to="/forgot-password">¿Olvidaste tu contraseña?</Link>
       </form>
     </div>
   );

@@ -10,6 +10,7 @@ import RankingPage from './pages/public/RankingPage';
 import EducationCategoryPage from './pages/public/EducationCategoryPage';
 
 import LoginPage from './pages/auth/LoginPage';
+import PasswordRecoveryPage from './pages/auth/PasswordRecoveryPage';
 
 import LeaderDashboard from './pages/leader/LeaderDashboard';
 import RegisterRecyclingPage from './pages/leader/RegisterRecyclingPage';
@@ -39,6 +40,8 @@ export default function App() {
 
             {/* Login */}
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/forgot-password" element={<PasswordRecoveryPage key="forgot" />} />
+            <Route path="/reset-password" element={<PasswordRecoveryPage key="reset" reset />} />
 
             {/* Líder */}
             <Route element={<ProtectedRoute roles={['leader', 'admin']} />}>

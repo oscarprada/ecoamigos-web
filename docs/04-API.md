@@ -71,7 +71,7 @@ Consulta email exacto; exige cuenta activa; compara `password_hash` con bcrypt. 
 }
 ```
 
-El token contiene `id`, `role`, `email`, `team_id` y claims de tiempo. Dura 8 h. No hay refresh ni recuperación de clave por API. Los cuerpos ausentes o mal tipados no tienen validación completa.
+El token contiene `id`, `role`, `email`, `team_id` y claims de tiempo. Dura 8 h. No hay refresh. La recuperación F16 tiene endpoints públicos separados descritos abajo. Login conserva sus validaciones previas; sus cuerpos ausentes o mal tipados no tienen validación completa.
 
 ### GET /auth/me
 
@@ -276,3 +276,21 @@ Remove-Variable body, credencial, sesion, cabeceras
 ```
 
 Para multipart en Windows PowerShell 5.1, utilizar el formulario web o un cliente HTTP que maneje multipart; `Invoke-RestMethod -Form` pertenece a versiones posteriores de PowerShell. No fijar manualmente un boundary incorrecto.
+
+
+## Recuperación de contraseña — F16
+
+| Endpoint público | Cuerpo estricto | Respuesta |
+| --- | --- | --- |
+| POST /api/auth/forgot-password | {"email":"cuenta@institucion.example"} | 200 y mensaje genérico; 400 formato/cuerpo inválido |
+| POST /api/auth/reset-password | {"token":"64 caracteres hexadecimales","new_password":"nueva clave"} | 200 al completar; 400 token/clave inválidos, vencidos, usados o cuenta inactiva; 500 genérico ante fallo interno |
+
+La solicitud responde siempre «Si existe una cuenta asociada, se enviarán instrucciones de recuperación.» para emails válidos, existan o no, estén activos o no, incluso si falla emisión/entrega. No devuelve token, hash, ID, rol, equipo ni estado de entrega. Formato de email validado, trim igual a edición F15, sin lowercase: la búsqueda y UNIQUE conservan la comparación exacta del login. No se normalizan cuentas históricas.
+
+Solo cuentas activas reciben un token aleatorio de 32 bytes (256 bits), representado en 64 caracteres hex; la BD almacena SHA-256. Expira a los 30 minutos desde emisión. Nueva solicitud invalida enlaces anteriores; reset exitoso consume el token e invalida los demás pendientes del usuario. El reset requiere exclusivamente token + new_password, sin JWT; no existe endpoint de cambio voluntario autenticado ni edición de contraseña por admin.
+
+Contraseña: string no vacío y máximo 72 bytes UTF-8 para evitar truncamiento bcrypt. Se conserva costo 10. El alta actual no impone longitud mínima fuerte/complejidad; F16 no inventa esa política ni cambia el alta. No recorta contraseñas. Nunca devuelve password_hash.
+
+El adaptador institucional de entrega aún no está configurado. Ningún entorno devuelve tokens por HTTP; las pruebas inyectan un capturador en memoria en su proceso aislado. El futuro envío debe usar CLIENT_URL para formar /reset-password?token=... con HTTPS en producción. No hay envío real hoy ni proveedor añadido.
+
+Los JWT anteriores siguen vigentes según firma/expiración (S01/S02); forgot/reset necesitan protección contra abuso en S03. Respuestas públicas uniformes no equivalen a tiempo constante ni a rate limiting.

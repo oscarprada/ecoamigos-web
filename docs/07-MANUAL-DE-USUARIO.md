@@ -4,7 +4,7 @@
 
 ## Antes de comenzar
 
-En desarrollo abrir `http://localhost:5173`. Para usar datos, el backend y PostgreSQL deben estar disponibles. Una portada visible no demuestra que esos servicios funcionen. Las cuentas son creadas por administradores; no hay autorregistro ni recuperación de contraseña desde la aplicación.
+En desarrollo abrir `http://localhost:5173`. Para usar datos, el backend y PostgreSQL deben estar disponibles. Una portada visible no demuestra que esos servicios funcionen. Las cuentas son creadas por administradores; no hay autorregistro. La recuperación F16 está disponible como flujo, con entrega de correo pendiente de configuración institucional.
 
 ## Visitante
 
@@ -33,7 +33,7 @@ Los logos de aliados abren sitios externos. Regresar a Ecoamigos desde su pesta�
 3. Pulsar Ingresar. Se abre el panel del rol correspondiente.
 4. Para salir, usar Cerrar sesión en la cabecera.
 
-La sesión dura hasta ocho horas desde su emisión y el navegador conserva el token localmente. En equipos compartidos cerrar sesión al terminar. Si aparece token inválido/expirado, salir e ingresar nuevamente. Si se olvidó la contraseña, contactar al responsable técnico: no existe enlace de restablecimiento operativo.
+La sesión dura hasta ocho horas desde su emisión y el navegador conserva el token localmente. En equipos compartidos cerrar sesión al terminar. Si aparece token inválido/expirado, salir e ingresar nuevamente. Si se olvidó la contraseña, usar «¿Olvidaste tu contraseña?»; consultar la limitación de envío descrita abajo.
 
 ## Líder
 
@@ -138,3 +138,16 @@ Pulsar la acción de exportar para descargar `Reporte_Ecoamigos.xlsx`. Incluye t
 ## Solicitar soporte
 
 Informar página, operación, fecha/hora aproximada, ID de registro si aplica y mensaje visible. No enviar contraseña, JWT, `.env`, exportaciones completas ni evidencias privadas. El responsable puede consultar logs y los [diagnósticos](08-OPERACION.md).
+
+
+## Recuperar una contraseña olvidada — F16
+
+1. En Iniciar sesión, pulsa «¿Olvidaste tu contraseña?».
+2. Introduce el correo de la cuenta y solicita recuperación. El mensaje es genérico y no confirma si la cuenta existe o está activa.
+3. Cuando la institución configure entrega de correo, abre el enlace recibido en /reset-password?token=... dentro de sus 30 minutos de vigencia.
+4. Escribe una nueva contraseña no vacía (máximo 72 bytes UTF-8) y pulsa Restablecer contraseña.
+5. Inicia sesión con la clave nueva. La anterior deja de funcionar y el enlace ya no puede usarse. Solicitar otro enlace invalida los anteriores.
+
+**Limitación actual:** no hay proveedor de correo configurado; solicitar recuperación no envía un email todavía. El envío institucional debe habilitarse antes de ofrecer este servicio como operativo. La aplicación no muestra tokens ni ofrece un atajo de administrador para asignar contraseñas. Las cuentas inactivas no pueden recuperar acceso por este flujo.
+
+No hay «Cambiar contraseña» en perfil/dashboard. Restablecer no cierra sesiones previamente abiertas: esa protección queda en S01/S02. No compartas enlaces, tokens o contraseñas; no los pegues en incidencias. El procedimiento SQL excepcional de Operación continúa reservado a soporte autorizado, no es parte de esta pantalla.

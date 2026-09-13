@@ -23,6 +23,16 @@ CREATE TABLE users (
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT NOW()
 );
+CREATE TABLE public.password_reset_tokens (
+  id BIGSERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
+  token_hash VARCHAR(64) NOT NULL UNIQUE CHECK (token_hash ~ '^[a-f0-9]{64}$'),
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+  CHECK (expires_at > created_at)
+);
+CREATE INDEX password_reset_tokens_user_id_idx ON public.password_reset_tokens(user_id);
 CREATE TABLE periods (
   id SERIAL PRIMARY KEY,
   name VARCHAR(120) NOT NULL UNIQUE,

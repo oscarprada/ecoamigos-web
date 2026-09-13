@@ -90,3 +90,12 @@ Se conserva compatibilidad temporal, no se reactiva el módulo:
 | Código de aplicación | No hay consultas, endpoints, rutas ni pantallas activas para este módulo. |
 
 La funcionalidad ejecutable y visible se retiró de forma controlada al resolver F01–F03. No se hizo `DROP TABLE`, `DROP COLUMN` ni migración destructiva; una limpieza física posterior requiere inventario y autorización separados.
+
+
+## Instalación/migración F16 — recuperación
+
+Una instalación vacía con schema.sql ya incluye password_reset_tokens. En una instalación existente previamente conciliada con D01/F09, revisar y ejecutar una sola vez database/20260912_f16_password_reset.sql, antes de iniciar el backend actualizado. No cambia users, registros ni catálogo; añade únicamente tabla, restricciones, secuencia e índices de recuperación. Si la tabla ya existe, aborta sin sobrescribirla: no reejecutar sobre schema nuevo. D01 sigue siendo histórico y no incorpora esta migración posterior.
+
+Verificar con database/verify_20260912_f16.sql (transacción de solo lectura). Las pruebas F16 ejecutan ambos caminos en PostgreSQL desechable, con datos previos y repetición fallida segura. No se aplicó nada sobre ecoamigos real.
+
+No se añadieron dependencias ni variables de entorno. CLIENT_URL ya existe: debe ser el origen institucional HTTPS para construir enlaces en producción, sin fallback localhost. passwordResetDelivery.js aún no tiene proveedor; no envía emails ni imprime tokens. Implementar/configurar el adaptador institucional de entrega antes de habilitar recuperación operativa. La única captura de tokens para validar es el capturador en memoria dentro de backend/tests/f16-password-recovery.test.js; no hay modo debug HTTP.

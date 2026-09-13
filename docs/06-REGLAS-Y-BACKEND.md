@@ -12,7 +12,7 @@ Express monta CORS con origen fijo `http://localhost:5173` y credentials true, e
 
 Login busca email exacto, exige is_active, compara bcrypt y firma JWT por ocho horas. Crear usuario utiliza costo bcrypt 10 y guarda únicamente password_hash. El token conserva equipo y rol al momento de iniciar sesión.
 
-Middleware verifica firma/expiración y roles incluidos, sin consultar cuenta en cada petición. Cambiar equipo, desactivar o cambiar rol en base no invalida un JWT ya emitido. `/auth/me` obtiene información actual, pero tampoco verifica is_active. Logout solo elimina token del cliente, sin revocación de servidor. No hay registro público, refresh, MFA ni recuperación de contraseña.
+Middleware verifica firma/expiración y roles incluidos, sin consultar cuenta en cada petición. Cambiar equipo, desactivar o cambiar rol en base no invalida un JWT ya emitido. `/auth/me` obtiene información actual, pero tampoco verifica is_active. Logout solo elimina token del cliente, sin revocación de servidor. No hay registro público, refresh ni MFA. F16 añade recuperación por token, sin cambio voluntario desde perfil.
 
 ## Autorización de creación — F11
 
@@ -150,3 +150,20 @@ Columnas: Fecha, Líder, Equipo, Material, Cantidad, Unidad, Estado, Puntos, Per
 ## Logs y gestión de errores
 
 `logger.js` crea logs relativos al directorio de trabajo y escribe de forma síncrona a info.log/error.log con fecha ISO. Registra accesos, IDs, correos, altas y revisiones. No es una auditoría inmutable, no rota archivos y no cubre todas las consultas públicas/exportaciones. La exportación usa console.error; numerosos controladores devuelven error.message al cliente. No publicar logs en GitHub.
+
+
+## Recuperación temporal — F16
+
+Auditoría: users.password_hash es autoritativo tras D01/D02; login usa bcrypt.compare y el alta bcrypt.hash(...,10), sin política fuerte de longitud/complejidad. La columna password heredada no se consulta ni escribe. No hay servicio de correo, rate limit ni revocación de JWT configurados. No se modifica D01, roles, F15 ni credenciales administrativas.
+
+password_reset_tokens contiene id, user_id (FK ON DELETE RESTRICT), token_hash UNIQUE con formato SHA-256 hexadecimal, expires_at, used_at y created_at (TIMESTAMPTZ). Un índice user_id facilita invalidar tokens de la cuenta. No almacena texto plano del token ni contraseña nueva. La FK impide cascadas sobre recuperación; no introduce borrado de historial. No se añade purga automática ni política de retención no autorizada.
+
+crypto.randomBytes(32) aporta 256 bits de entropía; SHA-256 permite lookup de un secreto aleatorio, no sustituye bcrypt para contraseñas. Vigencia fija de 30 minutos: limita exposición del enlace y deja tiempo para recibirlo/usarlo. Nueva solicitud marca usados los enlaces anteriores de la cuenta. El adaptador recibe email, token y expiración solo después del COMMIT, sin registrar secretos ni devolverlos por HTTP.
+
+Solicitud y reset bloquean primero users FOR UPDATE; reset después bloquea el token. Esto serializa solicitudes, consumo simultáneo y cambios F15 de la misma cuenta, sin invertir bloqueos entre distintos tokens. Reset verifica cuenta activa, hash, used_at y expiración; calcula bcrypt costo 10, vuelve a comprobar vigencia con clock_timestamp(), consume token, actualiza únicamente password_hash e invalida pendientes, todo en una transacción. Cualquier fallo, incluido COMMIT, revierte hash/consumo. El cliente se libera o descarta si falla rollback. Cero cambios en referencias, cupo F12, períodos, puntos o ranking.
+
+La nueva clave requiere entre 1 y 72 bytes UTF-8, sin regla de complejidad adicional. El límite superior evita truncamiento silencioso de bcrypt; endurecer el mínimo del alta/recuperación corresponde a seguridad y se documenta pendiente.
+
+La entrega automática de correo requiere un adaptador institucional posterior. passwordResetDelivery.js deja una interfaz explícita, devuelve false mientras no haya proveedor y ofrece construcción del enlace con CLIENT_URL (HTTPS en producción). No lee credenciales de correo ni imprime enlaces. Solo pruebas inyectan un capturador en memoria; no hay interruptor de entorno para exponer tokens.
+
+S01/S02: recuperar no revoca JWT emitidos; siguen aceptándose hasta expiración o cambio coordinado del secreto global. S03: no existe rate limit reutilizable; solicitud/reset requieren límites de intentos/emisión y monitoreo antes de operación pública. Respuestas genéricas eliminan distinción explícita de cuenta, no garantizan tiempo constante. Fallos de emisión/entrega también son genéricos para no revelar existencia; observabilidad institucional futura debe excluir email/token/clave y detalles sensibles.
