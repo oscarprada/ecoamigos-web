@@ -37,6 +37,7 @@ async function mount(file, api, props = {}, auth = {}) {
   };
   const bindings = {
     React, api, uiError, LoadState, useState,
+    useRef: initial => useState(() => ({ current: initial }))[0],
     useEffect: fn => { if (!mounted) effects.push(fn); }, useMemo: fn => fn(),
     useToast: () => ({ showToast: (...args) => toasts.push(args) }),
     useAuth: () => ({ user: { role: 'admin', id: 1 }, login: async () => { throw technical; }, ...auth }),

@@ -29,7 +29,7 @@ CORREGIDO se refiere al código y la instalación nueva probados, no a una base 
 
 Premios y ganadores están fuera del alcance actual del producto. Se retiraron sus páginas, rutas, enlaces, llamadas, controladores y endpoints, y `GET /public/ranking` volvió a limitarse a `currentPeriod` y `ranking`. No se modificó el cálculo de posiciones o puntos. Las tablas `prizes`, `winner_records` y `rewards` permanecen deliberadamente como legado; no se ejecutó SQL destructivo ni se modificaron datos.
 
-F19–F20 y S01–S12 permanecen sin resolver por alcance. F18 está corregido según su verificación formal. F17 está corregido según su bloque final. F16 se detalla en su bloque de recuperación. F10–F15 están corregidos según lo descrito abajo; la matriz T01–T28 conserva sus comprobaciones manuales con T20 actualizado para F13. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
+F20 y S01–S12 permanecen sin resolver por alcance. F19 está corregido según su bloque final. F18 está corregido según su verificación formal. F17 está corregido según su bloque final. F16 se detalla en su bloque de recuperación. F10–F15 están corregidos según lo descrito abajo; la matriz T01–T28 conserva sus comprobaciones manuales con T20 actualizado para F13. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
 
 ## Fuente única de puntuación — F04
 
@@ -236,7 +236,7 @@ Pruebas: backend/tests/f15-admin-scope.test.js conserva el arnés PostgreSQL des
 | F16 | Recuperación de contraseña | **CORREGIDO técnicamente**: token temporal hasheado de un uso, bcrypt y flujo público; sin cambio voluntario. Entrega de correo institucional pendiente |
 | F17 | Promesas UI y 404 SPA | **CORREGIDO**: errores persistentes separados de vacío/carga, reintento, mensajes controlados y catch-all; pruebas aprobadas, smoke visual pendiente |
 | F18 | Identidad del toast y consultas por efectos | **CORREGIDO**: useCallback de F17 verificado con ReactDOM; value estabilizado con useMemo en F18; avisos no repiten carga del período |
-| F19 | Input file no se limpia explícitamente tras registro | Revisar coherencia visual entre archivo elegido y estado reiniciado |
+| F19 | Evidencia del registro: estado e input nativo | **CORREGIDO**: useRef limpia el input solo tras éxito; fallo conserva selección y FormData no reutiliza evidencia |
 | F20 | Modal sin focus trap/Escape; menú oculto | Accesibilidad y navegación móvil requieren QA |
 
 ## Seguridad y operación
@@ -374,3 +374,16 @@ El toast aparece con el texto solicitado, se actualiza y se oculta al ejecutar s
 Resultados: **4 pruebas F18 y 26 F17 aprobadas** (30 frontend), **135 pruebas F01–F16/backend aprobadas**, cero fallos/omisiones; total 165. Incluye instalación, D01, migraciones y concurrencias existentes. F17 conserva 404, errores y reintento exitoso probado; F16/forgot/reset intactos. Build Vite correcto, solo avisos de deprecación; sintaxis de los archivos nuevos y git diff --check correctos. Backend, bases/migraciones, registro/revisión, cálculo de ranking/puntos y catálogo distribuido sin modificaciones F18. Las 56 filas del catálogo temporal se comparan idénticas antes/después. Clústeres aislados detenidos; ecoamigos real no conectada ni modificada.
 
 El navegador integrado no estaba disponible (lista de navegadores vacía); no se certifica prueba visual en navegador. El host DOM de prueba comprueba contenido y ejecución React, no geometría, accesibilidad o interacción nativa. Archivos cambiados: ToastContext.jsx, f18-toast.test.js, helpers/minimalDom.js y este documento. No se trabajó F19 ni se ejecutaron commit/push.
+
+
+## Evidencia del registro — F19 CORREGIDO
+
+Auditoría: RegisterRecyclingPage guarda el File en form.evidence y lo adjunta condicionalmente a un FormData nuevo en cada submit. Tras éxito ya reiniciaba evidence a null junto con los campos actuales, pero no tenía ref ni vaciaba el input nativo. Esto dejaba el nombre anterior visible aunque el siguiente payload no llevara archivo; la selección consecutiva del mismo archivo podía no emitir change. No hay preview ni nombre personalizado: solo la presentación nativa del input. Ante error el estado ya se conservaba.
+
+Cambio mínimo: useRef(null), ref sobre el input y fileInputRef.current.value = '' después del POST exitoso y del reset existente. No se asigna FileList ni se cambia payload, accept, validaciones, fechas, puntos o criterios. Ante respuesta pendiente o rechazada no se limpia el input ni el File. Después del éxito el estado no conserva el File, el input está vacío y puede elegirse otra vez el mismo archivo. Cada nuevo FormData refleja exclusivamente la selección actual.
+
+Otros inputs auditados: solo se encontró AdminContentPage además del registro. Allí resetForm/cancelar y handleEdit reinician form.file sin ref, por lo que cancelar/cambiar edición puede dejar una selección nativa desalineada; se reporta como seguimiento de ese módulo, sin modificarlo dentro de F19. Tras guardado exitoso, la carga F17 desmonta temporalmente el formulario y recrea el input. No se localizaron otros inputs de evidencias administrativas.
+
+Pruebas: frontend/tests/f19-evidence.test.js ejecuta RegisterRecyclingPage con hooks/refs ReactDOM reales, host DOM mínimo existente y File/FormData de Node. Tres pruebas cubren selección y reemplazo, payload correcto, ausencia de reset antes de respuesta, éxito con estado/input vacíos, siguiente envío sin evidencia, mismo archivo consecutivo, fallo que conserva selección/datos y reintento con el File conservado. La selección se modela en el host de prueba y llama al handler real; no se certifica diálogo nativo ni etiqueta visual de un navegador. El FileList no se asigna desde código de aplicación. Queda smoke visual del selector nativo, sin necesidad de una nueva librería de pruebas.
+
+Se adaptó únicamente el arnés F17 para admitir useRef. **33 pruebas frontend aprobadas: 3 F19, 4 F18 y 26 F17**, cero fallos/omisiones. F18 mantiene una sola consulta al período al mostrar/actualizar/ocultar avisos; F17 conserva 404, manejo de errores y reintento. Build Vite, sintaxis de prueba y git diff --check correctos (solo avisos de deprecación Vite). Registro/FormData probado con API sustituida, sin escrituras reales. No se repitió backend porque no cambió ningún contrato ni código backend. F10 permanece conceptualmente intacto; ranking/puntos, backend, esquema y catálogo sin cambios. ecoamigos real no conectada ni modificada. No se trabajó F20; sin commit/push.

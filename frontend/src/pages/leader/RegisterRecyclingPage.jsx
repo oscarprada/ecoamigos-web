@@ -1,6 +1,6 @@
 import LoadState from '../../components/LoadState';
 import { uiError } from '../../utils/uiError';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../../api/client';
 import { useToast } from '../../context/ToastContext';
 
@@ -60,6 +60,7 @@ function localCalendarDate() {
 }
 
 export default function RegisterRecyclingPage() {
+  const fileInputRef = useRef(null);
   const { showToast } = useToast();
 
   const [period, setPeriod] = useState(null);
@@ -180,6 +181,7 @@ export default function RegisterRecyclingPage() {
       });
 
       setCheckedCriteria(['Material limpio']);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err) {
       showToast(
         uiError(err, 'No fue posible guardar el registro.'),
@@ -379,6 +381,7 @@ export default function RegisterRecyclingPage() {
           <input
             style={styles.input}
             type="file"
+            ref={fileInputRef}
             accept="image/*,video/*"
             onChange={(e) =>
               setForm({
