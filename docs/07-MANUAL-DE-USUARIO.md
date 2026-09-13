@@ -162,3 +162,10 @@ Reintentar vuelve a cargar usuarios dentro de la pantalla; en las demás cargas 
 Las direcciones inexistentes muestran «404 — Página no encontrada» dentro del diseño habitual, con Volver al inicio. /winners y /prizes también muestran 404: sus funciones no se restauraron. Una ruta protegida válida sigue solicitando login cuando no hay sesión; un rol sin permiso vuelve al inicio. Una dirección inexistente, incluso bajo /admin o /leader, muestra 404.
 
 La recuperación mantiene su mensaje genérico para no revelar cuentas. Los errores inesperados no muestran detalles técnicos; las validaciones funcionales conocidas sí pueden mostrarse.
+
+
+## Contenido y menú con teclado — F20
+
+Al abrir «Ver contenido completo», el foco pasa a Cerrar. Tab y Shift+Tab recorren los controles del diálogo; Escape o Cerrar lo cierran y devuelven el foco al botón de apertura. El contenido largo se desplaza dentro del diálogo.
+
+En pantallas de hasta 768 px, pulsa Menú para mostrar la navegación. Puedes recorrer sus enlaces con Tab; Escape desde la cabecera o seleccionar un enlace cierra el menú. En escritorio la navegación permanece visible.

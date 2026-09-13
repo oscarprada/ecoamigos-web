@@ -1,5 +1,6 @@
+import { activateDialog } from '../../utils/dialogFocus';
 import LoadState from '../../components/LoadState';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api, { getBackendUrl } from '../../api/client';
 
@@ -73,9 +74,16 @@ esperanza.
 export default function EducationCategoryPage() {
   const [loadError, setLoadError] = useState('');
   const [pageLoading, setPageLoading] = useState(true);
+  const dialogRef = useRef(null);
+  const triggerRef = useRef(null);
   const { category } = useParams();
   const [items, setItems] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
+
+  useEffect(() => {
+    if (!selectedItem || !dialogRef.current) return;
+    return activateDialog(dialogRef.current, triggerRef.current, () => setSelectedItem(null));
+  }, [selectedItem]);
 
   useEffect(() => {
     let current = true;
@@ -153,7 +161,7 @@ export default function EducationCategoryPage() {
                 <button
                   type="button"
                   style={styles.viewButton}
-                  onClick={() => setSelectedItem(item)}
+                  onClick={e => { triggerRef.current = e.currentTarget; setSelectedItem(item); }}
                 >
                   Ver contenido completo
                 </button>
@@ -164,12 +172,18 @@ export default function EducationCategoryPage() {
       )}
 
       {selectedItem && (
-        <div style={styles.modalOverlay} onClick={() => setSelectedItem(null)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <dialog ref={dialogRef} className="education-dialog" style={styles.modal}
+          aria-modal="true" aria-labelledby="education-dialog-title" tabIndex={-1}
+          onCancel={e => { e.preventDefault(); setSelectedItem(null); }}
+          onClick={e => {
+            if (e.target !== e.currentTarget) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) setSelectedItem(null);
+          }}>
             <div style={styles.modalHeader}>
               <div>
                 <p style={styles.kicker}>Contenido educativo</p>
-                <h3 style={styles.modalTitle}>{selectedItem.title}</h3>
+                <h3 id="education-dialog-title" style={styles.modalTitle}>{selectedItem.title}</h3>
               </div>
 
               <button
@@ -211,8 +225,7 @@ export default function EducationCategoryPage() {
                 Ver archivo
               </a>
             )}
-          </div>
-        </div>
+        </dialog>
       )}
     </div>
   );
@@ -384,19 +397,12 @@ primaryButton: {
     cursor: 'pointer',
     fontFamily: 'Montserrat, sans-serif',
   },
-  modalOverlay: {
-    position: 'fixed',
-    inset: 0,
-    backgroundColor: 'rgba(0,0,0,0.58)',
-    zIndex: 3000,
-    padding: 20,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   modal: {
     backgroundColor: '#fff',
-    width: 'min(920px, 100%)',
+    width: 'min(920px, calc(100% - 32px))',
+    boxSizing: 'border-box',
+    border: 'none',
+    margin: 'auto',
     maxHeight: '90vh',
     overflowY: 'auto',
     borderRadius: 22,
