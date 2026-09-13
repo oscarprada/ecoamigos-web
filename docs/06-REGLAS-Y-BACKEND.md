@@ -113,6 +113,20 @@ El único indicador cuantitativo ambiental es **Cantidad total reciclada aprobad
 
 La [metodología histórica](12-METODOLOGIA-INDICADORES.md) conserva factores retirados, origen git, fuentes evaluadas y razones de insuficiencia. Reintroducir equivalencias exige material específico, unidad, factor, fuente técnica y ubicación exacta, escenario de comparación, conversión reproducible y aplicabilidad a Ecoamigos. WARM distingue materiales y escenarios; no es un factor genérico por kg.
 
+## Alcance de mantenimiento administrativo — F15
+
+La decisión funcional autorizada completa la auditoría inicial: usuarios permiten crear/listar/editar nombre, email y equipo, y activar/desactivar; equipos permiten crear/listar/editar nombre y dependencia. No hay cambio de rol, clave ni borrado físico en F15. No se añaden migraciones ni campos a teams.
+
+Desactivar cambia users.is_active sin borrar la fila. Login ya rechaza inactivos con 401. F12 cuenta todas las filas, incluidos administradores e inactivos, hasta quince; editar o reactivar no consume ni libera cupos. users.team_id cambia solo la asignación actual del líder; recycling_records.team_id conserva el equipo original. Un administrador permanece sin equipo, conforme al alta existente.
+
+Cambios administrativos de role/team/is_active pueden no reflejarse en tokens previamente emitidos; el tratamiento de sesión/token se resolverá en S01/S02. authenticateToken verifica JWT sin releer la fila. No hay revocación nueva ni cambios de seguridad en F15; no se implementa edición de rol.
+
+Se preservan IDs y referencias: RR.user_id/team_id son CASCADE al borrar, RR.reviewed_by y content_items.created_by SET NULL; users.team_id SET NULL al borrar equipo. RR.period_id es SET NULL y winner_records conserva CASCADE legado para períodos/equipos. Estos riesgos justifican no habilitar DELETE. Las FK no prohíben modificaciones SQL externas: la protección aquí corresponde a rutas de aplicación, no a una política institucional inventada de retención.
+
+Períodos con registros se tratan como históricos: no se permite editar sus fechas ni eliminarlos. Tampoco se habilita edición de períodos vacíos porque no hay necesidad demostrada; creación/listado cubren el flujo actual. F09 conserva máximo un activo (cero permitido) y rollback del anterior; F10 sigue validando período activo y fecha al registrar. No se habilita activación independiente de períodos existentes.
+
+Renombrar usuarios/equipos cambia las etiquetas obtenidas mediante JOIN, no sus IDs ni registros anteriores. Ranking conserva algoritmo y puntos; al renombrar equipos empatados puede cambiar el desempate alfabético existente. No se reescribe historia ni se agrega versionado de nombres. D01 conserva teams.leader_id si existe como legado distinto de users.team_id; no hay reasignación automática.
+
 ## Archivos
 
 | Aspecto | Evidencias | Contenidos |

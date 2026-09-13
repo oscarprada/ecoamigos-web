@@ -13,6 +13,8 @@ import {
   listTeams,
   listUsers,
   updateContent,
+  updateUser,
+  updateTeam,
 } from '../controllers/adminController.js';
 
 import { exportRecyclingReport } from '../controllers/exportController.js';
@@ -42,6 +44,7 @@ router.get('/dashboard', getDashboard);
 
 router.get('/users', listUsers);
 router.post('/users', createUser);
+router.patch('/users/:id', updateUser);
 
 router.get('/content', listContent);
 router.post('/content', upload.single('file'), createContent);
@@ -50,6 +53,7 @@ router.delete('/content/:id', deleteContent);
 
 router.get('/teams', listTeams);
 router.post('/teams', createTeam);
+router.patch('/teams/:id', updateTeam);
 
 router.get('/periods', listPeriods);
 router.post('/periods', createPeriod);

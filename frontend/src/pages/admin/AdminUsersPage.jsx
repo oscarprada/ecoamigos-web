@@ -4,6 +4,8 @@ import api from '../../api/client';
 const MAX_USERS = 15;
 
 export default function AdminUsersPage() {
+  const [editing, setEditing] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
   const [users, setUsers] = useState([]);
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -104,6 +106,19 @@ export default function AdminUsersPage() {
     }
   };
 
+  const saveEdit = async (e) => {
+    e.preventDefault(); setError(''); setSuccess(''); setSavingEdit(true);
+    try {
+      await api.patch('/admin/users/' + editing.id, {
+        name: editing.name, email: editing.email,
+        team_id: editing.role === 'leader' ? Number(editing.team_id) : null,
+        is_active: editing.is_active,
+      });
+      setEditing(null); setSuccess('Usuario actualizado correctamente.'); await load();
+    } catch (err) { setError(err.response?.data?.message || 'No fue posible actualizar el usuario.'); }
+    finally { setSavingEdit(false); }
+  };
+
   return (
     <div className="container stack-lg">
       <div style={styles.header}>
@@ -139,6 +154,26 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
+      {editing && <section style={styles.formCard}>
+        <h3 style={styles.sectionTitle}>Editar usuario</h3>
+        <form onSubmit={saveEdit} style={styles.form}>
+          <label style={styles.label}>Nombre completo
+            <input style={styles.input} required maxLength={120} value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} />
+          </label>
+          <label style={styles.label}>Correo electrónico
+            <input style={styles.input} required type="email" maxLength={150} value={editing.email} onChange={e => setEditing({ ...editing, email: e.target.value })} />
+          </label>
+          <label style={styles.label}>Equipo asignado
+            <select style={styles.input} required={editing.role === 'leader'} disabled={editing.role !== 'leader'} value={editing.team_id ?? ''} onChange={e => setEditing({ ...editing, team_id: e.target.value })}>
+              <option value="">Seleccione equipo</option>
+              {teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
+            </select>
+          </label>
+          <label><input type="checkbox" checked={editing.is_active} onChange={e => setEditing({ ...editing, is_active: e.target.checked })} /> Cuenta activa</label>
+          <button className="button primary" disabled={savingEdit} type="submit">{savingEdit ? 'Guardando...' : 'Guardar cambios'}</button>
+          <button className="button" disabled={savingEdit} type="button" onClick={() => setEditing(null)}>Cancelar</button>
+        </form>
+      </section>}
       <div style={styles.layoutGrid}>
         <section style={styles.formCard}>
           <div style={styles.formHeader}>
@@ -257,6 +292,8 @@ export default function AdminUsersPage() {
                     <th style={styles.th}>Correo</th>
                     <th style={styles.th}>Rol</th>
                     <th style={styles.th}>Equipo</th>
+                    <th style={styles.th}>Estado</th>
+                    <th style={styles.th}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -278,6 +315,8 @@ export default function AdminUsersPage() {
                         </span>
                       </td>
                       <td style={styles.td}>{user.team_name || '-'}</td>
+                      <td style={styles.td}>{user.is_active ? 'Activo' : 'Inactivo'}</td>
+                      <td style={styles.td}><button type="button" disabled={savingEdit} onClick={() => { setEditing({ ...user }); setError(''); setSuccess(''); }}>Editar</button></td>
                     </tr>
                   ))}
                 </tbody>

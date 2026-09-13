@@ -79,7 +79,7 @@ Estados: Pendiente, Aprobado y Rechazado. El historial muestra comentario admini
 4. Entrar a Usuarios y crear líderes asociados a sus equipos.
 5. Pedir al responsable de datos que confirme el catálogo institucional antes de aprobar registros.
 
-No hay pantalla para editar un periodo existente ni cargar catálogo. Evitar periodos duplicados: una creación fallida de periodo activo puede dejar los anteriores desactivados. Premios y ganadores están fuera del alcance actual.
+No hay pantalla para editar un período existente ni cargar catálogo. Crear un período activo reemplaza al anterior de forma transaccional; si falla, F09 conserva el estado anterior. No hay controles para activar uno existente, desactivarlo por separado, cambiar sus fechas o eliminarlo. Premios y ganadores están fuera del alcance actual.
 
 ### Usuarios
 
@@ -89,7 +89,17 @@ No hay pantalla para editar un periodo existente ni cargar catálogo. Evitar per
 4. Para líder seleccionar equipo; para admin no se asigna equipo.
 5. Crear y comprobar el nuevo usuario en el listado.
 
-Se permiten hasta 15 cuentas totales almacenadas en toda la aplicación, incluidos administradores e inactivos. Desactivar o reactivar no cambia el cupo. El servidor también lo comprueba: si otro administrador ocupa el último lugar mientras completas el formulario, el alta se rechaza con un mensaje y la pantalla actualiza el conteo. No hay gestión de baja, edición, cambio de clave ni activación desde esta pantalla. Entregar credenciales por un canal privado, no por comentarios o issues públicos.
+Se permiten hasta 15 cuentas totales almacenadas en toda la aplicación, incluidos administradores e inactivos. Desactivar o reactivar no cambia el cupo. El servidor también lo comprueba: si otro administrador ocupa el último lugar mientras completas el formulario, el alta se rechaza con un mensaje y la pantalla actualiza el conteo. La edición permite actualizar datos y activar/desactivar; no hay eliminación ni cambio de clave. Entregar credenciales por un canal privado, no por comentarios o issues públicos.
+
+### Editar usuarios y equipos
+
+En Usuarios, pulsa Editar junto a una cuenta. Actualiza nombre, correo y equipo del líder; marca o desmarca Cuenta activa y pulsa Guardar cambios. Cancelar descarta el formulario. Los errores del servidor se muestran en la pantalla y el listado se recarga al guardar. El rol y la contraseña no se editan. Desactivar impide nuevos ingresos, conserva la cuenta y su historial, y sigue ocupando uno de los 15 cupos.
+
+En Configuración, pulsa Editar junto a un equipo. Modifica nombre/dependencia y pulsa Guardar equipo; Cancelar edición vuelve al alta. Cambiar un nombre conserva su ID. Cambiar el equipo actual de una cuenta no cambia el equipo de actividades anteriores.
+
+Períodos permite crear y listar. No hay edición de fechas ni eliminación de períodos históricos; tampoco se habilita edición de períodos vacíos, porque el flujo actual no la necesita. No hay botones de eliminación para usuarios, equipos o períodos. La recuperación excepcional de clave descrita en [Operación](08-OPERACION.md) permanece fuera de F15.
+
+Cambios administrativos de role/team/is_active pueden no reflejarse en tokens previamente emitidos; el tratamiento de sesión/token se resolverá en S01/S02.
 
 ### Validar registros
 

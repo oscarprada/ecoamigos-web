@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import api from '../../api/client';
 
 export default function AdminSettingsPage() {
+  const [editingTeam, setEditingTeam] = useState(null);
+  const [teamError, setTeamError] = useState('');
+  const [teamSuccess, setTeamSuccess] = useState('');
+  const [savingTeam, setSavingTeam] = useState(false);
   const [teams, setTeams] = useState([]);
   const [periods, setPeriods] = useState([]);
 
@@ -28,9 +32,14 @@ export default function AdminSettingsPage() {
 
   const submitTeam = async (e) => {
     e.preventDefault();
-    await api.post('/admin/teams', teamForm);
-    setTeamForm({ name: '', dependency: '' });
-    load();
+    setTeamError(''); setTeamSuccess(''); setSavingTeam(true);
+    try {
+      if (editingTeam !== null) await api.patch('/admin/teams/' + editingTeam, teamForm);
+      else await api.post('/admin/teams', teamForm);
+      setTeamForm({ name: '', dependency: '' }); setEditingTeam(null);
+      await load(); setTeamSuccess('Equipo guardado correctamente.');
+    } catch (err) { setTeamError(err.response?.data?.message || 'No fue posible guardar el equipo.'); }
+    finally { setSavingTeam(false); }
   };
 
   const submitPeriod = async (e) => {
@@ -57,7 +66,9 @@ export default function AdminSettingsPage() {
       </section>
 
       <section style={styles.grid}>
-        <ConfigCard title="Equipos" subtitle="Crea y consulta equipos participantes.">
+        <ConfigCard title="Equipos" subtitle="Crea, consulta y edita equipos participantes.">
+          {teamError && <p role="alert">{teamError}</p>}
+          {teamSuccess && <p role="status">{teamSuccess}</p>}
           <form style={styles.form} onSubmit={submitTeam}>
             <input
               style={styles.input}
@@ -77,9 +88,10 @@ export default function AdminSettingsPage() {
               required
             />
 
-            <button style={styles.button} type="submit">
-              Crear equipo
+            <button style={styles.button} type="submit" disabled={savingTeam}>
+              {savingTeam ? 'Guardando...' : editingTeam !== null ? 'Guardar equipo' : 'Crear equipo'}
             </button>
+            {editingTeam !== null && <button type="button" disabled={savingTeam} onClick={() => { setEditingTeam(null); setTeamForm({ name: '', dependency: '' }); }}>Cancelar edición</button>}
           </form>
 
           <ItemList
@@ -87,6 +99,7 @@ export default function AdminSettingsPage() {
               id: item.id,
               title: item.name,
               subtitle: item.dependency || 'Sin dependencia',
+              action: <button type="button" disabled={savingTeam} onClick={() => { setEditingTeam(item.id); setTeamForm({ name: item.name, dependency: item.dependency }); setTeamError(''); setTeamSuccess(''); }}>Editar</button>,
             }))}
           />
         </ConfigCard>
@@ -182,6 +195,7 @@ function ItemList({ items }) {
             <p style={styles.listSubtitle}>{item.subtitle}</p>
           </div>
 
+          {item.action}
           {item.badge && <span style={styles.badge}>{item.badge}</span>}
         </div>
       ))}

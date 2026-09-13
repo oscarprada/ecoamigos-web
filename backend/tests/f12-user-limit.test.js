@@ -101,12 +101,12 @@ test('F12: revision transaccional PostgreSQL aislado', {
       const before=await rows();const result=await post('sixteenth@test.invalid');
       assert.equal(result.code,409);assert.equal(result.body.code,'USER_LIMIT_REACHED');assert.deepEqual(await rows(),before);
     });
-    await t.test('desactivar/reactivar no altera cupo total; no existen rutas para ello',async()=>{
+    await t.test('desactivar/reactivar no altera cupo total; eliminación física ausente',async()=>{
       await client.query('UPDATE users SET is_active=false');
       assert.equal((await post('inactive-full@test.invalid')).code,409);
       await client.query('UPDATE users SET is_active=true');
       assert.equal((await post('active-full@test.invalid')).code,409);assert.equal(await count(),15);
-      assert.doesNotMatch(routeSource,/router\.(?:put|patch|delete)\(['"]\/users/);
+      assert.doesNotMatch(routeSource,/router\.(?:put|delete)\(['"]\/users/);
     });
     await t.test('fallo INSERT y fallo diferido COMMIT revierten sin consumir cupo ni exponer SQL',async()=>{
       await seed(14);const before=await rows();

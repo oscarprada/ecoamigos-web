@@ -36,6 +36,8 @@ export async function listUsers(_req, res) {
         u.name,
         u.email,
         u.role,
+        u.team_id,
+        u.is_active,
         t.name AS team_name
       FROM users u
       LEFT JOIN teams t ON t.id = u.team_id
@@ -116,6 +118,76 @@ export async function createUser(req, res) {
   } finally {
     if (client) client.release(releaseError);
   }
+}
+
+// F15: partial updates accept only explicitly authorized fields.
+function editFields(body, limits, extra = []) {
+  if (!body || Array.isArray(body) || typeof body !== 'object') return null;
+  const keys = Object.keys(body);
+  if (!keys.length || keys.some(key => !Object.hasOwn(limits, key) && !extra.includes(key))) return null;
+  const values = { ...body };
+  for (const [field, max] of Object.entries(limits)) {
+    if (!Object.hasOwn(values, field)) continue;
+    if (typeof values[field] !== 'string' || !values[field].trim() || values[field].trim().length > max) return null;
+    values[field] = values[field].trim();
+  }
+  return values;
+}
+
+function editError(res, error, entity) {
+  if (error.code === '23505') return res.status(409).json({ message: entity === 'usuario' ? 'El email ya existe' : 'El nombre del equipo ya existe' });
+  if (['23503', '23502', '22001', '22P02'].includes(error.code)) return res.status(400).json({ message: 'Datos inválidos' });
+  return res.status(500).json({ message: 'Error al actualizar ' + entity });
+}
+
+export async function updateUser(req, res) {
+  const values = editFields(req.body, { name: 120, email: 150 }, ['team_id', 'is_active']);
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647 || !values ||
+      (Object.hasOwn(values, 'email') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) ||
+      (Object.hasOwn(values, 'is_active') && typeof values.is_active !== 'boolean') ||
+      (Object.hasOwn(values, 'team_id') && values.team_id !== null &&
+        (!Number.isInteger(values.team_id) || values.team_id < 1 || values.team_id > 2147483647))) {
+    return res.status(400).json({ message: 'Datos de usuario inválidos' });
+  }
+  try {
+    const current = await query('SELECT role FROM users WHERE id = $1', [id]);
+    if (!current.rows[0]) return res.status(404).json({ message: 'Usuario no encontrado' });
+    if (Object.hasOwn(values, 'team_id') &&
+        ((current.rows[0].role === 'leader' && values.team_id === null) ||
+         (current.rows[0].role === 'admin' && values.team_id !== null))) {
+      return res.status(400).json({ message: 'Equipo inválido para el rol del usuario' });
+    }
+    // The FK checks existence atomically. Historical recycling_records are never updated.
+    const has = key => Object.hasOwn(values, key);
+    const result = await query(
+      `UPDATE users SET
+        name = CASE WHEN $1 THEN $2 ELSE name END,
+        email = CASE WHEN $3 THEN $4 ELSE email END,
+        team_id = CASE WHEN $5 THEN $6 ELSE team_id END,
+        is_active = CASE WHEN $7 THEN $8 ELSE is_active END
+       WHERE id = $9 RETURNING id, name, email, role, team_id, is_active`,
+      [has('name'), values.name, has('email'), values.email, has('team_id'), values.team_id, has('is_active'), values.is_active, id]);
+    if (!result.rows[0]) return res.status(404).json({ message: 'Usuario no encontrado' });
+    return res.json(result.rows[0]);
+  } catch (error) { return editError(res, error, 'usuario'); }
+}
+
+export async function updateTeam(req, res) {
+  const values = editFields(req.body, { name: 100, dependency: 150 });
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647 || !values) {
+    return res.status(400).json({ message: 'Datos de equipo inválidos' });
+  }
+  try {
+    const result = await query(
+      `UPDATE teams SET name = CASE WHEN $1 THEN $2 ELSE name END,
+        dependency = CASE WHEN $3 THEN $4 ELSE dependency END
+       WHERE id = $5 RETURNING id, name, dependency`,
+      [Object.hasOwn(values, 'name'), values.name, Object.hasOwn(values, 'dependency'), values.dependency, id]);
+    if (!result.rows[0]) return res.status(404).json({ message: 'Equipo no encontrado' });
+    return res.json(result.rows[0]);
+  } catch (error) { return editError(res, error, 'equipo'); }
 }
 
 export async function listTeams(_req, res) {

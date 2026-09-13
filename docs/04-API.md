@@ -110,6 +110,23 @@ Los conteos `total_records`, `materials[].total` y `status[]` siguen midiendo ac
 
 F14: se retiró el objeto indicators completo de /public/stats, incluidos totalQuantity y los cuatro campos estimated*. No se devuelven equivalencias ni ceros sustitutos. El total permanece exclusivamente en general.total_quantity (NUMERIC SQL); los subtotales por material permanecen en materials[].total_quantity. Se conserva el SQL F13, sin conversión ni redondeo adicional. Sin registros compatibles el total real es cero. Ranking, conteos y puntos conservan su contrato. Consumidores anteriores deben usar general.total_quantity y retirar las cuatro equivalencias. Ver [motivo y trazabilidad histórica](12-METODOLOGIA-INDICADORES.md).
 
+### Alcance administrativo autorizado en F15
+
+Todas las rutas /admin exigen authenticateToken y authorizeRoles('admin'). Se conservan GET/POST /admin/users, /admin/teams y /admin/periods. Se añaden:
+
+| Endpoint | Campos permitidos (actualización parcial) | Respuesta 200 |
+| --- | --- | --- |
+| PATCH /admin/users/:id | name, email, team_id, is_active | id, name, email, role, team_id, is_active |
+| PATCH /admin/teams/:id | name, dependency | id, name, dependency |
+
+El cuerpo debe contener al menos un campo autorizado. Nombre/email/dependencia se recortan y no admiten vacío ni longitudes superiores al esquema (usuario 120/150; equipo 100/150). Email requiere formato válido y unicidad según UNIQUE existente (no se introduce normalización de mayúsculas). team_id debe ser entero positivo existente: obligatorio no nulo para leader cuando se modifica; para admin solo null, coherente con el alta. is_active exige booleano. Se rechazan role, password, password_hash, id y cualquier campo no autorizado. Campos omitidos se conservan. GET /admin/users incorpora team_id e is_active y nunca devuelve password_hash.
+
+Ediciones: 400 datos/ID inválidos o equipo inexistente; 404 recurso inexistente con petición válida; 409 email/nombre de equipo duplicado; 403 líder; 500 genérico sin SQL. Las FK comprueban existencia del equipo dentro de la sentencia UPDATE atómica. No se modifican registros históricos. Los códigos de creación previos se conservan (F12 409 por cupo; F09 400/409/500 controlados); no se certifican nuevas validaciones de alta.
+
+No existen DELETE de usuarios/equipos/períodos, PUT de estas entidades ni GET administrativo por ID. PATCH de períodos tampoco existe: responde 404, con registros o vacío. Se mantiene creación/listado porque no se demostró necesidad de editar períodos vacíos; las fechas históricas no se pueden modificar desde la API. Crear un período activo conserva la transacción F09, no es editar fechas de uno existente. Contenido conserva GET/POST y PUT/DELETE por ID, sin cambios.
+
+Cambios administrativos de role/team/is_active pueden no reflejarse en tokens previamente emitidos; el tratamiento de sesión/token se resolverá en S01/S02.
+
 ### GET /public/points-catalog
 
 Array con `id, source_code, group_name, action_name, action_level, points, evidence_required, max_frequency`, ordenado por grupo y acción ASC. No hay agrupación JSON ni filtrado por grupo. `evidence_required` es TEXT en el esquema oficial; verificar compatibilidad antes de migrar una base histórica.

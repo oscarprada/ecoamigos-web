@@ -29,7 +29,7 @@ CORREGIDO se refiere al código y la instalación nueva probados, no a una base 
 
 Premios y ganadores están fuera del alcance actual del producto. Se retiraron sus páginas, rutas, enlaces, llamadas, controladores y endpoints, y `GET /public/ranking` volvió a limitarse a `currentPeriod` y `ranking`. No se modificó el cálculo de posiciones o puntos. Las tablas `prizes`, `winner_records` y `rewards` permanecen deliberadamente como legado; no se ejecutó SQL destructivo ni se modificaron datos.
 
-F15–F20 y S01–S12 permanecen sin resolver por alcance. F10–F14 están corregidos según lo descrito abajo; la matriz T01–T28 conserva sus comprobaciones manuales con T20 actualizado para F13. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
+F16–F20 y S01–S12 permanecen sin resolver por alcance. F10–F15 están corregidos según lo descrito abajo; la matriz T01–T28 conserva sus comprobaciones manuales con T20 actualizado para F13. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
 
 ## Fuente única de puntuación — F04
 
@@ -193,6 +193,27 @@ Pendientes concretos: fuente técnica con unidad/alcance/material que derive 0.0
 
 Validación de software: **114 pruebas aprobadas, cero fallos/omisiones**, incluidas cinco F14 que congelan resultados de 0, 1, 0.25 y 80 kg y verifican las cuatro etiquetas/unidades y advertencia. F13 mantiene HTTP/SQL reales approved+kg, precisión e histórico; F01–F12, instalación, migraciones D01/F09 y concurrencias F08/F09/F10/F12 pasan. Sintaxis de 31 archivos backend, build frontend (solo avisos de deprecación) y git diff --check correctos. Estas pruebas no son validación científica. F05, ranking y puntos intactos; las 56 filas del catálogo temporal se compararon idénticas y CSV original sin cambios. Clústeres temporales detenidos; ecoamigos real no conectada ni modificada. Sin commit/push; F15 no trabajado.
 
+## Alcance administrativo — F15 CORREGIDO
+
+La auditoría inicial revisó README, docs 01–12, esquema/aliases, D01, seeds, rutas/controllers y pantallas. Demostró alta/listado para usuarios, equipos y períodos; contenido ya tenía edición/borrado. No encontró requisitos inequívocos de CRUD completo y quedó PARCIAL. La decisión funcional explícita posterior autoriza el mantenimiento limitado siguiente; no se deriva por simetría ni por ausencia de requisitos.
+
+| Entidad | Operaciones finales | Fuera del alcance |
+| --- | --- | --- |
+| Usuarios | GET/POST /admin/users; PATCH /admin/users/:id: nombre, email, team_id, is_active; UI Editar | DELETE, cambio de rol, contraseña/recuperación (F16) |
+| Equipos | GET/POST /admin/teams; PATCH /admin/teams/:id: nombre/dependencia; UI Editar | DELETE, nueva baja lógica, reasignaciones automáticas |
+| Períodos | GET/POST /admin/periods con F09 | DELETE, edición de fechas/nombre, activación independiente |
+| Contenido (referencia) | GET/POST /admin/content; PUT/DELETE /admin/content/:id existentes | Sin cambios F15 |
+
+Períodos históricos y vacíos no tienen ruta de edición: no se encontró necesidad real para los vacíos. Esto protege fechas históricas desde la API; no añade restricciones a SQL externo. RR.user_id/team_id CASCADE, RR.period_id/reviewed_by SET NULL, content_items.created_by SET NULL, users.team_id SET NULL y winner_records CASCADE legado justifican excluir DELETE. teams no tiene is_active; D01 puede conservar leader_id legado distinto de users.team_id.
+
+Ediciones con lista cerrada de campos, formato/longitud, unicidad existente y FK: 400 inválidos, 404 inexistentes, 409 duplicados, 403 líder y 500 genérico. Nunca se devuelve hash ni se acepta password/password_hash/role. UPDATE modifica únicamente la entidad destino, conserva IDs, claves y registros históricos. El listado de usuarios ahora incluye team_id/is_active. F12 cuenta inactivos y mantiene quince; login existente rechaza inactivos. Las validaciones de creación anteriores no se amplían.
+
+Cambios administrativos de role/team/is_active pueden no reflejarse en tokens previamente emitidos; el tratamiento de sesión/token se resolverá en S01/S02.
+
+Ranking y puntuación conservan algoritmo y valores. Los nombres se obtienen por JOIN, por lo que se actualizan etiquetas; en empates el nombre de equipo puede cambiar el orden alfabético ya existente. No se garantiza versionado de identidad ni revocación de tokens.
+
+Pruebas: backend/tests/f15-admin-scope.test.js conserva el arnés PostgreSQL desechable y HTTP real con rutas/middleware/controller. Amplía altas/listados, permisos, campos prohibidos, duplicados, errores internos provocados sin filtrar SQL, desactivación/reactivación y login, límite quince incluyendo inactivo, reasignación sin reescritura histórica, ranking/puntos, DELETE ausentes y fechas de períodos históricos/vacíos intactas. Compara las 56 filas del catálogo antes/después. Resultado final: **123 pruebas aprobadas, cero fallos y cero omisiones**, incluidas diez subpruebas F15 y su contenedor. Pasan F01–F14, instalación (42 consultas preparadas), migraciones D01/F09 y concurrencias F08/F09/F09-F10/F12. Se adaptó la afirmación obsoleta de F12 sobre ausencia de PATCH; el límite de quince y sus pruebas de concurrencia se conservan. F09 mantiene el período anterior ante rollback; F10 valida período y fecha; F12 cuenta todas las cuentas; F13 conserva approved+kg; F14 mantiene retirados los indicadores no sustentados; F05 sigue rechazando referencias manipuladas. Sintaxis de 31 archivos backend y build frontend correctos (solo avisos de deprecación Vite); git diff --check correcto. Ranking/puntos sin cambios de algoritmo; 56 filas del catálogo temporal idénticas antes/después y CSV original sin cambios. Se usaron únicamente clústeres nuevos aislados, detenidos al finalizar; ecoamigos real no conectada ni modificada. No se ejecutaron commit/push ni trabajo de F16. F15 CORREGIDO dentro de la decisión autorizada; S01/S02 permanecen pendientes. La verificación frontend consistió en revisión del código y build, sin prueba interactiva de navegador.
+
 ## Hallazgos funcionales y técnicos
 
 | ID | Hallazgo | Consecuencia / prioridad de revisión |
@@ -211,7 +232,7 @@ Validación de software: **114 pruebas aprobadas, cero fallos/omisiones**, inclu
 | F12 | Límite de 15 solo frontend | **CORREGIDO**: máximo 15 cuentas totales, incluidos admins/inactivos; API y bootstrap transaccionales con bloqueo, conflicto 409 y concurrencia real probada |
 | F13 | Estadísticas suman todos los estados/unidades | **CORREGIDO**: cantidades e indicadores solo approved con unit kg; conteos operativos/puntos e histórico preservados; factores intactos |
 | F14 | Factores ambientales sin fuente trazable en repositorio | **CORREGIDO** por retiro: cuatro equivalencias fuera de cálculo/API/UI; total approved+kg intacto; metodología histórica conservada |
-| F15 | Solo contenido tiene CRUD completo | No hay edición/baja de usuarios, equipos o periodos |
+| F15 | Mantenimiento administrativo limitado y autorizado | **CORREGIDO**: usuarios editables y activables; equipos editables; períodos solo alta/listado; sin borrados físicos, con referencias preservadas y pruebas HTTP/regresión aprobadas |
 | F16 | Sin endpoint de recuperación/cambio de contraseña | Soporte requiere intervención autorizada |
 | F17 | Algunas promesas UI sin catch y sin 404 SPA | Errores pueden verse como vacíos o páginas sin contenido |
 | F18 | showToast cambia identidad, depende efecto de registro | Posibles consultas repetidas al actualizar avisos |
