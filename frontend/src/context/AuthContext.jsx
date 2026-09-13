@@ -4,6 +4,7 @@ import api from '../api/client';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  const [authError, setAuthError] = useState('');
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -15,14 +16,14 @@ export function AuthProvider({ children }) {
     }
     api.get('/auth/me')
       .then(({ data }) => setUser(data))
-      .catch(() => localStorage.removeItem('ecoamigos_token'))
+      .catch(() => { localStorage.removeItem('ecoamigos_token'); setAuthError('No fue posible verificar la sesión. Inicia sesión nuevamente.'); })
       .finally(() => setLoading(false));
   }, []);
 
   const login = async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password });
     localStorage.setItem('ecoamigos_token', data.token);
-    setUser(data.user);
+    setUser(data.user); setAuthError('');
     return data.user;
   };
 
@@ -33,6 +34,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{ user, loading, login, logout }}>
+      {authError && <p role="alert" className="container error">{authError}</p>}
       {children}
     </AuthContext.Provider>
   );

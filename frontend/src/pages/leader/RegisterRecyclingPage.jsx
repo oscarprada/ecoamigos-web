@@ -1,3 +1,5 @@
+import LoadState from '../../components/LoadState';
+import { uiError } from '../../utils/uiError';
 import { useEffect, useMemo, useState } from 'react';
 import api from '../../api/client';
 import { useToast } from '../../context/ToastContext';
@@ -61,6 +63,7 @@ export default function RegisterRecyclingPage() {
   const { showToast } = useToast();
 
   const [period, setPeriod] = useState(null);
+  const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [checkedCriteria, setCheckedCriteria] = useState(['Material limpio']);
@@ -90,6 +93,7 @@ export default function RegisterRecyclingPage() {
           }));
         }
       } catch (err) {
+        setLoadError('No fue posible cargar el periodo activo.');
         showToast(
           'No fue posible cargar el periodo activo.',
           'error'
@@ -178,14 +182,15 @@ export default function RegisterRecyclingPage() {
       setCheckedCriteria(['Material limpio']);
     } catch (err) {
       showToast(
-        err.response?.data?.message ||
-          'No fue posible guardar el registro.',
+        uiError(err, 'No fue posible guardar el registro.'),
         'error'
       );
     } finally {
       setSaving(false);
     }
   };
+
+  if (loading || loadError) return <LoadState loading={loading} error={loadError} retry={() => window.location.reload()} />;
 
   return (
     <div style={styles.page}>

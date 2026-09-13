@@ -16,7 +16,7 @@ En desarrollo abrir `http://localhost:5173`. Para usar datos, el backend y Postg
 4. Abrir un contenido del listado para consultar el detalle en un modal.
 5. Usar el botón de cierre o pulsar fuera del modal para regresar al listado.
 
-Los contenidos pueden ser texto, imagen, video o archivo descargable. Solo aparecen los publicados. Un listado vacío puede corresponder a falta de publicaciones; si se esperaba contenido, revisar disponibilidad de API. Las introducciones generales no se administran desde la pantalla de contenidos.
+Los contenidos pueden ser texto, imagen, video o archivo descargable. Solo aparecen los publicados. Un listado vacío indica que la consulta terminó correctamente sin publicaciones. Si falla la API se muestra un error, no un listado vacío. Las introducciones generales no se administran desde la pantalla de contenidos.
 
 ### Ranking
 
@@ -151,3 +151,14 @@ Informar página, operación, fecha/hora aproximada, ID de registro si aplica y 
 **Limitación actual:** no hay proveedor de correo configurado; solicitar recuperación no envía un email todavía. El envío institucional debe habilitarse antes de ofrecer este servicio como operativo. La aplicación no muestra tokens ni ofrece un atajo de administrador para asignar contraseñas. Las cuentas inactivas no pueden recuperar acceso por este flujo.
 
 No hay «Cambiar contraseña» en perfil/dashboard. Restablecer no cierra sesiones previamente abiertas: esa protección queda en S01/S02. No compartas enlaces, tokens o contraseñas; no los pegues en incidencias. El procedimiento SQL excepcional de Operación continúa reservado a soporte autorizado, no es parte de esta pantalla.
+
+
+## Carga, errores y páginas inexistentes — F17
+
+Mientras se consultan datos aparece Cargando. Si la consulta termina sin elementos se conserva el mensaje normal de lista vacía; si falla, aparece un mensaje de error con Reintentar. Ranking, estadísticas, contenido y paneles no representan un fallo como cero o ausencia de registros.
+
+Reintentar vuelve a cargar usuarios dentro de la pantalla; en las demás cargas recarga la página. La recarga puede descartar cambios de formulario sin guardar. No hay reintentos automáticos. Si falla guardar, crear un período o editar, se muestra un error controlado y no un mensaje de éxito; el formulario conserva sus valores. Si se guardó pero falló la actualización del listado, se informa del fallo de carga.
+
+Las direcciones inexistentes muestran «404 — Página no encontrada» dentro del diseño habitual, con Volver al inicio. /winners y /prizes también muestran 404: sus funciones no se restauraron. Una ruta protegida válida sigue solicitando login cuando no hay sesión; un rol sin permiso vuelve al inicio. Una dirección inexistente, incluso bajo /admin o /leader, muestra 404.
+
+La recuperación mantiene su mensaje genérico para no revelar cuentas. Los errores inesperados no muestran detalles técnicos; las validaciones funcionales conocidas sí pueden mostrarse.

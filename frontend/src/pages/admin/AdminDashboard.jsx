@@ -1,8 +1,11 @@
+import LoadState from '../../components/LoadState';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
 
 export default function AdminDashboard() {
+  const [loadError, setLoadError] = useState('');
+  const [pageLoading, setPageLoading] = useState(true);
   const [adminStats, setAdminStats] = useState({
     users: 0,
     teams: 0,
@@ -25,6 +28,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const load = async () => {
+      try {
       const [adminRes, publicRes] = await Promise.all([
         api.get('/admin/dashboard'),
         api.get('/public/stats'),
@@ -32,6 +36,8 @@ export default function AdminDashboard() {
 
       setAdminStats(adminRes.data);
       setPublicStats(publicRes.data);
+      } catch { setLoadError('No fue posible cargar las estadísticas.'); }
+      finally { setPageLoading(false); }
     };
 
     load();
@@ -91,6 +97,8 @@ export default function AdminDashboard() {
     ...topMaterials.map((item) => Number(item.total || 0)),
     1
   );
+
+  if (pageLoading || loadError) return <LoadState loading={pageLoading} error={loadError} retry={() => window.location.reload()} />;
 
   return (
     <div style={styles.page}>

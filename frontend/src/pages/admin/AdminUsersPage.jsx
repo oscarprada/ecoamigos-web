@@ -1,9 +1,12 @@
+import LoadState from '../../components/LoadState';
+import { uiError } from '../../utils/uiError';
 import { useEffect, useMemo, useState } from 'react';
 import api from '../../api/client';
 
 const MAX_USERS = 15;
 
 export default function AdminUsersPage() {
+  const [loadError, setLoadError] = useState('');
   const [editing, setEditing] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [users, setUsers] = useState([]);
@@ -23,7 +26,7 @@ export default function AdminUsersPage() {
 
   const load = async () => {
     try {
-      setLoading(true);
+      setLoading(true); setLoadError('');
       const [usersRes, teamsRes] = await Promise.all([
         api.get('/admin/users'),
         api.get('/admin/teams'),
@@ -31,7 +34,7 @@ export default function AdminUsersPage() {
       setUsers(usersRes.data || []);
       setTeams(teamsRes.data || []);
     } catch (err) {
-      setError(err.response?.data?.message || 'No fue posible cargar usuarios');
+      setLoadError('No fue posible cargar usuarios y equipos.');
     } finally {
       setLoading(false);
     }
@@ -97,7 +100,7 @@ export default function AdminUsersPage() {
 
       await load();
     } catch (err) {
-      setError(err.response?.data?.message || 'No fue posible crear el usuario.');
+      setError(uiError(err, 'No fue posible crear el usuario.'));
       if (err.response?.status === 409 && err.response?.data?.code === 'USER_LIMIT_REACHED') {
         await load();
       }
@@ -115,9 +118,11 @@ export default function AdminUsersPage() {
         is_active: editing.is_active,
       });
       setEditing(null); setSuccess('Usuario actualizado correctamente.'); await load();
-    } catch (err) { setError(err.response?.data?.message || 'No fue posible actualizar el usuario.'); }
+    } catch (err) { setError(uiError(err, 'No fue posible actualizar el usuario.')); }
     finally { setSavingEdit(false); }
   };
+
+  if (loading || loadError) return <LoadState loading={loading} error={loadError} retry={load} />;
 
   return (
     <div className="container stack-lg">

@@ -6,6 +6,7 @@ import AppLayout from './layouts/AppLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import HomePage from './pages/public/HomePage';
+import NotFoundPage from './pages/public/NotFoundPage';
 import RankingPage from './pages/public/RankingPage';
 import EducationCategoryPage from './pages/public/EducationCategoryPage';
 
@@ -40,6 +41,7 @@ export default function App() {
 
             {/* Login */}
             <Route path="/login" element={<LoginPage />} />
+            <Route path="*" element={<NotFoundPage />} />
             <Route path="/forgot-password" element={<PasswordRecoveryPage key="forgot" />} />
             <Route path="/reset-password" element={<PasswordRecoveryPage key="reset" reset />} />
 

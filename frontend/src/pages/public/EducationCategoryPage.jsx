@@ -1,3 +1,4 @@
+import LoadState from '../../components/LoadState';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api, { getBackendUrl } from '../../api/client';
@@ -70,13 +71,23 @@ esperanza.
 };
 
 export default function EducationCategoryPage() {
+  const [loadError, setLoadError] = useState('');
+  const [pageLoading, setPageLoading] = useState(true);
   const { category } = useParams();
   const [items, setItems] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
 
   useEffect(() => {
-    api.get(`/public/content/${category}`).then(({ data }) => setItems(data || []));
+    let current = true;
+    setPageLoading(true); setLoadError(''); setSelectedItem(null);
+    api.get(`/public/content/${category}`)
+      .then(({ data }) => { if (current) setItems(data || []); })
+      .catch(() => { if (current) setLoadError('No fue posible cargar el contenido.'); })
+      .finally(() => { if (current) setPageLoading(false); });
+    return () => { current = false; };
   }, [category]);
+
+  if (pageLoading || loadError) return <LoadState loading={pageLoading} error={loadError} retry={() => window.location.reload()} />;
 
   return (
     <div style={styles.page}>

@@ -1,3 +1,4 @@
+import { uiError } from '../../utils/uiError';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -6,16 +7,17 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [form, setForm] = useState({ email: '', password: '' });
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault(); setError(''); setBusy(true);
     try {
       const user = await login(form.email, form.password);
       navigate(user.role === 'admin' ? '/admin' : '/leader');
     } catch (err) {
-      setError(err.response?.data?.message || 'No fue posible iniciar sesión');
-    }
+      setError(uiError(err, 'No fue posible iniciar sesión'));
+    } finally { setBusy(false); }
   };
 
   return (
@@ -29,7 +31,7 @@ export default function LoginPage() {
           <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
         </label>
         {error && <p className="error">{error}</p>}
-        <button className="button primary" type="submit">Ingresar</button>
+        <button className="button primary" type="submit" disabled={busy}>{busy ? 'Ingresando...' : 'Ingresar'}</button>
         <Link className="helper" to="/forgot-password">¿Olvidaste tu contraseña?</Link>
       </form>
     </div>

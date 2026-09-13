@@ -29,7 +29,7 @@ CORREGIDO se refiere al código y la instalación nueva probados, no a una base 
 
 Premios y ganadores están fuera del alcance actual del producto. Se retiraron sus páginas, rutas, enlaces, llamadas, controladores y endpoints, y `GET /public/ranking` volvió a limitarse a `currentPeriod` y `ranking`. No se modificó el cálculo de posiciones o puntos. Las tablas `prizes`, `winner_records` y `rewards` permanecen deliberadamente como legado; no se ejecutó SQL destructivo ni se modificaron datos.
 
-F17–F20 y S01–S12 permanecen sin resolver por alcance. F16 se detalla en su bloque de recuperación. F10–F15 están corregidos según lo descrito abajo; la matriz T01–T28 conserva sus comprobaciones manuales con T20 actualizado para F13. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
+F18–F20 y S01–S12 permanecen sin resolver por alcance. F17 está corregido según su bloque final. F16 se detalla en su bloque de recuperación. F10–F15 están corregidos según lo descrito abajo; la matriz T01–T28 conserva sus comprobaciones manuales con T20 actualizado para F13. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
 
 ## Fuente única de puntuación — F04
 
@@ -234,7 +234,7 @@ Pruebas: backend/tests/f15-admin-scope.test.js conserva el arnés PostgreSQL des
 | F14 | Factores ambientales sin fuente trazable en repositorio | **CORREGIDO** por retiro: cuatro equivalencias fuera de cálculo/API/UI; total approved+kg intacto; metodología histórica conservada |
 | F15 | Mantenimiento administrativo limitado y autorizado | **CORREGIDO**: usuarios editables y activables; equipos editables; períodos solo alta/listado; sin borrados físicos, con referencias preservadas y pruebas HTTP/regresión aprobadas |
 | F16 | Recuperación de contraseña | **CORREGIDO técnicamente**: token temporal hasheado de un uso, bcrypt y flujo público; sin cambio voluntario. Entrega de correo institucional pendiente |
-| F17 | Algunas promesas UI sin catch y sin 404 SPA | Errores pueden verse como vacíos o páginas sin contenido |
+| F17 | Promesas UI y 404 SPA | **CORREGIDO**: errores persistentes separados de vacío/carga, reintento, mensajes controlados y catch-all; pruebas aprobadas, smoke visual pendiente |
 | F18 | showToast cambia identidad, depende efecto de registro | Posibles consultas repetidas al actualizar avisos |
 | F19 | Input file no se limpia explícitamente tras registro | Revisar coherencia visual entre archivo elegido y estado reiniciado |
 | F20 | Modal sin focus trap/Escape; menú oculto | Accesibilidad y navegación móvil requieren QA |
@@ -315,3 +315,31 @@ Nueva tabla y migración incremental separada de D01, FK restrictiva y verificac
 Límites abiertos: S01/S02 (JWT previos siguen válidos después del reset, comprobado), S03 (sin límite de intentos/emisión ni garantía de tiempo constante), configuración institucional de correo y política robusta de contraseñas. No se certifica resolución de estos hallazgos. No se añade limpieza automática de tokens ni se ejecuta migración real.
 
 Pruebas F16: HTTP con authRoutes/controladores reales y PostgreSQL temporal; cuentas existentes/inexistentes/inactivas, validaciones, aleatoriedad/hash/expiración, enlace anterior/reutilización, login nuevo/anterior, bcrypt, datos privados ausentes, rollback diferido, consumo simultáneo, producción sin token, entrega fallida, migración con datos previos/repetición segura/FK/índices y catálogo intacto. Resultado final: **135 pruebas aprobadas, cero fallos y cero omisiones**, incluidas once subpruebas F16 y su contenedor. Pasan F01–F15, instalación (51 consultas SQL preparadas), D01, migración F09, concurrencias F08/F09/F09-F10/F12 y migración F16. La prueba de FK se ajustó al SQLSTATE RESTRICT de PostgreSQL, sin cambiar la restricción. Sintaxis de 34 archivos backend correcta, build frontend correcto (solo avisos Vite de deprecación), git diff --check correcto. La UI se verificó por revisión de código/build, no mediante navegador interactivo. F15 sigue correcto; F12 conserva quince cuentas; F09 mantiene el período anterior ante rollback; F10 valida período/fecha; F13 approved+kg y F14 sin indicadores no sustentados. Algoritmo de ranking/puntos y catálogo original sin cambios; 56 filas del catálogo aislado idénticas antes/después. Solo clústeres temporales, detenidos al finalizar; ecoamigos real no conectada ni modificada. F16 se cierra técnicamente según el criterio autorizado, con entrega automática institucional aún pendiente. No se trabajó F17, ni se hizo commit/push.
+
+
+## Promesas UI y 404 SPA — F17 CORREGIDO
+
+Auditoría completa de frontend/src: dashboard admin, contenidos, configuración, ranking, panel líder (dos peticiones) y educación tenían cargas con rechazos sin tratamiento; creación de períodos tampoco los capturaba. Usuarios, revisión y registro capturaban errores, pero podían mostrar vacíos, ceros o ausencia de período después de una carga fallida. Faltaba catch-all. Se conservó el diff correcto de la ejecución interrumpida.
+
+Se protegen nueve cargas de página y la creación de períodos. LoadState presenta loading o error persistente con acción de reintento; devuelve null sin ambos estados, dejando empty a las páginas tras éxito. No borra datos previos para representar error. Usuarios reintenta su carga local; los demás botones recargan la página de forma explícita, sin bucles automáticos. Las mutaciones mantienen sus formularios ante rechazo; solo muestran éxito después de la escritura exitosa. Fallos de recarga posteriores a guardar se muestran como error de carga. uiError permite únicamente mensajes literales funcionales auditados en respuestas 4xx; el resto usa texto genérico, sin SQL, stack ni error Axios.
+
+Clasificación final:
+
+| Clase | Casos | Tratamiento |
+| --- | --- | --- |
+| A: manejado | Cargas de nueve páginas; crear/editar/borrar contenido, equipos, períodos, usuarios, revisión, registro, login, recuperación | catch explícito y aviso; finally para estados de carga/envío existentes o añadidos. Sin rechazo presentado como empty |
+| A: manejado | auth/me | catch elimina token como antes y ahora avisa de fallo de verificación; finally termina carga |
+| A: manejado | Exportación | Conserva try/catch, console.error acompañado de alerta genérica. No era tratamiento solo por consola |
+| B: propagado intencionalmente | AuthContext.login; interceptor de petición Axios | El formulario captura login; los consumidores de API capturan rechazos. No se añaden catches redundantes |
+| C: no relevante | Helpers síncronos, render, enlaces, archivos sin llamadas asíncronas | Sin promesa de red que corregir; no se refactorizan |
+| D: pendiente real de promesas UI | Ninguno identificado en los flujos ejecutables auditados | Limitaciones visuales y de infraestructura separadas abajo |
+
+Educación descarta respuestas de una categoría anterior al cambiar categoría/desmontar; no se aplica cancelación global. En ToastContext el único cambio incidental es useCallback para estabilizar showToast, dependencia del efecto de carga de período. Impide que un aviso provoque otra carga por cambio de identidad. **F18 no se trabajó formalmente ni se declara corregido**; revisar este antecedente al abordar F18, sin ampliar ahora gestión de temporizadores o notificaciones.
+
+NotFoundPage usa clases existentes y enlace al inicio. path="*" se encuentra dentro de AppLayout, fuera de grupos ProtectedRoute: rutas inexistentes públicas, /admin y /leader muestran 404, igual que /winners y /prizes. Las rutas válidas conservan sus permisos: sin sesión → /login, sin rol autorizado → /. Navbar, AppLayout y ProtectedRoute sin cambios. No se añadió ErrorBoundary: no se identificó un crash de render que exigiera ampliarlo para F17. No se modifica servidor/hosting ni se restaura funcionalidad retirada.
+
+Validación: **26 pruebas F17 aprobadas**, con el transformador JSX de Vite existente, handlers/efectos reales bajo un arnés de hooks controlado y render React/React Router para routing. Incluyen carga→éxito/empty/error, nueve rechazos de carga, reintento exitoso de usuarios sin bucle, POST período rechazado, PATCH con formulario/listado conservados, mensajes técnicos ocultos y funcionales visibles, login/forgot/reset, rutas retiradas/404, enlaces y ProtectedRoute. El arnés se corrigió para excluir nombres de exports de interoperabilidad no válidos como parámetros JavaScript; no era un fallo de la aplicación. No había otra suite frontend; no se añadieron dependencias.
+
+Regresión completa: **135 pruebas backend aprobadas**, cero fallos/omisiones (161 sumando F17). Incluye F01–F16, instalación con 51 consultas preparadas, D01 y migraciones/concurrencias F08/F09/F09-F10/F12/F16. F15 y forgot/reset intactos; F12 mantiene 15 cuentas; F09 preserva el activo anterior ante rollback; F10 valida período/fecha; F13 approved+kg; F14 sin equivalencias retiradas. Backend y base/migraciones no tienen cambios F17. Algoritmo de ranking y puntos conservado. Las 56 filas del catálogo temporal se comparan idénticas y el original no cambia. Clústeres temporales detenidos, sin conexión ni modificación de ecoamigos real. Sintaxis de 36 archivos JS (34 backend + utilidad/prueba frontend), build Vite y git diff --check correctos; solo avisos de deprecación Vite.
+
+Smoke manual pendiente: apariencia responsive de 404/errores, clics en navegador real, recarga completa y estados con red interrumpida, navegación rápida entre categorías. Routing automatizado usa páginas sustitutas para las rutas válidas y un layout Outlet; no valida visualmente Navbar/AppLayout. Los efectos se prueban con hooks controlados, no un DOM de navegador. El hosting debe servir index.html al abrir URLs SPA directamente; la 404 React no configura ese fallback ni cambia el código HTTP del servidor. Sin commit/push; detenido antes de F18.

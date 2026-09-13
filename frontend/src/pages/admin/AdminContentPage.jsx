@@ -1,3 +1,5 @@
+import LoadState from '../../components/LoadState';
+import { uiError } from '../../utils/uiError';
 import { useEffect, useState } from 'react';
 import api, { getBackendUrl } from '../../api/client';
 
@@ -11,14 +13,19 @@ const initialForm = {
 };
 
 export default function AdminContentPage() {
+  const [loadError, setLoadError] = useState('');
+  const [pageLoading, setPageLoading] = useState(true);
   const [items, setItems] = useState([]);
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  const load = () => {
-    api.get('/admin/content').then(({ data }) => setItems(data || []));
+  const load = async () => {
+    setPageLoading(true); setLoadError('');
+    try { const { data } = await api.get('/admin/content'); setItems(data || []); }
+    catch { setLoadError('No fue posible cargar los contenidos.'); }
+    finally { setPageLoading(false); }
   };
 
   useEffect(() => {
@@ -60,9 +67,9 @@ export default function AdminContentPage() {
       }
 
       resetForm();
-      load();
+      await load();
     } catch (err) {
-      setError(err.response?.data?.message || 'No fue posible guardar el contenido.');
+      setError(uiError(err, 'No fue posible guardar el contenido.'));
     }
   };
 
@@ -96,15 +103,17 @@ export default function AdminContentPage() {
     try {
       await api.delete(`/admin/content/${id}`);
       setMessage('Contenido eliminado correctamente.');
-      load();
+      await load();
 
       if (editingId === id) {
         resetForm();
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'No fue posible eliminar el contenido.');
+      setError(uiError(err, 'No fue posible eliminar el contenido.'));
     }
   };
+
+  if (pageLoading || loadError) return <LoadState loading={pageLoading} error={loadError} retry={() => window.location.reload()} />;
 
   return (
     <div style={styles.page}>

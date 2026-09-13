@@ -1,7 +1,10 @@
+import LoadState from '../../components/LoadState';
 import { useEffect, useMemo, useState } from 'react';
 import api from '../../api/client';
 
 export default function RankingPage() {
+  const [loadError, setLoadError] = useState('');
+  const [pageLoading, setPageLoading] = useState(true);
   const [data, setData] = useState({
     ranking: [],
     currentPeriod: null,
@@ -13,7 +16,8 @@ export default function RankingPage() {
     api
       .get('/public/ranking')
       .then(({ data }) => setData(data))
-      .finally(() => setLoading(false));
+      .catch(() => setLoadError('No fue posible cargar el ranking.'))
+      .finally(() => { setLoading(false); setPageLoading(false); });
   }, []);
 
   const topThree = useMemo(() => data.ranking.slice(0, 3), [data.ranking]);
@@ -21,6 +25,8 @@ export default function RankingPage() {
   const getPoints = (row) => {
     return Number(row.total_points ?? row.score ?? 0);
   };
+
+  if (pageLoading || loadError) return <LoadState loading={pageLoading} error={loadError} retry={() => window.location.reload()} />;
 
   return (
     <div style={styles.page}>

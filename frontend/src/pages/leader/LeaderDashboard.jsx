@@ -1,16 +1,25 @@
+import LoadState from '../../components/LoadState';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api, { getBackendUrl } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
 export default function LeaderDashboard() {
+  const [loadError, setLoadError] = useState('');
+  const [pageLoading, setPageLoading] = useState(true);
   const { user } = useAuth();
   const [records, setRecords] = useState([]);
   const [ranking, setRanking] = useState([]);
 
   useEffect(() => {
-    api.get('/recycling/mine').then(({ data }) => setRecords(data || []));
-    api.get('/public/ranking').then(({ data }) => setRanking(data.ranking || []));
+    const load = async () => {
+      try {
+        const [mine, result] = await Promise.all([api.get('/recycling/mine'), api.get('/public/ranking')]);
+        setRecords(mine.data || []); setRanking(result.data.ranking || []);
+      } catch { setLoadError('No fue posible cargar los registros y el ranking.'); }
+      finally { setPageLoading(false); }
+    };
+    load();
   }, []);
 
   const teamStats = useMemo(
@@ -26,6 +35,8 @@ export default function LeaderDashboard() {
   const pendingCount = records.filter((item) => item.status === 'pending').length;
   const approvedCount = records.filter((item) => item.status === 'approved').length;
   const rejectedCount = records.filter((item) => item.status === 'rejected').length;
+
+  if (pageLoading || loadError) return <LoadState loading={pageLoading} error={loadError} retry={() => window.location.reload()} />;
 
   return (
     <div style={styles.page}>

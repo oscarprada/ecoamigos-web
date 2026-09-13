@@ -1,3 +1,4 @@
+import { uiError } from '../../utils/uiError';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
@@ -26,7 +27,7 @@ export default function PasswordRecoveryPage({ reset = false }) {
         setMessage(generic);
       }
     } catch (err) {
-      setMessage(reset ? (err.response?.data?.message || 'No fue posible restablecer la contraseña.') : generic);
+      setMessage(reset ? (uiError(err, 'No fue posible restablecer la contraseña.')) : generic);
     } finally { setBusy(false); }
   };
 

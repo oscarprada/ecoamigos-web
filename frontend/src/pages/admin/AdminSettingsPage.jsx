@@ -1,7 +1,14 @@
+import LoadState from '../../components/LoadState';
+import { uiError } from '../../utils/uiError';
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
 
 export default function AdminSettingsPage() {
+  const [loadError, setLoadError] = useState('');
+  const [pageLoading, setPageLoading] = useState(true);
+  const [periodError, setPeriodError] = useState('');
+  const [periodSuccess, setPeriodSuccess] = useState('');
+  const [savingPeriod, setSavingPeriod] = useState(false);
   const [editingTeam, setEditingTeam] = useState(null);
   const [teamError, setTeamError] = useState('');
   const [teamSuccess, setTeamSuccess] = useState('');
@@ -17,6 +24,8 @@ export default function AdminSettingsPage() {
     is_active: true,
   });
   const load = async () => {
+    setPageLoading(true); setLoadError('');
+    try {
     const [teamsRes, periodsRes] = await Promise.all([
       api.get('/admin/teams'),
       api.get('/admin/periods'),
@@ -24,6 +33,8 @@ export default function AdminSettingsPage() {
 
     setTeams(teamsRes.data || []);
     setPeriods(periodsRes.data || []);
+    } catch { setLoadError('No fue posible cargar equipos y períodos.'); }
+    finally { setPageLoading(false); }
   };
 
   useEffect(() => {
@@ -38,12 +49,14 @@ export default function AdminSettingsPage() {
       else await api.post('/admin/teams', teamForm);
       setTeamForm({ name: '', dependency: '' }); setEditingTeam(null);
       await load(); setTeamSuccess('Equipo guardado correctamente.');
-    } catch (err) { setTeamError(err.response?.data?.message || 'No fue posible guardar el equipo.'); }
+    } catch (err) { setTeamError(uiError(err, 'No fue posible guardar el equipo.')); }
     finally { setSavingTeam(false); }
   };
 
   const submitPeriod = async (e) => {
     e.preventDefault();
+    setPeriodError(''); setPeriodSuccess(''); setSavingPeriod(true);
+    try {
     await api.post('/admin/periods', periodForm);
     setPeriodForm({
       name: '',
@@ -51,8 +64,13 @@ export default function AdminSettingsPage() {
       end_date: '',
       is_active: true,
     });
-    load();
+    setPeriodSuccess('Período creado correctamente.');
+    await load();
+    } catch (err) { setPeriodError(uiError(err, 'No fue posible crear el período.')); }
+    finally { setSavingPeriod(false); }
   };
+
+  if (pageLoading || loadError) return <LoadState loading={pageLoading} error={loadError} retry={() => window.location.reload()} />;
 
   return (
     <div style={styles.page}>
@@ -105,6 +123,8 @@ export default function AdminSettingsPage() {
         </ConfigCard>
 
         <ConfigCard title="Periodos" subtitle="Define el periodo activo del ranking.">
+          {periodError && <p role="alert">{periodError}</p>}
+          {periodSuccess && <p role="status">{periodSuccess}</p>}
           <form style={styles.form} onSubmit={submitPeriod}>
             <input
               style={styles.input}
@@ -147,7 +167,7 @@ export default function AdminSettingsPage() {
               Marcar como periodo activo
             </label>
 
-            <button style={styles.button} type="submit">
+            <button style={styles.button} type="submit" disabled={savingPeriod}>
               Crear periodo
             </button>
           </form>

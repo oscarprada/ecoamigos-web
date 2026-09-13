@@ -1,8 +1,12 @@
+import LoadState from '../../components/LoadState';
+import { uiError } from '../../utils/uiError';
 import { useEffect, useMemo, useState } from 'react';
 import api, { getBackendUrl } from '../../api/client';
 import { useToast } from '../../context/ToastContext';
 
 export default function AdminReviewsPage() {
+  const [loadError, setLoadError] = useState('');
+  const [pageLoading, setPageLoading] = useState(true);
   const { showToast } = useToast();
 
   const [pendingRecords, setPendingRecords] = useState([]);
@@ -14,6 +18,7 @@ export default function AdminReviewsPage() {
   const [notes, setNotes] = useState({});
 
   const load = async () => {
+    setPageLoading(true); setLoadError('');
     try {
       const [pendingRes, historyRes] = await Promise.all([
         api.get('/recycling/pending'),
@@ -23,11 +28,12 @@ export default function AdminReviewsPage() {
       setPendingRecords(pendingRes.data || []);
       setHistoryRecords(historyRes.data || []);
     } catch (error) {
+      setLoadError('No fue posible cargar los registros.');
       showToast(
         'No fue posible cargar los registros.',
         'error'
       );
-    }
+    } finally { setPageLoading(false); }
   };
 
   useEffect(() => {
@@ -81,14 +87,15 @@ export default function AdminReviewsPage() {
       await load();
     } catch (error) {
       showToast(
-        error.response?.data?.message ||
-          'No fue posible procesar la validación.',
+        uiError(error, 'No fue posible procesar la validación.'),
         'error'
       );
     } finally {
       setSubmittingId(null);
     }
   };
+
+  if (pageLoading || loadError) return <LoadState loading={pageLoading} error={loadError} retry={() => window.location.reload()} />;
 
   return (
     <div style={styles.page}>
