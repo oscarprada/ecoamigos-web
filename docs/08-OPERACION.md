@@ -14,7 +14,7 @@ Se requieren tres servicios: hosting estático para frontend, proceso Node persi
 | --- | --- |
 | Base de datos | Conciliar esquema real con código, versionar migración y validar restauración |
 | Catálogo | Definir grupo/puntos institucionales y probar cada nivel |
-| CORS | Reemplazar origen localhost por configuración controlada; CLIENT_URL hoy no tiene efecto |
+| CORS | Configurar CORS_ORIGINS; CLIENT_URL se reserva para enlaces F16 |
 | Conexión DB | Adaptar puerto/SSL si lo exige el proveedor; no basta definir DATABASE_URL |
 | API pública | Decidir acceso a evidencias, borradores y estadísticas antes de exponer datos |
 | HTTPS | Terminar TLS en infraestructura y usar URL HTTPS de API en frontend |
@@ -92,21 +92,21 @@ No usar `git reset --hard` como procedimiento rutinario ni aplicar SQL históric
 
 ## Recuperación administrativa de contraseña
 
-No existe flujo de recuperación en UI/API. Un responsable con autorización de base puede generar bcrypt y actualizar solo la cuenta indicada. Para el esquema oficial, abrir `psql -X -n -h localhost -U postgres -d ecoamigos` en una terminal privada, sin historial de psql:
+Existe recuperación F16, con entrega institucional todavía pendiente. Este procedimiento SQL es excepcional. Un responsable con autorización de base puede generar bcrypt y actualizar solo la cuenta indicada. Para el esquema oficial, abrir `psql -X -n -h localhost -U postgres -d ecoamigos` en una terminal privada, sin historial de psql:
 
 ```sql
 BEGIN;
 WITH nuevo AS (
   SELECT crypt('REEMPLAZAR_CLAVE_UNICA', gen_salt('bf', 10)) AS h
 )
-UPDATE users SET password_hash = nuevo.h
+UPDATE users SET password_hash = nuevo.h, session_version = session_version + 1
 FROM nuevo WHERE email = 'REEMPLAZAR_CORREO'
 RETURNING id, email;
 -- Confirmar que el resultado corresponde exactamente a la cuenta prevista.
 COMMIT;
 ```
 
-Si el resultado no es el esperado, usar ROLLBACK en lugar de COMMIT. En una base existente verificar primero que dispone de password_hash y pgcrypto; no usar ni escribir password. No modificar role/is_active sin una solicitud específica. Cambiar contraseña no revoca JWT emitidos; rotar JWT_SECRET invalida todas las sesiones y exige coordinación.
+Si el resultado no es el esperado, usar ROLLBACK en lugar de COMMIT. En una base existente verificar primero que dispone de password_hash, session_version y pgcrypto; no usar ni escribir password. No modificar role/is_active sin una solicitud específica. Con S01, toda actualización administrativa de contraseña debe incrementar session_version en la misma sentencia/transacción, como en el ejemplo; actualizar solo el hash no revoca sesiones. F16 lo hace automáticamente. Rotar JWT_SECRET invalida todas las sesiones y exige coordinación.
 
 ## Problemas frecuentes
 
@@ -114,7 +114,7 @@ Si el resultado no es el esperado, usar ROLLBACK en lugar de COMMIT. En una base
 | --- | --- |
 | `Missing script: dev` | Se ejecutó desde raíz; usar frontend o backend |
 | Puerto 5173 ocupado, Vite cambia puerto | Cerrar instancia duplicada o configurar CORS para el puerto correcto |
-| CORS bloqueado | Usar localhost:5173; CLIENT_URL todavía no se aplica |
+| CORS bloqueado | Revisar CORS_ORIGINS; CLIENT_URL configura enlaces F16, no CORS |
 | ECONNREFUSED PostgreSQL | Servicio, DB_HOST, firewall y puerto fijo 5432 |
 | Authentication failed / database does not exist | DB_USER/DB_PASSWORD/DB_NAME y existencia de base |
 | Columna/relación no existe | Incompatibilidad de esquemas; comparar diccionario, no improvisar otro seed |
@@ -133,7 +133,18 @@ Si el resultado no es el esperado, usar ROLLBACK en lugar de COMMIT. En una base
 
 ## Seguridad y alcance de acceso
 
-El código parametriza consultas y utiliza hashes y autorización por rol, pero eso no constituye una auditoría de seguridad. La creación de reciclaje valida en backend su referencia contra material, cantidad y catálogo. Persisten otros hallazgos concretos: uploads públicos, límite ausente en contenido, token en localStorage, errores internos visibles en otros endpoints y autenticación sin rate limit. Prioridades detalladas en [calidad](09-CALIDAD-Y-PENDIENTES.md). Definir acceso institucional antes de un despliegue externo.
+El código parametriza consultas y utiliza hashes y autorización por rol, pero eso no constituye una auditoría de seguridad. La creación de reciclaje valida en backend su referencia contra material, cantidad y catálogo. Persisten otros hallazgos concretos: uploads públicos, límite ausente en contenido, token en localStorage, errores internos visibles en otros endpoints y riesgos fuera del bloque de autenticación. Prioridades detalladas en [calidad](09-CALIDAD-Y-PENDIENTES.md). Definir acceso institucional antes de un despliegue externo.
 
 
 F16 incorpora recuperación por token desde la aplicación; el envío institucional de correo aún requiere configurar el adaptador. El procedimiento SQL excepcional anterior no es un flujo de cambio voluntario de perfil ni una función de administración de contraseñas. Ver instalación/migración F16 en database/README.md; no se ha ejecutado en la base real.
+
+
+## Configuración y migración S01–S03
+
+En una instalación existente, después de las migraciones previas D01/F09/F16 y antes de iniciar este backend, el responsable debe aplicar database/20260914_s01_session_version.sql y revisar database/verify_s01_session_version.sql. Hacer respaldo y verificar el destino; no aplicar schema.sql a una base existente. La migración añade INTEGER NOT NULL DEFAULT 0 con CHECK no negativo, sin borrar filas; repetirla conserva versiones existentes. Los JWT anteriores sin sv requieren nuevo login. No se ejecutó esta migración en ecoamigos real. El esquema nuevo ya incluye la columna. No revertir el backend a uno que ignore sv: volvería a aceptar sesiones revocadas.
+
+CORS_ORIGINS: lista de orígenes completos separados por coma, por defecto http://localhost:5173; sin comodines, paths ni slash final. Para desarrollo con 127.0.0.1/otro puerto, declararlos explícitamente. Axios usa withCredentials:false y CORS no habilita cookies. CLIENT_URL sigue dedicado a enlaces de recuperación. La infraestructura institucional (HTTPS, dominios, proxy, mismo sitio o sitios distintos) sigue por definir; esto no es una configuración productiva certificada ni cierra S08.
+
+AUTH_WINDOW_MS=900000; AUTH_LOGIN_MAX=10; AUTH_FORGOT_MAX=5; AUTH_RESET_MAX=10. Enteros positivos; configuración inválida aborta la construcción de rutas. Ventana fija por IP/endpoint; cuentan éxitos y fallos, 429 con Retry-After y reinicio al vencer. El mapa tiene como máximo 10000 IP activas por endpoint; al saturarse rechaza IP nuevas con 429, sin crecer indefinidamente. Limpieza al recibir peticiones, sin timers permanentes. NAT comparte cupo; reiniciar proceso reinicia límites y varias instancias tienen contadores independientes. No es defensa completa frente a ataques distribuidos ni bloqueo por cuenta. Antes de escalar, coordinar límite compartido o de proxy.
+
+TRUSTED_PROXIES vacío: conexión directa; no se confía en X-Forwarded-For. Si existe proxy, declarar solo IP/subredes reales autorizadas y verificar la IP observada; nunca confiar en cualquier cliente. Las pruebas verifican que cambiar X-Forwarded-For sin proxy no evita el límite. No se ha fijado una topología productiva.

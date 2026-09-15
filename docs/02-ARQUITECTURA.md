@@ -139,3 +139,12 @@ sequenceDiagram
 ```
 
 El archivo se escribe antes del INSERT: si falla la base, puede quedar huérfano. La revisión no usa una transacción ni bloqueo; el detalle está en [pendientes](09-CALIDAD-Y-PENDIENTES.md).
+
+
+## Autenticación y sesión — S01–S03
+
+El JWT es identidad mínima (id, sv, iat, exp), HS256 y ocho horas. authenticateToken verifica firma/expiración y consulta una vez users/teams; comprueba existencia, is_active y session_version. req.user solo contiene datos actuales públicos. authorizeRoles y controladores usan esa autoridad; /me la reutiliza. No hay caché de permisos. Los cambios confirmados antes de la consulta se reflejan en el siguiente request; no se promete cancelar solicitudes ya autorizadas en curso. React conserva user en memoria para interfaz, nunca como autoridad del servidor.
+
+La columna session_version permite revocar JWT después del reset sin almacenar tokens ni hashes adicionales. F16 incrementa la versión al actualizar la contraseña, en su transacción existente. Se eligió versionado porque consultar is_active/role/team no revoca una sesión de una cuenta que sigue activa después de reset. No se añadieron dependencias. La migración incremental y su verificación están en database; solo fueron ejecutadas en clústeres temporales.
+
+S02 conserva provisionalmente Bearer/localStorage, sin cookies ni duplicación. Los orígenes CORS se configuran explícitamente y credentials permanece false. S03 limita por IP y endpoint en memoria y normaliza errores de autenticación/errores propagados. Los detalles de límites y despliegue están en 08-OPERACION; comparación de alternativas y riesgo XSS pendiente en 09-CALIDAD-Y-PENDIENTES.

@@ -1,118 +1,26 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-
 import { query } from '../config/db.js';
-import { logInfo, logError } from '../utils/logger.js';
 
+// Valid bcrypt hash with cost 10; keeps missing/inactive accounts on the comparison path.
+const DUMMY_HASH = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
 export async function login(req, res) {
+  const { email, password } = req.body || {};
+  const invalid = () => res.status(401).json({ message: 'Credenciales inválidas' });
+  if (typeof email !== 'string' || email.length > 150 || typeof password !== 'string' ||
+      !password.length || Buffer.byteLength(password, 'utf8') > 72) return invalid();
   try {
-    const { email, password } = req.body;
-
-    const result = await query(
-      `
-        SELECT
-          u.id,
-          u.name,
-          u.email,
-          u.password_hash,
-          u.role,
-          u.is_active,
-          u.team_id,
-          t.name AS team_name
-        FROM users u
-        LEFT JOIN teams t ON t.id = u.team_id
-        WHERE u.email = $1
-      `,
-      [email]
-    );
-
-    const user = result.rows[0];
-
-    if (!user || !user.is_active) {
-      logInfo(`Intento de login fallido para correo: ${email}`);
-      return res.status(401).json({
-        message: 'Credenciales inválidas',
-      });
-    }
-
-    const validPassword = await bcrypt.compare(
-      password,
-      user.password_hash
-    );
-
-    if (!validPassword) {
-      logInfo(`Contraseña inválida para correo: ${email}`);
-      return res.status(401).json({
-        message: 'Credenciales inválidas',
-      });
-    }
-
-    const token = jwt.sign(
-      {
-        id: user.id,
-        role: user.role,
-        email: user.email,
-        team_id: user.team_id,
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: '8h',
-      }
-    );
-
-    logInfo(
-      `Login exitoso: ${user.email} | rol=${user.role} | user_id=${user.id}`
-    );
-
-    return res.json({
-      message: 'Inicio de sesión exitoso',
-      token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        team_id: user.team_id,
-        team_name: user.team_name,
-      },
-    });
-  } catch (error) {
-    logError(`LOGIN ERROR: ${error.message}`);
-
-    return res.status(500).json({
-      message: 'Error al iniciar sesión',
-      error: error.message,
-    });
+    const { rows } = await query(
+      'SELECT u.id, u.name, u.email, u.password_hash, u.role, u.is_active, u.team_id, u.session_version, t.name AS team_name FROM users u LEFT JOIN teams t ON t.id = u.team_id WHERE u.email = $1', [email]);
+    const user = rows[0];
+    const valid = await bcrypt.compare(password, user?.password_hash || DUMMY_HASH);
+    if (!user?.is_active || !valid) return invalid();
+    const token = jwt.sign({ id: user.id, sv: user.session_version }, process.env.JWT_SECRET,
+      { algorithm: 'HS256', expiresIn: '8h' });
+    const { password_hash, is_active, session_version, ...publicUser } = user;
+    return res.json({ message: 'Inicio de sesión exitoso', token, user: publicUser });
+  } catch {
+    return res.status(500).json({ message: 'Error al iniciar sesión' });
   }
 }
-
-export async function me(req, res) {
-  try {
-    const result = await query(
-      `
-        SELECT
-          u.id,
-          u.name,
-          u.email,
-          u.role,
-          u.team_id,
-          t.name AS team_name
-        FROM users u
-        LEFT JOIN teams t ON t.id = u.team_id
-        WHERE u.id = $1
-      `,
-      [req.user.id]
-    );
-
-    return res.json(result.rows[0]);
-  } catch (error) {
-    logError(`ME ERROR user_id=${req.user?.id}: ${error.message}`);
-
-    return res.status(500).json({
-      message: 'Error al obtener usuario',
-      error: error.message,
-    });
-  }
-}
-
-
+export function me(req, res) { return res.json(req.user); }

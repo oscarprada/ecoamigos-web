@@ -18,6 +18,7 @@ CREATE TABLE users (
   name VARCHAR(120) NOT NULL,
   email VARCHAR(150) NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
+  session_version INTEGER NOT NULL DEFAULT 0 CHECK (session_version >= 0),
   role user_role NOT NULL,
   team_id INT REFERENCES teams(id) ON DELETE SET NULL,
   is_active BOOLEAN DEFAULT true,

@@ -1,3 +1,4 @@
+import { authModuleUrl } from './helpers/authModule.js';
 // F16 only. Starts a NEW disposable PostgreSQL cluster, never reads .env.
 // No application database URL is accepted. Files remain in OS temp for inspection.
 import test from 'node:test';
@@ -68,11 +69,13 @@ test('F16: revision transaccional PostgreSQL aislado', {
     const auth=await load('authController.js');
     const recovery=await load('passwordRecoveryController.js',true);
     const production=await load('passwordRecoveryController.js');
+    process.env.AUTH_LOGIN_MAX='1000'; process.env.AUTH_FORGOT_MAX='1000'; process.env.AUTH_RESET_MAX='1000';
     let routeSource=fs.readFileSync(path.join(root,'backend/src/routes/authRoutes.js'),'utf8');
     routeSource=routeSource.replace("'express'",()=>JSON.stringify(pathToFileURL(require.resolve('express')).href));
     routeSource=routeSource.replace("'../controllers/authController.js'",()=>JSON.stringify(auth.url));
     routeSource=routeSource.replace("'../controllers/passwordRecoveryController.js'",()=>JSON.stringify(recovery.url));
-    routeSource=routeSource.replace("'../middleware/authMiddleware.js'",()=>JSON.stringify(pathToFileURL(path.join(root,'backend/src/middleware/authMiddleware.js')).href));
+    routeSource=routeSource.replace("'../middleware/authMiddleware.js'",JSON.stringify(await authModuleUrl(testPool)));
+    routeSource=routeSource.replace("'../middleware/authRateLimit.js'",()=>JSON.stringify(pathToFileURL(path.join(root,'backend/src/middleware/authRateLimit.js')).href));
     const {default:router}=await import('data:text/javascript;base64,'+Buffer.from(routeSource).toString('base64'));
     const app=express();app.use(express.json());app.use('/api/auth',router);
     app.post('/production/forgot',production.module.forgotPassword);
@@ -118,12 +121,13 @@ test('F16: revision transaccional PostgreSQL aislado', {
       const result=await reset(token);assert.equal(result.code,200);assert.deepEqual(Object.keys(result.body),['message']);
       const after=await users();assert.notEqual(after[0].password_hash,originalHash);assert.equal(bcrypt.getRounds(after[0].password_hash),10);
       assert.equal(await bcrypt.compare('new-fixture-password',after[0].password_hash),true);
-      assert.deepEqual(after.map(({password_hash,...rest})=>rest),before.map(({password_hash,...rest})=>rest));
+      assert.deepEqual(after.map(({password_hash,session_version,...rest})=>rest),before.map(({password_hash,session_version,...rest})=>rest));
       assert.equal((await login('old-fixture-password')).code,401); const next=await login('new-fixture-password');assert.equal(next.code,200);assert.equal('password_hash' in next.body.user,false);
       assert.equal((await reset(token)).code,400); assert.deepEqual(await users(),after);
       assert.ok((await tokenRows()).every(row=>row.used_at));
-      // Characterizes the explicitly deferred S01/S02 risk: old JWT still accepted.
-      const response=await fetch(base+'/api/auth/me',{headers:{Authorization:'Bearer '+oldLogin.body.token}});assert.equal(response.status,200);
+      // S01 supersedes the historical risk: password reset revokes old JWT.
+      assert.equal(after[0].session_version,before[0].session_version+1);
+      const response=await fetch(base+'/api/auth/me',{headers:{Authorization:'Bearer '+oldLogin.body.token}});assert.equal(response.status,401);
     });
     await t.test('inválido/expirado/vacío y contraseñas inválidas no cambian filas',async()=>{
       await forgot('active@test.invalid');const expiring=delivered.at(-1).token;

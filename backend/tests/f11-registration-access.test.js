@@ -1,3 +1,4 @@
+import { authModuleUrl } from './helpers/authModule.js';
 // F11 only. Starts a NEW disposable PostgreSQL cluster, never reads .env.
 // No application database URL is accepted. Files remain in OS temp for inspection.
 import test from 'node:test';
@@ -65,7 +66,7 @@ test('F11: revision transaccional PostgreSQL aislado', {
     routeSource=routeSource.replace("'express'",JSON.stringify(pathToFileURL(require.resolve('express')).href));
     routeSource=routeSource.replace("'../controllers/recyclingController.js'",JSON.stringify(globalThis.__f11ControllerUrl));
     delete globalThis.__f11ControllerUrl;
-    routeSource=routeSource.replace("'../middleware/authMiddleware.js'",JSON.stringify(pathToFileURL(path.join(root,'backend/src/middleware/authMiddleware.js')).href));
+    routeSource=routeSource.replace("'../middleware/authMiddleware.js'",JSON.stringify(await authModuleUrl(testPool)));
     // No files in this suite: preserve actual route/auth/controller, stub only upload storage.
     routeSource=routeSource.replace("import { upload } from '../middleware/uploadMiddleware.js';",'const upload={single:()=> (_req,_res,next)=>next()};');
     const {default:router}=await import('data:text/javascript;base64,'+Buffer.from(routeSource).toString('base64'));
@@ -81,33 +82,39 @@ test('F11: revision transaccional PostgreSQL aislado', {
     await client.query('INSERT INTO points_catalog(group_name,action_name,action_level,points) VALUES ($1,$2,$3,123)',Object.values(reference));
     const dates=(await client.query('SELECT CURRENT_DATE::text AS today,(CURRENT_DATE+1)::text AS future,(CURRENT_DATE-11)::text AS outside')).rows[0];
     const post=async (identity={id:1,role:'leader',team_id:1},extra={})=>{
-      const token=jwt.sign(identity,process.env.JWT_SECRET,{expiresIn:'5m'});
+      const token=jwt.sign({...identity,sv:0},process.env.JWT_SECRET,{expiresIn:'5m'});
       const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({material_type:'papel_carton',quantity:1,unit:'kg',quality_level:'media',criteria_count:1,period_id:1,record_date:dates.today,...reference,...extra})});
       return {code:response.status,body:await response.json()};
     };
     const rows=async ()=>(await client.query('SELECT * FROM recycling_records ORDER BY id')).rows;
-    await t.test('POST real: lider usa equipo JWT, ignora equipo/body y mantiene pending/0',async()=>{
+    await t.test('POST real: lider usa equipo actual, ignora equipo/body y mantiene pending/0',async()=>{
       const result=await post(undefined,{team_id:2,user_id:2,role:'admin',points:999,points_awarded:999,status:'approved'});
       assert.equal(result.code,201);assert.equal(result.body.team_id,1);assert.equal(result.body.user_id,1);
       assert.equal(result.body.status,'pending');assert.equal(result.body.points_awarded,0);
     });
     for(const role of ['admin','supervisor']) {
-      await t.test(`POST directo ${role}: 403 incluso con equipo y body leader`,async()=>{
+      await t.test(`admin actual con claim ${role}: 403 incluso con equipo y body leader`,async()=>{
         const before=await rows();
         for(const team_id of [null,1]) assert.equal((await post({id:2,role,team_id},{role:'leader',team_id:1})).code,403);
         assert.deepEqual(await rows(),before);
       });
     }
-    await t.test('lider sin equipo o identidad de equipo invalida: 403 sin sustituto body',async()=>{
-      const before=await rows();
-      for(const team_id of [null,undefined,0,-1,1.2,'1',{},2147483648]) {
-        const result=await post({id:1,role:'leader',team_id},{team_id:1});assert.equal(result.code,403);assert.match(result.body.message,/equipo/);
-      }
+    await t.test('líder sin equipo actual: 403 aunque JWT/body tengan equipo', async()=>{
+      const before=await rows(); await client.query('UPDATE users SET team_id=NULL WHERE id=1');
+      try { const result=await post(); assert.equal(result.code,403); assert.match(result.body.message,/equipo/); }
+      finally { await client.query('UPDATE users SET team_id=1 WHERE id=1'); }
       assert.deepEqual(await rows(),before);
     });
-    await t.test('equipo inexistente en JWT: 403 controlado, no FK/SQL expuesto',async()=>{
-      const before=await rows();const result=await post({id:1,role:'leader',team_id:2147483647},{team_id:1});
-      assert.equal(result.code,403);assert.deepEqual(Object.keys(result.body),['message']);assert.match(result.body.message,/ya no existe/);assert.deepEqual(await rows(),before);
+    await t.test('equipo obsoleto o manipulado en JWT no es autoridad',async()=>{
+      for(const team_id of [null,0,-1,1.2,'1',{},2147483647]) {
+        const result=await post({id:1,role:'admin',team_id});
+        assert.equal(result.code,201);assert.equal(result.body.team_id,1);
+      }
+    });
+    await t.test('S01/F15 nuevo registro usa equipo actual; históricos intactos',async()=>{
+      const before=await rows();await client.query('UPDATE users SET team_id=2 WHERE id=1');
+      try {const result=await post({id:1,role:'leader',team_id:1});assert.equal(result.code,201);assert.equal(result.body.team_id,2);assert.deepEqual((await rows()).slice(0,before.length),before);}
+      finally {await client.query('UPDATE users SET team_id=1 WHERE id=1');}
     });
     await t.test('sin autenticacion: 401 en POST real',async()=>{
       const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});assert.equal(response.status,401);

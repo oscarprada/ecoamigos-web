@@ -72,7 +72,7 @@ node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"
 | `PORT` | Servidor Express; respaldo 3000 |
 | `JWT_SECRET` | Firma y verificación JWT; sin respaldo |
 | `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Configuración de `pg.Pool` |
-| `CLIENT_URL` | Declarada, pero no utilizada por el CORS actual |
+| `CLIENT_URL` | Origen de enlaces F16; CORS usa CORS_ORIGINS |
 | `VITE_API_URL` | URL pública frontend; respaldo `http://localhost:3000/api`; debe terminar en `/api` |
 | `DATABASE_URL`, `DB_PORT` | No consumidas; PostgreSQL usa puerto fijo 5432 |
 
@@ -131,7 +131,7 @@ Set-Location frontend
 npm run dev
 ```
 
-Abrir `http://localhost:5173`. CORS admite solo ese origen: `127.0.0.1`, otro puerto o un dominio son diferentes.
+Abrir `http://localhost:5173`. CORS_ORIGINS admite por defecto solo ese origen: `127.0.0.1`, otro puerto o un dominio son diferentes.
 
 ## 8. Verificar
 
@@ -152,3 +152,6 @@ npm --prefix frontend run preview
 ```
 
 `preview` suele usar otro puerto y CORS puede bloquear su API. Es una vista local del build, no hosting productivo. El backend no compila: `npm start`, ejecutado dentro de `backend`, inicia Node.
+
+
+S01: para bases existentes aplicar la migración incremental de session_version antes de iniciar el backend actualizado; instrucciones en [Operación](08-OPERACION.md). Configuración nueva de CORS y límites de autenticación en backend/.env.example. No usar schema.sql sobre datos existentes.

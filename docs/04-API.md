@@ -6,20 +6,20 @@
 
 Base local: `http://localhost:3000/api`. JSON para operaciones normales; `multipart/form-data` para registros y contenidos. La exportación entrega binario XLSX. Las listas no están paginadas y no aceptan filtros de servidor documentados: búsquedas de revisión se hacen en el navegador.
 
-Autenticación: `Authorization: Bearer <token>`. No son cookies de sesión. El middleware extrae el segundo segmento del encabezado sin validar literalmente el prefijo Bearer. Las llamadas públicas no necesitan token.
+Autenticación: `Authorization: Bearer <token>`. No son cookies de sesión. El middleware exige el esquema Bearer. Las llamadas públicas no necesitan token.
 
 | Situación | HTTP / respuesta |
 | --- | --- |
 | Operación correcta | 200, salvo creación 201 |
-| Token ausente | 401 `{ "message": "Token requerido" }` |
-| Token inválido/expirado | 403 `{ "message": "Token inválido o expirado" }` |
+| Token ausente | 401 `{ "message": "Sesión inválida o expirada" }` |
+| Token inválido/expirado | 401 `{ "message": "Sesión inválida o expirada" }` |
 | Rol no autorizado | 403 `{ "message": "No tienes permisos para esta acción" }` |
 | Login incorrecto/inactivo | 401 `{ "message": "Credenciales inválidas" }` |
 | Estado de revisión inválido | 400 |
 | Registro o contenido a editar inexistente | 404 |
 | Error SQL/controlador | Generalmente 500 `{ "message": "...", "error": "detalle técnico" }` |
 
-No hay contrato uniforme para errores de Multer, JSON inválido o rutas desconocidas: pueden usar el manejador predeterminado de Express y devolver HTML. Los errores de validación de PostgreSQL suelen llegar como 500, no 400/409.
+El manejador final devuelve JSON genérico ante errores propagados; JSON inválido es 400 y cuerpo excesivo 413. Rutas desconocidas conservan su respuesta existente. Otros controladores que capturan errores por su cuenta requieren auditoría separada. Los errores de validación de PostgreSQL suelen llegar como 500, no 400/409.
 
 `pg` puede serializar NUMERIC y BIGINT como cadenas. Por eso `quantity`, sumatorias o `total_points` pueden ser strings; los casts `::int` y conversiones explícitas devuelven números. No asumir que todos los números JSON tienen el mismo tipo.
 
@@ -33,7 +33,7 @@ No hay contrato uniforme para errores de Multer, JSON inválido o rutas desconoc
 | GET | `/public/stats` | Público | general, status, materials, teams, periods |
 | GET | `/public/points-catalog` | Público | Catálogo completo |
 | GET | `/public/content/:category` | Público | Contenido publicado |
-| POST | `/recycling` | leader | Registro creado; requiere equipo válido en JWT |
+| POST | `/recycling` | leader | Registro creado; requiere equipo actual válido |
 | GET | `/recycling/mine` | leader, admin | Historial del usuario |
 | GET | `/recycling/pending` | admin | Registros pendientes |
 | GET | `/recycling/reviewed` | admin | Registros revisados |
@@ -71,11 +71,11 @@ Consulta email exacto; exige cuenta activa; compara `password_hash` con bcrypt. 
 }
 ```
 
-El token contiene `id`, `role`, `email`, `team_id` y claims de tiempo. Dura 8 h. No hay refresh. La recuperación F16 tiene endpoints públicos separados descritos abajo. Login conserva sus validaciones previas; sus cuerpos ausentes o mal tipados no tienen validación completa.
+El JWT HS256 contiene `id`, `sv` (session_version), `iat` y `exp`; dura 8 h, sin refresh. No contiene rol/equipo/email. Login valida tipos y límites de email/contraseña; inexistente, inactivo o clave incorrecta reciben 401 con el mismo mensaje. Error interno: 500 genérico sin detalles. JWT antiguos sin sv requieren iniciar sesión otra vez.
 
 ### GET /auth/me
 
-Devuelve `id, name, email, role, team_id, team_name` desde la base. No devuelve hash. No vuelve a comprobar `is_active`; no maneja explícitamente usuario borrado, por lo que puede responder sin objeto en vez de un 404.
+Devuelve `id, name, email, role, team_id, team_name` actuales, sin hash ni versión interna. Reutiliza la consulta del middleware. Usuario inexistente/inactivo, JWT inválido/expirado o versión revocada: 401 controlado. Falta de permisos con sesión válida: 403. Fallo de consulta: 500 genérico.
 
 ## Endpoints públicos
 
@@ -125,7 +125,7 @@ Ediciones: 400 datos/ID inválidos o equipo inexistente; 404 recurso inexistente
 
 No existen DELETE de usuarios/equipos/períodos, PUT de estas entidades ni GET administrativo por ID. PATCH de períodos tampoco existe: responde 404, con registros o vacío. Se mantiene creación/listado porque no se demostró necesidad de editar períodos vacíos; las fechas históricas no se pueden modificar desde la API. Crear un período activo conserva la transacción F09, no es editar fechas de uno existente. Contenido conserva GET/POST y PUT/DELETE por ID, sin cambios.
 
-Cambios administrativos de role/team/is_active pueden no reflejarse en tokens previamente emitidos; el tratamiento de sesión/token se resolverá en S01/S02.
+Desde S01, cada solicitud protegida consulta el usuario actual: existencia, is_active, role, team_id y versión de sesión. Desactivar rechaza el siguiente request; cambiar equipo afecta solicitudes nuevas sin reescribir históricos. F15 no permite editar el rol; si cambia por administración SQL autorizada, el backend usa el rol actual.
 
 ### GET /public/points-catalog
 
@@ -143,7 +143,7 @@ Categorías del frontend: `agua`, `energia`, `papel`, `residuos`. Devuelve `id, 
 
 Usa multipart. Solo role=leader puede crear: admin y cualquier otro rol (incluido supervisor, que no existe en el esquema oficial) reciben 403 antes de procesar archivos. El formulario /leader/register también está restringido a líderes.
 
-El equipo procede exclusivamente de team_id del JWT firmado al iniciar sesión. Debe ser un entero positivo válido para PostgreSQL y existir en teams. Ausente, inválido o inexistente devuelve 403 con mensaje controlado; no se asigna uno automáticamente ni se usa team_id del body como sustituto. La existencia se comprueba con SELECT FOR KEY SHARE dentro de la transacción F10, impidiendo eliminar el equipo antes del INSERT. NOT NULL y FK de recycling_records.team_id son defensa adicional. Se conserva la semántica de identidad del JWT; auth/me refresca la interfaz pero no reescribe el token, y la revocación/actualización de identidad sigue fuera de F11.
+El equipo procede de req.user.team_id, leído de PostgreSQL por el middleware S01. Debe ser válido y existir; el controlador conserva SELECT FOR KEY SHARE dentro de F10 y las defensas NOT NULL/FK. Nunca se usa team_id del body ni un claim antiguo como autoridad.
 
 | Campo | Uso / normalización |
 | --- | --- |
@@ -162,7 +162,7 @@ El equipo procede exclusivamente de team_id del JWT firmado al iniciar sesión. 
 
 El backend deriva grupo, acción y nivel desde `material_type` y `quantity` con la misma tabla vigente que usa el formulario. Los tres valores recibidos deben coincidir y la identidad resultante debe existir en `points_catalog`; una discrepancia o configuración ausente devuelve 400 con un mensaje controlado. La fila conserva los textos canónicos recuperados del catálogo, no los textos arbitrarios del cliente.
 
-`user_id` y `team_id` salen del JWT; `status` se fija pending; `points_awarded` se fija 0. Los campos `points` o `points_awarded` enviados adicionalmente no se usan. Devuelve 201 y la fila completa de recycling_records. No calcula puntos al crear ni exige evidencia aunque el catálogo la describa.
+`user_id` y `team_id` salen del usuario actual verificado; `status` se fija pending; `points_awarded` se fija 0. Los campos `points` o `points_awarded` enviados adicionalmente no se usan. Devuelve 201 y la fila completa de recycling_records. No calcula puntos al crear ni exige evidencia aunque el catálogo la describa.
 
 F10: fecha inválida devuelve 400; ausencia de activo devuelve 409; period_id distinto, inexistente, inactivo, omitido o manipulado devuelve 409 con indicación de actualizar el formulario. Se exige coincidencia para evitar reasignar silenciosamente un formulario abierto antes de un cambio de período. La validación F05 se conserva y también puede rechazar previamente una referencia de catálogo no configurada. Fallo interno devuelve 500 genérico sin SQL.
 
@@ -172,7 +172,7 @@ Evidencia: hasta 20 MiB (20 × 1024 × 1024 bytes); filtro por expresión regula
 
 ### GET /recycling/mine
 
-Filtra `user_id` del JWT. Devuelve todas las columnas del registro más `period_name`, ordenadas por created_at DESC. Es historial del usuario, no todos los registros de su equipo.
+Filtra `user_id` del usuario autenticado. Devuelve todas las columnas del registro más `period_name`, ordenadas por created_at DESC. Es historial del usuario, no todos los registros de su equipo.
 
 ### GET /recycling/pending
 
@@ -188,7 +188,7 @@ Filtra approved/rejected. Fila del registro más `leader_name, team_name, period
 { "status": "approved", "review_notes": "Revisión de ejemplo" }
 ```
 
-`status` solo admite approved o rejected; otro valor causa 400. ID inexistente: 404. `review_notes` opcional se normaliza a null si vacío. Aprobación consulta catálogo; rechazo fija puntos 0. Guarda reviewed_by desde JWT y reviewed_at NOW(). Devuelve fila completa.
+`status` solo admite approved o rejected; otro valor causa 400. ID inexistente: 404. `review_notes` opcional se normaliza a null si vacío. Aprobación consulta catálogo; rechazo fija puntos 0. Guarda reviewed_by desde el usuario autenticado y reviewed_at NOW(). Devuelve fila completa.
 
 Solo admite pending → approved/rejected. Una segunda revisión devuelve 409 con `message: "El registro ya fue revisado"`, sin sobrescribir decisión, puntos ni auditoría. Usa BEGIN, SELECT FOR UPDATE, consulta de catálogo y UPDATE en la misma conexión, y COMMIT; ante fallo, ROLLBACK. Error interno: 500 con mensaje genérico, sin SQL ni detalles PostgreSQL. No se conserva una tabla de revisiones anteriores.
 
@@ -294,3 +294,10 @@ Contraseña: string no vacío y máximo 72 bytes UTF-8 para evitar truncamiento 
 El adaptador institucional de entrega aún no está configurado. Ningún entorno devuelve tokens por HTTP; las pruebas inyectan un capturador en memoria en su proceso aislado. El futuro envío debe usar CLIENT_URL para formar /reset-password?token=... con HTTPS en producción. No hay envío real hoy ni proveedor añadido.
 
 Los JWT anteriores siguen vigentes según firma/expiración (S01/S02); forgot/reset necesitan protección contra abuso en S03. Respuestas públicas uniformes no equivalen a tiempo constante ni a rate limiting.
+
+
+### Límites de autenticación — S03
+
+Ventanas fijas por IP y por endpoint: login 10, forgot-password 5 y reset-password 10 solicitudes cada 15 minutos, incluidos éxitos y fallos que alcanzan la ruta. Exceso: HTTP 429, mensaje «Demasiados intentos. Intenta de nuevo más tarde.» y Retry-After en segundos. Sin reintento automático. CORS expone Retry-After; no usa credenciales/cookies. Parámetros y límites de infraestructura en Operación. Recuperación conserva mensaje genérico y nunca devuelve reset tokens.
+
+S01: un reset exitoso incrementa session_version en la misma transacción que password_hash y consumo del enlace; los JWT anteriores reciben 401. Un rollback conserva contraseña, versión y sesiones anteriores. Logout sigue siendo local; no existe endpoint de logout ni lista de revocación individual.

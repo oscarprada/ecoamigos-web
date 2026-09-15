@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { attachSessionInterceptors } from './session';
 
 const API_URL =
   import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -18,16 +19,9 @@ export const getBackendUrl = (path = '') => {
 
 const api = axios.create({
   baseURL: API_URL,
+  withCredentials: false,
 });
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('ecoamigos_token');
-
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-
-  return config;
-});
+attachSessionInterceptors(api);
 
 export default api;

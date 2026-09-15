@@ -22,7 +22,7 @@ No hay ruta comodín de página 404. BrowserRouter exige fallback a index.html e
 
 ## Sesión y navegación
 
-AuthProvider consulta `/auth/me` al montar si hay `ecoamigos_token` en localStorage. Ante error elimina el token y finaliza loading. Login almacena token y user; logout limpia ambos. Axios añade el token a cada solicitud. No hay interceptor global de respuesta para cerrar sesión cuando otra llamada recibe 403.
+AuthProvider consulta /auth/me al montar si existe ecoamigos_token en localStorage; user permanece solo en memoria. Un 401 de la sesión enviada elimina token/usuario y ProtectedRoute dirige a login. Un 403 mantiene la sesión: significa falta de permisos. Errores de red/500 al cargar me terminan loading y no autorizan la interfaz; el token se conserva para reintentar al recargar. Axios adjunta Bearer, sin cookies. Respuestas tardías de un token anterior no eliminan un login nuevo; logout invalida resultados pendientes de me.
 
 ProtectedRoute muestra “Cargando...” mientras se consulta sesión, redirige a login sin usuario y al inicio si el rol no coincide. Esta protección de interfaz no sustituye la de backend.
 

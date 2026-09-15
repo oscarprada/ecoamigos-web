@@ -197,6 +197,7 @@ test('D01: migración histórica transaccional y sin pérdida', {
       }
     });
 
+    ok(psql('d01_detected', 'database/20260914_s01_session_version.sql'));
     await t.test('las columnas y restricciones oficiales coinciden con una instalación nueva', async () => {
       const official = await connect('d01_official');
       const migrated = await connect('d01_detected');

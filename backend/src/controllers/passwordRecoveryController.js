@@ -76,7 +76,7 @@ export function createRecoveryHandlers(databasePool, deliver) {
         await client.query('ROLLBACK'); open = false;
         return invalidToken(res);
       }
-      await client.query('UPDATE users SET password_hash = $1 WHERE id = $2', [passwordHash, user.id]);
+      await client.query('UPDATE users SET password_hash = $1, session_version = session_version + 1 WHERE id = $2', [passwordHash, user.id]);
       await client.query('UPDATE password_reset_tokens SET used_at = clock_timestamp() WHERE user_id = $1 AND used_at IS NULL', [user.id]);
       await client.query('COMMIT'); open = false;
       return res.json({ message: 'Contraseña restablecida. Puedes iniciar sesión.' });

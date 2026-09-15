@@ -33,7 +33,7 @@ Los logos de aliados abren sitios externos. Regresar a Ecoamigos desde su pesta�
 3. Pulsar Ingresar. Se abre el panel del rol correspondiente.
 4. Para salir, usar Cerrar sesión en la cabecera.
 
-La sesión dura hasta ocho horas desde su emisión y el navegador conserva el token localmente. En equipos compartidos cerrar sesión al terminar. Si aparece token inválido/expirado, salir e ingresar nuevamente. Si se olvidó la contraseña, usar «¿Olvidaste tu contraseña?»; consultar la limitación de envío descrita abajo.
+La sesión dura hasta ocho horas desde su emisión y el navegador conserva el token localmente. En equipos compartidos cerrar sesión al terminar. Si la API rechaza la sesión por expiración, desactivación o reset, se limpia la sesión del navegador y las páginas protegidas dirigen a login. Si se olvidó la contraseña, usar «¿Olvidaste tu contraseña?»; consultar la limitación de envío descrita abajo.
 
 ## Líder
 
@@ -99,7 +99,7 @@ En Configuración, pulsa Editar junto a un equipo. Modifica nombre/dependencia y
 
 Períodos permite crear y listar. No hay edición de fechas ni eliminación de períodos históricos; tampoco se habilita edición de períodos vacíos, porque el flujo actual no la necesita. No hay botones de eliminación para usuarios, equipos o períodos. La recuperación excepcional de clave descrita en [Operación](08-OPERACION.md) permanece fuera de F15.
 
-Cambios administrativos de role/team/is_active pueden no reflejarse en tokens previamente emitidos; el tratamiento de sesión/token se resolverá en S01/S02.
+Desde S01, cada solicitud protegida consulta el usuario actual: existencia, is_active, role, team_id y versión de sesión. Desactivar rechaza el siguiente request; cambiar equipo afecta solicitudes nuevas sin reescribir históricos. F15 no permite editar el rol; si cambia por administración SQL autorizada, el backend usa el rol actual.
 
 ### Validar registros
 
@@ -150,7 +150,7 @@ Informar página, operación, fecha/hora aproximada, ID de registro si aplica y 
 
 **Limitación actual:** no hay proveedor de correo configurado; solicitar recuperación no envía un email todavía. El envío institucional debe habilitarse antes de ofrecer este servicio como operativo. La aplicación no muestra tokens ni ofrece un atajo de administrador para asignar contraseñas. Las cuentas inactivas no pueden recuperar acceso por este flujo.
 
-No hay «Cambiar contraseña» en perfil/dashboard. Restablecer no cierra sesiones previamente abiertas: esa protección queda en S01/S02. No compartas enlaces, tokens o contraseñas; no los pegues en incidencias. El procedimiento SQL excepcional de Operación continúa reservado a soporte autorizado, no es parte de esta pantalla.
+No hay «Cambiar contraseña» en perfil/dashboard. Restablecer invalida las sesiones anteriores: su próxima solicitud protegida pedirá iniciar sesión otra vez. No compartas enlaces, tokens o contraseñas; no los pegues en incidencias. El procedimiento SQL excepcional de Operación continúa reservado a soporte autorizado, no es parte de esta pantalla.
 
 
 ## Carga, errores y páginas inexistentes — F17
@@ -169,3 +169,8 @@ La recuperación mantiene su mensaje genérico para no revelar cuentas. Los erro
 Al abrir «Ver contenido completo», el foco pasa a Cerrar. Tab y Shift+Tab recorren los controles del diálogo; Escape o Cerrar lo cierran y devuelven el foco al botón de apertura. El contenido largo se desplaza dentro del diálogo.
 
 En pantallas de hasta 768 px, pulsa Menú para mostrar la navegación. Puedes recorrer sus enlaces con Tab; Escape desde la cabecera o seleccionar un enlace cierra el menú. En escritorio la navegación permanece visible.
+
+
+## Intentos y cierre de sesión — S01–S03
+
+Si aparece «Demasiados intentos. Intenta de nuevo más tarde.», espera antes de volver a iniciar sesión o solicitar/restablecer contraseña; no hay reintento automático. El límite se comparte entre equipos que salgan por la misma IP. Cerrar sesión elimina la sesión guardada en ese navegador; no revoca una copia del token en otro dispositivo. Restablecer la contraseña sí invalida todos los JWT anteriores de la cuenta.

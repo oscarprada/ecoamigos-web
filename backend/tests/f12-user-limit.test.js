@@ -1,3 +1,4 @@
+import { authModuleUrl } from './helpers/authModule.js';
 // F12 only. Starts a NEW disposable PostgreSQL cluster, never reads .env.
 // No application database URL is accepted. Files remain in OS temp for inspection.
 import test from 'node:test';
@@ -66,14 +67,16 @@ test('F12: revision transaccional PostgreSQL aislado', {
     for(const pkg of ['express','multer']) routeSource=routeSource.replace(`'${pkg}'`,JSON.stringify(pathToFileURL(require.resolve(pkg)).href));
     routeSource=routeSource.replace("'../controllers/adminController.js'",JSON.stringify(globalThis.__f12ControllerUrl));delete globalThis.__f12ControllerUrl;
     routeSource=routeSource.replace("import { exportRecyclingReport } from '../controllers/exportController.js';",'const exportRecyclingReport=()=>{};');
-    routeSource=routeSource.replace("'../middleware/authMiddleware.js'",JSON.stringify(pathToFileURL(path.join(root,'backend/src/middleware/authMiddleware.js')).href));
+    routeSource=routeSource.replace("'../middleware/authMiddleware.js'",JSON.stringify(await authModuleUrl(testPool)));
     const {default:router}=await import('data:text/javascript;base64,'+Buffer.from(routeSource).toString('base64'));
     process.env.JWT_SECRET='f12-isolated-test-secret';
     const app=express();app.use(express.json());app.use('/api/admin',router);
     server=await new Promise(resolve=>{const running=app.listen(0,'127.0.0.1',()=>resolve(running));});
     const url=`http://127.0.0.1:${server.address().port}/api/admin/users`;
-    const token=jwt.sign({id:1,role:'admin'},process.env.JWT_SECRET,{expiresIn:'5m'});
+
     const post=async(email,extra={})=>{
+      const admin=(await client.query("SELECT id FROM users WHERE email='seed-1@test.invalid'")).rows[0];
+      const token=jwt.sign({id:admin.id,sv:0},process.env.JWT_SECRET,{expiresIn:'5m'});
       const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({name:'Fixture',email,password:'fixture-password',role:'leader',team_id:1,...extra})});
       return {code:response.status,body:await response.json()};
     };
@@ -102,7 +105,7 @@ test('F12: revision transaccional PostgreSQL aislado', {
       assert.equal(result.code,409);assert.equal(result.body.code,'USER_LIMIT_REACHED');assert.deepEqual(await rows(),before);
     });
     await t.test('desactivar/reactivar no altera cupo total; eliminación física ausente',async()=>{
-      await client.query('UPDATE users SET is_active=false');
+      await client.query('UPDATE users SET is_active=false WHERE role<>\'admin\'');
       assert.equal((await post('inactive-full@test.invalid')).code,409);
       await client.query('UPDATE users SET is_active=true');
       assert.equal((await post('active-full@test.invalid')).code,409);assert.equal(await count(),15);
@@ -121,10 +124,13 @@ test('F12: revision transaccional PostgreSQL aislado', {
       await seed(14);
       const originalConnect=testPool.connect.bind(testPool);let reached,resume,used=false;
       const locked=new Promise(resolve=>{reached=resolve;});const gate=new Promise(resolve=>{resume=resolve;});
-      testPool.connect=async()=>{
+      testPool.connect=(callback)=>{
+        if (callback) return originalConnect(callback);
+        return (async()=>{
         const c=await originalConnect();const q=c.query.bind(c);const release=c.release.bind(c);
         c.query=async(...args)=>{const result=await q(...args);if(!used && String(args[0]).startsWith('SELECT COUNT(*)::int AS total')) {used=true;reached();await gate;}return result;};
         c.release=(...args)=>{c.query=q;release(...args);};return c;
+        })();
       };
       const first=post('race-first@test.invalid');await locked;
       const second=post('race-second@test.invalid');

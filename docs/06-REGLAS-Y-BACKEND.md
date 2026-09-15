@@ -10,15 +10,15 @@ Express monta CORS con origen fijo `http://localhost:5173` y credentials true, e
 
 ## Autenticación y roles
 
-Login busca email exacto, exige is_active, compara bcrypt y firma JWT por ocho horas. Crear usuario utiliza costo bcrypt 10 y guarda únicamente password_hash. El token conserva equipo y rol al momento de iniciar sesión.
+Login busca email exacto, exige is_active, compara bcrypt y firma JWT por ocho horas. Crear usuario utiliza costo bcrypt 10 y guarda únicamente password_hash. El token identifica usuario y versión de sesión; el middleware obtiene equipo y rol actuales de PostgreSQL.
 
-Middleware verifica firma/expiración y roles incluidos, sin consultar cuenta en cada petición. Cambiar equipo, desactivar o cambiar rol en base no invalida un JWT ya emitido. `/auth/me` obtiene información actual, pero tampoco verifica is_active. Logout solo elimina token del cliente, sin revocación de servidor. No hay registro público, refresh ni MFA. F16 añade recuperación por token, sin cambio voluntario desde perfil.
+Desde S01, cada solicitud protegida consulta el usuario actual: existencia, is_active, role, team_id y versión de sesión. Desactivar rechaza el siguiente request; cambiar equipo afecta solicitudes nuevas sin reescribir históricos. F15 no permite editar el rol; si cambia por administración SQL autorizada, el backend usa el rol actual. El JWT HS256 dura ocho horas y lleva id/sv/iat/exp. /me reutiliza la consulta; no se exponen hash, is_active ni session_version. Logout elimina el token local, sin revocar copias; reset F16 incrementa session_version transaccionalmente y revoca sesiones anteriores. No hay registro público, refresh ni MFA.
 
 ## Autorización de creación — F11
 
 Solo el líder registra reciclaje, conforme al README (registro por líderes), manual de líder y alta administrativa que asigna equipo solo a líderes. No existe rol supervisor, ni registro administrativo en nombre de otro equipo. POST /recycling aplica authorizeRoles('leader') antes del upload; admin y otros roles reciben 403 incluso si poseen team_id. Los permisos de otros endpoints se conservan.
 
-createRecord toma team_id del JWT, nunca del body ni del estado de auth/me. Rechaza 403 si falta o no es entero positivo dentro del rango INT, y comprueba que exista con SELECT id FROM teams WHERE id=$1 FOR KEY SHARE dentro de la transacción, después del bloqueo de periods de F10 y antes del INSERT. Equipo inexistente también devuelve 403 y ROLLBACK. El bloqueo de clave protege la existencia hasta confirmar; NOT NULL/FK actúan como defensa adicional. No se cambian usuarios, equipos, esquema ni la política general de actualización de claims del JWT.
+createRecord toma team_id de req.user actualizado por S01, nunca del body ni de claims obsoletos. Rechaza 403 si falta o no es entero positivo dentro del rango INT, y comprueba que exista con SELECT id FROM teams WHERE id=$1 FOR KEY SHARE dentro de la transacción, después del bloqueo de periods de F10 y antes del INSERT. Equipo inexistente también devuelve 403 y ROLLBACK. El bloqueo de clave protege la existencia hasta confirmar; NOT NULL/FK actúan como defensa adicional. F11 conserva las validaciones de equipo; S01 actualiza la autoridad de req.user sin modificar registros históricos.
 
 Frontend restringe /leader/register a leader; navegación directa de admin/otros usa el redirect existente a /. El panel /leader conserva su acceso anterior leader/admin, pero solo muestra el enlace de registro al líder. Las pantallas administrativas y su navegación no ofrecen registro en nombre de equipos.
 
@@ -119,7 +119,7 @@ La decisión funcional autorizada completa la auditoría inicial: usuarios permi
 
 Desactivar cambia users.is_active sin borrar la fila. Login ya rechaza inactivos con 401. F12 cuenta todas las filas, incluidos administradores e inactivos, hasta quince; editar o reactivar no consume ni libera cupos. users.team_id cambia solo la asignación actual del líder; recycling_records.team_id conserva el equipo original. Un administrador permanece sin equipo, conforme al alta existente.
 
-Cambios administrativos de role/team/is_active pueden no reflejarse en tokens previamente emitidos; el tratamiento de sesión/token se resolverá en S01/S02. authenticateToken verifica JWT sin releer la fila. No hay revocación nueva ni cambios de seguridad en F15; no se implementa edición de rol.
+Desde S01, cada solicitud protegida consulta el usuario actual: existencia, is_active, role, team_id y versión de sesión. Desactivar rechaza el siguiente request; cambiar equipo afecta solicitudes nuevas sin reescribir históricos. F15 no permite editar el rol; si cambia por administración SQL autorizada, el backend usa el rol actual. F15 conserva sus campos autorizados; no se implementa edición de rol.
 
 Se preservan IDs y referencias: RR.user_id/team_id son CASCADE al borrar, RR.reviewed_by y content_items.created_by SET NULL; users.team_id SET NULL al borrar equipo. RR.period_id es SET NULL y winner_records conserva CASCADE legado para períodos/equipos. Estos riesgos justifican no habilitar DELETE. Las FK no prohíben modificaciones SQL externas: la protección aquí corresponde a rutas de aplicación, no a una política institucional inventada de retención.
 
@@ -166,4 +166,4 @@ La nueva clave requiere entre 1 y 72 bytes UTF-8, sin regla de complejidad adici
 
 La entrega automática de correo requiere un adaptador institucional posterior. passwordResetDelivery.js deja una interfaz explícita, devuelve false mientras no haya proveedor y ofrece construcción del enlace con CLIENT_URL (HTTPS en producción). No lee credenciales de correo ni imprime enlaces. Solo pruebas inyectan un capturador en memoria; no hay interruptor de entorno para exponer tokens.
 
-S01/S02: recuperar no revoca JWT emitidos; siguen aceptándose hasta expiración o cambio coordinado del secreto global. S03: no existe rate limit reutilizable; solicitud/reset requieren límites de intentos/emisión y monitoreo antes de operación pública. Respuestas genéricas eliminan distinción explícita de cuenta, no garantizan tiempo constante. Fallos de emisión/entrega también son genéricos para no revelar existencia; observabilidad institucional futura debe excluir email/token/clave y detalles sensibles.
+S01: recuperar incrementa session_version y revoca JWT anteriores. S02 permanece parcial por almacenamiento local accesible a JavaScript. S03 aplica límites por IP a login/solicitud/reset; sus parámetros y limitaciones constan en Operación. Respuestas genéricas eliminan distinción explícita de cuenta, no garantizan tiempo constante. Fallos de emisión/entrega también son genéricos para no revelar existencia; observabilidad institucional futura debe excluir email/token/clave y detalles sensibles.

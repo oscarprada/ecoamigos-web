@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { corsOptions, configureProxy, controlledError } from './middleware/httpConfig.js';
 
 import authRoutes from './routes/authRoutes.js';
 import publicRoutes from './routes/publicRoutes.js';
@@ -11,11 +12,8 @@ dotenv.config();
 
 const app = express();
 
-// 🔥 CONFIGURACIÓN CORS (CLAVE)
-app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true,
-}));
+configureProxy(app);
+app.use(cors(corsOptions()));
 
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
@@ -30,6 +28,8 @@ app.use('/api/admin', adminRoutes);
 app.get('/', (_req, res) => {
   res.send('Servidor Ecoamigos funcionando 🚀');
 });
+
+app.use(controlledError);
 
 const PORT = process.env.PORT || 3000;
 

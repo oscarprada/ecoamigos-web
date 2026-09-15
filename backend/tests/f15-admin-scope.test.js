@@ -1,3 +1,4 @@
+import { authModuleUrl } from './helpers/authModule.js';
 // F15 only. Starts a NEW disposable PostgreSQL cluster, never reads .env.
 // No application database URL is accepted. Files remain in OS temp for inspection.
 import test from 'node:test';
@@ -66,7 +67,7 @@ test('F15: revision transaccional PostgreSQL aislado', {
     for(const pkg of ['express','multer']) routeSource=routeSource.replace(`'${pkg}'`,JSON.stringify(pathToFileURL(require.resolve(pkg)).href));
     routeSource=routeSource.replace("'../controllers/adminController.js'",JSON.stringify(globalThis.__f15ControllerUrl));delete globalThis.__f15ControllerUrl;
     routeSource=routeSource.replace("import { exportRecyclingReport } from '../controllers/exportController.js';",'const exportRecyclingReport=()=>{};');
-    routeSource=routeSource.replace("'../middleware/authMiddleware.js'",JSON.stringify(pathToFileURL(path.join(root,'backend/src/middleware/authMiddleware.js')).href));
+    routeSource=routeSource.replace("'../middleware/authMiddleware.js'",JSON.stringify(await authModuleUrl(testPool)));
     const {default:router}=await import('data:text/javascript;base64,'+Buffer.from(routeSource).toString('base64'));
     process.env.JWT_SECRET='f15-isolated-test-secret';
     const app=express();app.use(express.json());app.use('/api/admin',router);
@@ -76,7 +77,8 @@ test('F15: revision transaccional PostgreSQL aislado', {
     app.post('/api/auth/login', auth.login); app.get('/api/public/ranking', pub.getRanking);
     server=await new Promise(resolve=>{const running=app.listen(0,'127.0.0.1',()=>resolve(running));});
     const base = 'http://127.0.0.1:' + server.address().port + '/api/admin';
-    const token = role => jwt.sign({ id: 1, role }, process.env.JWT_SECRET, { expiresIn: '5m' });
+    await client.query("INSERT INTO users(id,name,email,password_hash,role) VALUES (100,'Auth admin','auth@test.invalid','fixture','admin')");
+    const token = role => jwt.sign({ id: role === 'admin' ? 100 : 1, sv: 0 }, process.env.JWT_SECRET, { expiresIn: '5m' });
     const request = async (method, resource, body, role = 'admin') => {
       const response = await fetch(base + resource, {
         method, headers: { Authorization: 'Bearer ' + token(role), 'Content-Type': 'application/json' },
@@ -99,7 +101,7 @@ test('F15: revision transaccional PostgreSQL aislado', {
       assert.equal(created.code,201); assert.equal('password_hash' in created.body,false);
       assert.equal((await request('POST','/periods',period)).code,201);
       for (const entity of ['users','teams','periods']) {
-        const result=await request('GET','/'+entity); assert.equal(result.code,200); assert.equal(result.body.length,1);
+        const result=await request('GET','/'+entity); assert.equal(result.code,200); assert.equal(result.body.length,entity === 'users' ? 2 : 1);
       }
       const users=await request('GET','/users'); assert.equal('password_hash' in users.body[0],false);
     });
@@ -177,8 +179,8 @@ test('F15: revision transaccional PostgreSQL aislado', {
       assert.equal((await login()).status,200);
       assert.equal((await request('PATCH','/users/1',{is_active:false})).body.is_active,false);
       assert.equal((await login()).status,401);
-      assert.equal((await client.query('SELECT count(*)::int n FROM users')).rows[0].n,2);
-      await client.query("INSERT INTO users(name,email,password_hash,role,is_active) SELECT 'Cupo', 'slot'||n||'@test.invalid', 'fixture', 'admin', true FROM generate_series(3,15) n");
+      assert.equal((await client.query('SELECT count(*)::int n FROM users')).rows[0].n,3);
+      await client.query("INSERT INTO users(name,email,password_hash,role,is_active) SELECT 'Cupo', 'slot'||n||'@test.invalid', 'fixture', 'admin', true FROM generate_series(4,15) n");
       const full=await request('POST','/users',{name:'Exceso',email:'excess@test.invalid',password:'fixture-password',role:'admin'});
       assert.equal(full.code,409); assert.equal(full.body.code,'USER_LIMIT_REACHED');
       assert.equal((await request('PATCH','/users/1',{is_active:true})).body.is_active,true);
