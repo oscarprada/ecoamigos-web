@@ -6,7 +6,7 @@
 
 | Requisito | Detalle |
 | --- | --- |
-| Node y npm | Vite requiere Node 20.19+ o 22.12+ en las líneas indicadas por su documentación. Se encontró Node 24.13.0 y npm 11.6.2 en esta revisión. |
+| Node y npm | Usar Node 22.12+ o 24: file-type 22.1.0 exige Node >=22 y Vite requiere 22.12+ en esa línea. Se encontró Node 24.13.0 y npm 11.6.2 en esta revisión. |
 | PostgreSQL | Servidor TCP en 5432 y cliente `psql`. Se encontró cliente 18.1; no se confirmó el servidor. |
 | Git | Clonación y publicación |
 | Red | Dependencias, fuentes Google y enlaces externos |
@@ -155,3 +155,12 @@ npm --prefix frontend run preview
 
 
 S01: para bases existentes aplicar la migración incremental de session_version antes de iniciar el backend actualizado; instrucciones en [Operación](08-OPERACION.md). Configuración nueva de CORS y límites de autenticación en backend/.env.example. No usar schema.sql sobre datos existentes.
+
+
+## Archivos — S04–S07
+
+Instalar backend con su lockfile actualizado (file-type 22.1.0, ESM). Configurar UPLOAD_ROOT como directorio persistente privado; por defecto uploads relativo al proceso backend. Las carpetas managed/content y managed/evidence se crean al recibir cargas nuevas. No configurar ningún servidor/proxy para servir este directorio como estático. No se requiere migración SQL ni mover adjuntos existentes.
+
+Límites técnicos configurables, no política institucional: imágenes 10 MiB, documentos 20 MiB y videos de contenido 100 MiB; evidencia conserva techo total de 20 MiB (imágenes hasta 10 MiB). Un archivo por solicitud, 24 campos de hasta 64 KiB y 25 partes multipart. Nombres UUID generados por servidor con extensión canónica, escritura exclusiva sin sobrescritura.
+
+Variables UPLOAD_IMAGE_MB, UPLOAD_DOCUMENT_MB, UPLOAD_VIDEO_MB y UPLOAD_EVIDENCE_MB: enteros positivos de 1 a 500; unidades MiB. Revisar permisos de escritura del proceso y cuotas de disco. Los tests usan un UPLOAD_ROOT temporal y no tocan los archivos instalados.

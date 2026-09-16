@@ -1,7 +1,8 @@
+import ProtectedFile from '../../components/ProtectedFile';
 import LoadState from '../../components/LoadState';
 import { uiError } from '../../utils/uiError';
 import { useEffect, useState } from 'react';
-import api, { getBackendUrl } from '../../api/client';
+import api from '../../api/client';
 
 const initialForm = {
   title: '',
@@ -192,7 +193,7 @@ export default function AdminContentPage() {
         <input
           style={styles.input}
           type="file"
-          accept="image/*,video/*,.pdf,.doc,.docx"
+          accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.avi,.pdf,.docx"
           onChange={(e) => setForm({ ...form, file: e.target.files[0] })}
         />
 
@@ -233,14 +234,7 @@ export default function AdminContentPage() {
                   </td>
                   <td style={styles.td}>
                     {item.file_url ? (
-                      <a
-                        href={getBackendUrl(item.file_url)}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={styles.link}
-                      >
-                        Ver
-                      </a>
+                      <ProtectedFile kind="content" id={item.id} />
                     ) : (
                       '-'
                     )}

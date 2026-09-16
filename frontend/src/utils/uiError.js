@@ -1,5 +1,8 @@
 // Only audited, literal functional responses may reach the UI. Never render raw errors.
 const messages = new Set([
+  'Archivo vacío', 'Archivo demasiado grande', 'Tipo de archivo no permitido',
+  'Contenido del archivo inválido', 'El archivo no corresponde al tipo de contenido',
+  'Carga de archivos inválida',
   "Demasiados intentos. Intenta de nuevo más tarde.",
   "El email ya existe",
   "El nombre del equipo ya existe",

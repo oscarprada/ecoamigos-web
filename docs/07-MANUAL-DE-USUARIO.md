@@ -121,9 +121,9 @@ Los filtros no modifican registros. Historial es de lectura en la interfaz. La A
 4. Guardar como Borrador para ocultarlo de listados públicos o Publicado para mostrarlo.
 5. Verificar la categoría pública correspondiente.
 
-Para editar, pulsar Editar en la tabla, cambiar datos y Actualizar contenido. Sin nuevo adjunto se conserva el anterior. Cancelar edición restaura el formulario de alta. Para eliminar, pulsar Eliminar y confirmar; se borra la fila, pero el archivo permanece en disco hasta mantenimiento técnico.
+Para editar, pulsar Editar en la tabla, cambiar datos y Actualizar contenido. Sin nuevo adjunto se conserva el anterior. Cancelar edición restaura el formulario de alta. Para eliminar, pulsar Eliminar y confirmar; se borra la fila y se retira el archivo cuando ya no tiene referencias. Si hay fallo de disco, soporte debe revisar la limpieza pendiente.
 
-Tipos: Texto, Imagen, Video y Archivo. El selector admite imágenes, videos, PDF, DOC y DOCX; la API no valida esos tipos de manera equivalente. No subir información privada: los archivos son accesibles por URL, incluso si la fila es borrador o fue eliminada.
+Tipos: Texto, Imagen, Video y Archivo. Las cargas nuevas admiten JPG/JPEG, PNG, WEBP, MP4, MOV, AVI, PDF y DOCX; selecciona el tipo que corresponda. Convierte DOC antiguo a PDF/DOCX antes de subir; SVG/GIF no se admiten en nuevas cargas. Solo los adjuntos de publicaciones son públicos; borradores requieren sesión admin.
 
 ### Dashboard y Excel
 
@@ -174,3 +174,10 @@ En pantallas de hasta 768 px, pulsa Menú para mostrar la navegación. Puedes re
 ## Intentos y cierre de sesión — S01–S03
 
 Si aparece «Demasiados intentos. Intenta de nuevo más tarde.», espera antes de volver a iniciar sesión o solicitar/restablecer contraseña; no hay reintento automático. El límite se comparte entre equipos que salgan por la misma IP. Cerrar sesión elimina la sesión guardada en ese navegador; no revoca una copia del token en otro dispositivo. Restablecer la contraseña sí invalida todos los JWT anteriores de la cuenta.
+
+
+## Ver y subir archivos — S04–S07
+
+Evidencias: JPG/JPEG, PNG, WEBP, MP4, MOV o AVI; máximo 20 MiB, con imágenes hasta 10 MiB. Contenido educativo: imágenes hasta 10 MiB, documentos PDF/DOCX hasta 20 MiB y videos hasta 100 MiB, salvo configuración técnica distinta. Un archivo por operación. Cambiar extensión no convierte un archivo y el sistema puede rechazar contenido truncado o que no coincida con su formato.
+
+En historial, revisión y administración de contenido, pulsa Ver archivo/Ver evidencia. Se carga con tu sesión, muestra imagen/video cuando es compatible y ofrece Descargar archivo. Ante fallo puedes reintentar. Los formatos de video pueden requerir descarga/reproductor compatible; validar firma no garantiza codec reproducible en navegador. La evidencia solo puede consultarla su líder propietario o un admin; cambiar equipo no cambia la propiedad de registros antiguos. Las direcciones antiguas /uploads dejan de abrir directamente; usa el enlace de la aplicación.

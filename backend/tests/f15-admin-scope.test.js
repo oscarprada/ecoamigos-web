@@ -53,6 +53,7 @@ test('F15: revision transaccional PostgreSQL aislado', {
     testPool = new pg.Pool({host:'127.0.0.1',port,user:'postgres',database:'postgres',max:5});
     const loadController = async file => {
       let source = fs.readFileSync(path.join(root,'backend/src/controllers',file),'utf8');
+      source=source.replaceAll("'../services/contentFiles.js'",()=>JSON.stringify(new URL('../src/services/contentFiles.js',import.meta.url).href)).replaceAll("'../services/fileStore.js'",()=>JSON.stringify(new URL('../src/services/fileStore.js',import.meta.url).href));
       source = source.replace(/import \{ query(?:, pool)? \} from '..\/config\/db.js';/, 'const pool = globalThis.__f15Pool; const query = async (...args) => { const c = await pool.connect(); try { return await c.query(...args); } finally { c.release(); } };');
       source = source.replace("import { logInfo, logError } from '../utils/logger.js';", 'const logInfo = () => {}; const logError = () => {};');
       source = source.replace("'jsonwebtoken'", JSON.stringify(pathToFileURL(require.resolve('jsonwebtoken')).href));
@@ -64,6 +65,7 @@ test('F15: revision transaccional PostgreSQL aislado', {
     };
     await loadController('adminController.js');
     let routeSource=fs.readFileSync(path.join(root,'backend/src/routes/adminRoutes.js'),'utf8');
+    routeSource=routeSource.replace("'../middleware/uploadMiddleware.js'",()=>JSON.stringify(new URL('../src/middleware/uploadMiddleware.js',import.meta.url).href));
     for(const pkg of ['express','multer']) routeSource=routeSource.replace(`'${pkg}'`,JSON.stringify(pathToFileURL(require.resolve(pkg)).href));
     routeSource=routeSource.replace("'../controllers/adminController.js'",JSON.stringify(globalThis.__f15ControllerUrl));delete globalThis.__f15ControllerUrl;
     routeSource=routeSource.replace("import { exportRecyclingReport } from '../controllers/exportController.js';",'const exportRecyclingReport=()=>{};');

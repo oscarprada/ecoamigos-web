@@ -29,7 +29,7 @@ CORREGIDO se refiere al código y la instalación nueva probados, no a una base 
 
 Premios y ganadores están fuera del alcance actual del producto. Se retiraron sus páginas, rutas, enlaces, llamadas, controladores y endpoints, y `GET /public/ranking` volvió a limitarse a `currentPeriod` y `ranking`. No se modificó el cálculo de posiciones o puntos. Las tablas `prizes`, `winner_records` y `rewards` permanecen deliberadamente como legado; no se ejecutó SQL destructivo ni se modificaron datos.
 
-S01 y S03 corregidos según el bloque final; S02 parcial. S04–S12 permanecen fuera de este bloque y sin cierre. F20 está corregido según su bloque final, con smoke visual pendiente. F19 está corregido según su bloque final. F18 está corregido según su verificación formal. F17 está corregido según su bloque final. F16 se detalla en su bloque de recuperación. F10–F15 están corregidos según lo descrito abajo; la matriz T01–T28 conserva sus comprobaciones manuales con T20 actualizado para F13. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
+S01 y S03 corregidos según el bloque final; S02 parcial. S04–S07 corregidos según el bloque de archivos al final; S08–S12 permanecen sin cierre. F20 está corregido según su bloque final, con smoke visual pendiente. F19 está corregido según su bloque final. F18 está corregido según su verificación formal. F17 está corregido según su bloque final. F16 se detalla en su bloque de recuperación. F10–F15 están corregidos según lo descrito abajo; la matriz T01–T28 conserva sus comprobaciones manuales con T20 actualizado para F13. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
 
 ## Fuente única de puntuación — F04
 
@@ -246,10 +246,10 @@ Pruebas: backend/tests/f15-admin-scope.test.js conserva el arnés PostgreSQL des
 | S01 | CORREGIDO: usuario actual y revocación tras reset | JWT mínimo, una consulta por request, session_version transaccional |
 | S02 | PARCIAL: token continúa en localStorage | Rechazo de sesión coherente; decisión institucional cookies/orígenes pendiente |
 | S03 | CORREGIDO: límites y errores de autenticación | Login/forgot/reset por IP; 429/Retry-After; errores genéricos |
-| S04 | Multer contenido sin límite/filtro | Aplicar validación de contenido, tamaño y nombres |
-| S05 | Evidencias y borradores disponibles por URL pública | Definir autorización real de archivos |
-| S06 | Archivos huérfanos al fallar SQL, editar o borrar | Implementar limpieza consistente y política de retención |
-| S07 | Filtro de evidencia regex/MIME limitado | Probar MIME reales y validar contenido del archivo |
+| S04 | Multer contenido sin límite/filtro | **CORREGIDO: límites explícitos, un archivo, UUID y rechazo con limpieza**; ver cierre S04–S07 |
+| S05 | Evidencias y borradores disponibles por URL pública | **CORREGIDO: acceso por entidad y autorización; sin publicación estática de uploads**; ver cierre S04–S07 |
+| S06 | Archivos huérfanos al fallar SQL, editar o borrar | **CORREGIDO: limpieza transaccional con referencias; residuos físicos documentados**; ver cierre S04–S07 |
+| S07 | Filtro de evidencia regex/MIME limitado | **CORREGIDO: allowlist y firma con file-type; limitaciones expresas**; ver cierre S04–S07 |
 | S08 | CORS fijo y CLIENT_URL ignorada | Configuración por entorno antes de desplegar |
 | S09 | Puerto DB fijo, sin SSL parametrizable | Adaptar a infraestructura seleccionada |
 | S10 | Logs síncronos sin rotación | Controlar disco, retención y acceso a datos personales |
@@ -441,3 +441,78 @@ Regresión expresa: F08 revisión transaccional; F09 conserva activo anterior an
 Build Vite y sintaxis correctos; git diff --check sin errores. Sin nuevas dependencias ni cambios de lockfiles. Smoke manual de login/logout/expiración en navegador y topología institucional pendiente; las pruebas frontend usan ReactDOM con host mínimo y API sustituida, no certifican cookies ni geometría de navegador. La implementación no constituye un despliegue; la base real todavía no recibió migración. No se trabajó S04, sin commit/push.
 
 Archivos de aplicación: backend/.env.example; controllers/authController.js y passwordRecoveryController.js; middleware/authMiddleware.js, authRateLimit.js y httpConfig.js; routes/authRoutes.js; server.js. Base: database/schema.sql, 20260914_s01_session_version.sql y verify_s01_session_version.sql. Frontend: api/client.js, api/session.js, context/AuthContext.jsx y utils/uiError.js. Pruebas: d01-migration, f11-registration-access, f12-user-limit, f15-admin-scope, f16-password-recovery, helpers/authModule, s01-s03-auth, s03-rate-limit y frontend/tests/s02-session.test.js. Documentación: 01, 02, 04, 05, 06, 07, 08 y 09. Se usaron los nombres reales del repositorio: arquitectura está en 02-ARQUITECTURA.md, reglas backend en 06-REGLAS-Y-BACKEND.md y despliegue/operación en 08-OPERACION.md.
+
+
+## Cierre controlado S04–S07: archivos y compatibilidad
+
+Estado individual: **S04 CORREGIDO; S05 CORREGIDO; S06 CORREGIDO; S07 CORREGIDO** en código y pruebas aisladas. No supone despliegue, análisis antivirus ni validación de archivos reales. S02 permanece PARCIAL, sin modificaciones a su implementación. S08 y posteriores no se trabajaron.
+
+### S04: recepción y almacenamiento
+
+Antes: evidencia opcional del líder en POST /api/recycling usaba regex de extensión/MIME y 20 MiB, con inconsistencias MOV/AVI; contenido administrativo en POST/PUT /api/admin/content no tenía filtro ni límite. Los nombres usaban timestamp/Math.random para evidencia y timestamp-originalname para contenido. Ambos flujos escribían bajo uploads publicado estáticamente.
+
+Ahora Multer admite un archivo por solicitud (evidence o file), hasta 24 campos, 25 partes y 64 KiB por campo. Escribe mediante streaming a disco, sin memoryStorage. Genera randomUUID más extensión normalizada, abre con wx y permisos 0600; nunca utiliza originalname como ruta. Rechaza directorios enlazados bajo la raíz y rutas fuera del almacenamiento. El directorio configurado es de confianza y debe estar bajo control del operador. Colisiones no sobrescriben ni borran el archivo previo. El máximo de recepción de contenido es el mayor límite de categoría; luego se comprueba el límite específico. Evidencia aplica también su tope propio. Rechazos limpian el archivo nuevo; fallos físicos conservan residuo controlado, como se explica en S06.
+
+Errores uniformes: 400 vacío/multipart/tipo de contenido incompatible, 413 tamaño, 415 extensión/MIME/firma y 500 almacenamiento sin ruta interna. Las extensiones constructor y __proto__ se rechazan igual que cualquier extensión ajena; la tabla de formatos no hereda propiedades de Object.
+
+### S05: acceso por entidad y frontend
+
+Se retiró express.static de uploads y no existe otra publicación del directorio en el servidor. GET /uploads/... devuelve 404. Endpoints GET actuales:
+
+- /api/files/evidence/:id: autenticación S01 vigente; admin o líder propietario del registro. Pertenecer al mismo equipo no concede lectura. Otro líder, usuario inactivo con JWT previo y solicitud anónima se rechazan.
+- /api/files/content/:id: admin autenticado, incluidos borradores.
+- /api/files/public/content/:id: público únicamente si el contenido está publicado; borrador, ID inexistente o archivo ausente devuelve 404.
+
+El servidor obtiene la ruta desde la entidad, no desde una ruta enviada por el cliente; limita formatos legacy esperados y verifica contención real/directorios sin enlaces. Añade nosniff, no-store y CSP sandbox; documentos se descargan como adjuntos. No se añadió supervisor ni token en query string.
+
+ProtectedFile usa el cliente Axios existente con Bearer, responseType blob y AbortController. Crea Object URLs únicamente para respuestas vigentes, revoca al sustituir/desmontar e ignora respuestas tardías; error y reintento son controlados. AdminContentPage, AdminReviewsPage y LeaderDashboard lo consumen. EducationCategoryPage usa el endpoint público por ID mediante elementos HTML, sin Bearer. No queda concatenación backendBase + file_url para leer archivos privados.
+
+Compatibilidad demostrada con fixtures temporales: evidencia /uploads/timestamp-random.jpg, contenido /uploads/content/old-name.pdf y DOC /uploads/content/timestamp-nombre.doc, publicado y borrador. Los bytes y la ubicación se conservan, sin moverlos. Ausentes dan 404. DOC era un formato previo: el accept de AdminContentPage en HEAD incluía .doc y el middleware de contenido no lo filtraba; también estaba documentado en el manual. DOC legacy sigue descargable como application/msword, pero una nueva carga DOC se rechaza con 415. El fixture DOC prueba transporte de bytes heredados, no decodificación de Word.
+
+### S06: transacciones, referencias y residuos
+
+Antes no se compensaban archivos nuevos ante SQL fallido ni se limpiaban reemplazos/eliminaciones. Ahora INSERT o validación fallidos limpian el nuevo; UPDATE fallido conserva el anterior y limpia el nuevo. UPDATE/DELETE bloquean la entidad con SELECT FOR UPDATE y limpian el anterior solo después de COMMIT, liberando primero la conexión. Antes de borrar se consultan ambas referencias: content_items.file_url y recycling_records.evidence_url. Un archivo todavía referenciado se conserva; ENOENT es seguro. No se añadió eliminación de evidencias ni operación funcional nueva.
+
+Pruebas incluyen fallo SQL de INSERT/UPDATE, COMMIT diferido fallido, dos reemplazos concurrentes, referencia compartida con evidencia, ENOENT y fallo real simulado de fs.promises.unlink tras COMMIT de UPDATE y DELETE. Si unlink falla, la operación confirmada responde éxito y conserva la nueva referencia; registra solo FILE_CLEANUP_PENDING, sin ruta interna. Un fallo de consulta de referencias también conserva el archivo. El reintento posterior elimina únicamente el antiguo sin referencias.
+
+No existe atomicidad distribuida entre PostgreSQL y disco: caída del proceso o fallo físico pueden dejar residuos. No se revierte ficticiamente un COMMIT ni se declara limpieza absoluta. No se eliminan huérfanos históricos automáticamente ni se aplica retención por antigüedad. La revisión futura exige copia de seguridad, detener escrituras y cotejar ambas columnas antes de retirar residuos; procedimiento en 08-OPERACION. No se ejecutó esa operación sobre archivos reales.
+
+### S07: formatos y alcance de la firma
+
+Dependencia nueva exacta file-type 22.1.0, ESM, Node >=22; validada con Node 24.13.0. Solo backend/package.json y backend/package-lock.json cambian dependencias (nueve paquetes transitivos añadidos). No hay nueva dependencia frontend. Se ejecuta detección en worker con 10 segundos de plazo y heap de 64 MiB; no es un límite de memoria total del proceso. Extensión normalizada, MIME declarado permitido y extensión detectada deben concordar.
+
+Límites predeterminados en MiB (1024² bytes):
+
+| Flujo | Extensiones nuevas | MIME | Firma validada | Límite |
+| --- | --- | --- | --- | --- |
+| Evidencia y contenido | jpg, jpeg | image/jpeg | JPEG + marcador final EOI | 10 MiB |
+| Evidencia y contenido | png | image/png | PNG + marcador final IEND | 10 MiB |
+| Evidencia y contenido | webp | image/webp | WebP/RIFF + tamaño del contenedor | 10 MiB |
+| Evidencia y contenido | mp4 | video/mp4 | Contenedor MP4 | Evidencia 20; contenido 100 MiB |
+| Evidencia y contenido | mov | video/quicktime | Contenedor QuickTime | Evidencia 20; contenido 100 MiB |
+| Evidencia y contenido | avi | video/x-msvideo; alias video/avi, video/msvideo, video/vnd.avi | AVI/RIFF + tamaño del contenedor | Evidencia 20; contenido 100 MiB |
+| Solo contenido | pdf | application/pdf | PDF + cierre %%EOF | 20 MiB |
+| Solo contenido | docx | application/vnd.openxmlformats-officedocument.wordprocessingml.document | ZIP/estructura OOXML detectada + EOCD | 20 MiB |
+
+Variables nuevas: UPLOAD_ROOT, UPLOAD_IMAGE_MB=10, UPLOAD_DOCUMENT_MB=20, UPLOAD_VIDEO_MB=100, UPLOAD_EVIDENCE_MB=20. Los cuatro límites admiten enteros 1–500; evidencia toma además el menor límite aplicable por categoría. No se amplían formatos. Documentos nuevos solo PDF/DOCX; DOC únicamente lectura heredada.
+
+Se probaron JPEG y PNG reales de 1 píxel, PDF de una página con xref y DOCX ZIP con relaciones/documento; texto renombrado jpg/png/pdf, MZ/bytes arbitrarios, MIME/extensión falsos, vacío, truncados y doble extensión. Un PNG real con nombre doble que termina en .png se admite con UUID seguro; archivo .png.exe o ejecutable renombrado .exe.png se rechaza. Las muestras MP4/MOV/AVI comprueban detección de contenedor, no reproducción ni códecs.
+
+file-type ofrece identificación por firma de mejor esfuerzo, no antivirus ni garantía de seguridad interna. Los marcadores adicionales detectan ciertos truncamientos, no toda corrupción; no se decodifican imágenes/videos completos ni se certifican documentos libres de contenido activo. La lectura de archivos legacy no aplica retroactivamente el filtro de nuevas cargas. El smoke con archivos reales representativos queda pendiente en entorno autorizado.
+
+### Verificación y alcance de esta continuación
+
+Regresión completa: 166 pruebas backend y 47 frontend aprobadas, cero fallos/omisiones (213 en total). El bloque S04–S07 comprende 17 subpruebas backend más contenedor; frontend aporta cinco pruebas Blob/consumidores. Repetición final del bloque tras el último ajuste de extensiones: 18/18 aprobadas. Sintaxis de 58 archivos JavaScript y git diff --check correctos; JSX cubierto por build Vite aprobado. Las pruebas backend crean PostgreSQL y UPLOAD_ROOT temporales, inyectan sus conexiones y no cargan db.js/.env de la aplicación.
+
+En esta continuación se completaron pruebas de legacy, unlink fallido tras UPDATE confirmado, directorios enlazados y respuestas Blob tardías; se mejoraron fixtures JPEG/PNG/PDF/DOCX y se corrigieron únicamente defensas de archivos y documentación relacionadas con el bloque. Los arneses F08/F09/F10/F11/F12/F15 resuelven los nuevos imports conservando controladores y autorización reales.
+
+Regresión expresa: S01 CORREGIDO y S03 CORREGIDO; S02 PARCIAL y sin cambios. F09 conserva el período anterior ante rollback; F10 valida fecha/período; F12 conserva el límite de 15; F13 approved + kg; F14 indicadores retirados. F16 recuperación, F17 errores, F18 toast, F19 registro/reset de archivo y F20 foco/menú permanecen protegidos. Registro y contenido educativo pasan sus pruebas. ProtectedRoute no cambia; winners/prizes siguen 404. Ranking/puntos sin cambios de algoritmo. Las 56 filas originales de points_catalog se comparan intactas en las bases temporales y database no tiene diff.
+
+No se conectó ni modificó ecoamigos real; no se movieron, borraron, modificaron ni migraron uploads reales. Sin commit ni push. Pendiente smoke manual de previsualización/descarga, videos con códecs reales, móvil y expiración durante descarga; también verificar en un despliegue autorizado que el proxy no publique uploads por fuera de Express. Estas verificaciones no se presentan como ejecutadas.
+
+Archivos modificados o nuevos del bloque:
+
+- Backend: .env.example, package.json, package-lock.json; src/server.js; controllers/adminController.js, recyclingController.js, fileController.js; middleware/uploadMiddleware.js; routes/adminRoutes.js, fileRoutes.js; services/contentFiles.js, fileFormats.js, fileStore.js, fileValidation.js, fileValidationWorker.js.
+- Pruebas backend: f08-review.test.js, f09-periods.test.js, f10-record-period.test.js, f11-registration-access.test.js, f12-user-limit.test.js, f15-admin-scope.test.js, s04-s07-files.test.js, fixtures/files.js.
+- Frontend: components/ProtectedFile.jsx; pages/admin/AdminContentPage.jsx, AdminReviewsPage.jsx; pages/leader/LeaderDashboard.jsx, RegisterRecyclingPage.jsx; pages/public/EducationCategoryPage.jsx; utils/uiError.js; tests/s05-protected-files.test.js.
+- Documentación: 01-INSTALACION.md, 02-ARQUITECTURA.md, 04-API.md, 06-REGLAS-Y-BACKEND.md, 07-MANUAL-DE-USUARIO.md, 08-OPERACION.md y este 09-CALIDAD-Y-PENDIENTES.md.

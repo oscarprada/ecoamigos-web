@@ -51,7 +51,7 @@ El manejador final devuelve JSON genérico ante errores propagados; JSON inváli
 | DELETE | `/admin/content/:id` | admin | Mensaje |
 | GET | `/admin/export/excel` | admin | Reporte_Ecoamigos.xlsx |
 
-Fuera del prefijo: `GET /` devuelve texto de disponibilidad; `GET /uploads/<archivo>` y `/uploads/content/<archivo>` sirven archivos sin autenticación. No hay endpoint separado `/health`. Las rutas de premios y ganadores fueron retiradas del alcance actual.
+Fuera del prefijo: `GET /` devuelve texto de disponibilidad; las rutas antiguas /uploads ya no sirven archivos. Usar los endpoints por entidad indicados abajo. No hay endpoint separado `/health`. Las rutas de premios y ganadores fueron retiradas del alcance actual.
 
 ## Autenticación
 
@@ -168,7 +168,7 @@ F10: fecha inválida devuelve 400; ausencia de activo devuelve 409; period_id di
 
 La creación usa BEGIN, LOCK TABLE periods IN SHARE MODE, consulta/validación del activo y fecha PostgreSQL, INSERT y COMMIT en una conexión. ROLLBACK ante fallo. El bloqueo impide que F09 cambie el activo entre consulta y confirmación. `record_date` representa la fecha de realización de la actividad de reciclaje reportada. PostgreSQL evalúa `COALESCE($1::date, CURRENT_DATE) BETWEEN start_date AND end_date` y `COALESCE($1::date, CURRENT_DATE) <= CURRENT_DATE`. Ambos extremos están incluidos; actividades anteriores se admiten solo dentro del activo. Una fecha fuera del rango o futura devuelve **400**, sin INSERT: mensaje de rango si falla el rango (también si además es futura), o mensaje de fecha futura si solo falla esa condición. Omitir la fecha no evade la validación. No se convierten fechas a timestamps; CURRENT_DATE usa la fecha de transacción y zona de sesión PostgreSQL, no la del proceso Node. F10 queda CORREGIDO.
 
-Evidencia: hasta 20 MiB (20 × 1024 × 1024 bytes); filtro por expresión regular sobre extensión y MIME para jpeg/jpg/png/webp/mp4/mov/avi. Que una extensión esté mencionada no garantiza aceptación de todos sus MIME reales, especialmente MOV/AVI. Archivo final: `/uploads/<timestamp>-<aleatorio>.<extensión>`.
+Evidencia: campo multipart evidence, un archivo validado por extensión/MIME/firma. Máximo técnico 20 MiB, con imágenes hasta 10 MiB; límites configurables. Referencia interna nueva: /uploads/managed/evidence/<UUID>.<ext>. No es una URL pública.
 
 ### GET /recycling/mine
 
@@ -242,13 +242,13 @@ Multipart con `title, category, type, description, status` y archivo opcional `f
 - POST establece status published si falta y created_by desde JWT; devuelve 201 y fila completa.
 - PUT espera los campos completos; devuelve 404 si no existe y 200 con fila completa al actualizar.
 - POST sin archivo guarda file_url null; PUT sin archivo mantiene el anterior.
-- El nombre almacenado es `<timestamp>-<nombre original>` en uploads/content.
-- No hay límite de tamaño ni filtro de tipo de archivos en este Multer. La restricción `accept` de la UI no protege la API.
-- PUT no borra el archivo sustituido, no cambia created_at/created_by y no ofrece eliminación aislada del adjunto.
+- El nombre almacenado es UUID + extensión canónica en uploads/managed/content; el cliente no elige la ruta.
+- Extensión, MIME y firma se validan en backend; el tipo image/video/file debe corresponder al adjunto. Límites descritos abajo; accept solo orienta al usuario.
+- PUT confirma el cambio antes de retirar el archivo sustituido si ya no tiene referencias; no cambia created_at/created_by ni ofrece eliminación aislada del adjunto.
 
 ### DELETE /admin/content/:id
 
-Elimina la fila. Devuelve `{ "message": "Contenido eliminado correctamente" }`, incluso si el ID no existía. No elimina el archivo físico.
+Elimina la fila y, después del COMMIT, retira su archivo si no quedan referencias. Devuelve { "message": "Contenido eliminado correctamente" }; ID inexistente devuelve 404. Fallo de limpieza no revierte una eliminación ya confirmada.
 
 ### GET /admin/export/excel
 
@@ -301,3 +301,22 @@ Los JWT anteriores siguen vigentes según firma/expiración (S01/S02); forgot/re
 Ventanas fijas por IP y por endpoint: login 10, forgot-password 5 y reset-password 10 solicitudes cada 15 minutos, incluidos éxitos y fallos que alcanzan la ruta. Exceso: HTTP 429, mensaje «Demasiados intentos. Intenta de nuevo más tarde.» y Retry-After en segundos. Sin reintento automático. CORS expone Retry-After; no usa credenciales/cookies. Parámetros y límites de infraestructura en Operación. Recuperación conserva mensaje genérico y nunca devuelve reset tokens.
 
 S01: un reset exitoso incrementa session_version en la misma transacción que password_hash y consumo del enlace; los JWT anteriores reciben 401. Un rollback conserva contraseña, versión y sesiones anteriores. Logout sigue siendo local; no existe endpoint de logout ni lista de revocación individual.
+
+
+## Acceso y recepción de archivos — S04–S07
+
+| GET | Autorización | Relación consultada |
+| --- | --- | --- |
+| /api/files/public/content/:id | Público, solo status=published | content_items.file_url |
+| /api/files/content/:id | Admin activo autenticado | content_items.file_url, incluidos borradores |
+| /api/files/evidence/:id | Admin activo o líder propietario por user_id | recycling_records.evidence_url |
+
+No hay permiso por pertenecer al mismo equipo: /recycling/mine ya delimita historial por usuario. Cambiar de equipo no elimina propiedad histórica. Un líder ajeno recibe 403; sin sesión/inactivo, 401 de S01. Archivo/fila inexistente o referencia insegura: 404; borrador por ruta pública: 404; fallo interno: 500 genérico. IDs no son rutas; no existe parámetro path.
+
+Respuestas de archivo: MIME conocido, nosniff, Cache-Control:no-store, CSP sandbox y disposición attachment para documentos/tipos heredados no visualizables; imágenes/videos conocidos se sirven inline. Se conserva soporte Range mediante sendFile. No se emiten cookies ni tokens en URL. Un cambio posterior a borrador impide nuevas descargas públicas, pero no puede retirar copias ya descargadas.
+
+JPEG/JPG (image/jpeg), PNG (image/png), WEBP (image/webp), MP4 (video/mp4), MOV (video/quicktime) y AVI (video/x-msvideo, video/avi, video/msvideo o video/vnd.avi). Contenido admite además PDF (application/pdf) y DOCX (application/vnd.openxmlformats-officedocument.wordprocessingml.document). No se admiten nuevas cargas DOC, SVG, GIF, ejecutables ni extensiones fuera de esta lista.
+
+Límites técnicos configurables, no política institucional: imágenes 10 MiB, documentos 20 MiB y videos de contenido 100 MiB; evidencia conserva techo total de 20 MiB (imágenes hasta 10 MiB). Un archivo por solicitud, 24 campos de hasta 64 KiB y 25 partes multipart. Nombres UUID generados por servidor con extensión canónica, escritura exclusiva sin sobrescritura.
+
+Recepción: 413 tamaño, 415 tipo/firma no admitidos, 400 vacío/cantidad/campo multipart/tipo de contenido incompatible, 500 almacenamiento; mensajes controlados sin rutas/SQL/stack. Archivo opcional sigue siendo opcional; no se interpretan ni cambian los requisitos de evidencia del catálogo.

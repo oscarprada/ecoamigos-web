@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import multer from 'multer';
+import { contentUpload as upload } from '../middleware/uploadMiddleware.js';
 
 import {
   createContent,
@@ -25,18 +25,6 @@ import {
 } from '../middleware/authMiddleware.js';
 
 const router = Router();
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, 'uploads/content');
-  },
-  filename: (_req, file, cb) => {
-    const uniqueName = `${Date.now()}-${file.originalname}`;
-    cb(null, uniqueName);
-  },
-});
-
-const upload = multer({ storage });
 
 router.use(authenticateToken, authorizeRoles('admin'));
 

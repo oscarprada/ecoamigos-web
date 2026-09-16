@@ -135,13 +135,13 @@ export default function EducationCategoryPage() {
               <div style={styles.preview}>
                 {item.file_url && item.type === 'image' ? (
                   <img
-                    src={getBackendUrl(item.file_url)}
+                    src={getBackendUrl('/api/files/public/content/' + item.id)}
                     alt={item.title}
                     style={styles.previewMedia}
                   />
                 ) : item.file_url && item.type === 'video' ? (
                   <video
-                    src={getBackendUrl(item.file_url)}
+                    src={getBackendUrl('/api/files/public/content/' + item.id)}
                     style={styles.previewMedia}
                     muted
                     preload="metadata"
@@ -199,7 +199,7 @@ export default function EducationCategoryPage() {
 
             {selectedItem.file_url && selectedItem.type === 'image' && (
               <img
-                src={getBackendUrl(selectedItem.file_url)}
+                src={getBackendUrl('/api/files/public/content/' + selectedItem.id)}
                 alt={selectedItem.title}
                 style={styles.modalMedia}
               />
@@ -207,7 +207,7 @@ export default function EducationCategoryPage() {
 
             {selectedItem.file_url && selectedItem.type === 'video' && (
               <video
-                src={getBackendUrl(selectedItem.file_url)}
+                src={getBackendUrl('/api/files/public/content/' + selectedItem.id)}
                 controls
                 controlsList="nodownload"
                 disablePictureInPicture
@@ -217,7 +217,7 @@ export default function EducationCategoryPage() {
 
             {selectedItem.file_url && selectedItem.type === 'file' && (
               <a
-                href={getBackendUrl(selectedItem.file_url)}
+                href={getBackendUrl('/api/files/public/content/' + selectedItem.id)}
                 target="_blank"
                 rel="noreferrer"
                 style={styles.fileButton}

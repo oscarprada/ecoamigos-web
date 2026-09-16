@@ -1,3 +1,4 @@
+import { cleanupUnused } from '../services/fileStore.js';
 import { query, pool } from '../config/db.js';
 import { logInfo, logError } from '../utils/logger.js';
 import { isValidRecordDate } from '../utils/recordDate.js';
@@ -59,6 +60,7 @@ async function findCatalogEntry({
 }
 
 export async function createRecord(req, res) {
+  let fileCommitted = false;
   let client;
   let transactionOpen = false;
   let releaseError;
@@ -85,7 +87,7 @@ export async function createRecord(req, res) {
     if (declaredDate !== null && !isValidRecordDate(declaredDate)) {
       return res.status(400).json({ message: 'record_date debe ser una fecha valida YYYY-MM-DD' });
     }
-    const evidence_url = req.file ? `/uploads/${req.file.filename}` : null;
+    const evidence_url = req.file ? req.file.url : null;
     const catalogReference = await validateCatalogReference({
       materialType: material_type,
       quantity,
@@ -180,6 +182,7 @@ export async function createRecord(req, res) {
 
     await client.query('COMMIT');
     transactionOpen = false;
+    fileCommitted = true;
     try { logInfo(
       `Registro de reciclaje creado: record_id=${result.rows[0].id} | user_id=${req.user.id} | team_id=${req.user.team_id} | material=${material_type} | cantidad=${quantity}${unit}`
     ); } catch { /* A committed record must not depend on file logging. */ }
@@ -204,6 +207,7 @@ export async function createRecord(req, res) {
     });
   } finally {
     if (client) client.release(releaseError);
+    if (req.file && !fileCommitted) await cleanupUnused(req.file.url, query);
   }
 }
 

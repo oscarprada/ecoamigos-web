@@ -382,7 +382,7 @@ export default function RegisterRecyclingPage() {
             style={styles.input}
             type="file"
             ref={fileInputRef}
-            accept="image/*,video/*"
+            accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.avi"
             onChange={(e) =>
               setForm({
                 ...form,

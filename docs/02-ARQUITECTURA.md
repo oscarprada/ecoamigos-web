@@ -11,8 +11,8 @@ flowchart LR
   B --> A[Autenticación y autorización]
   A --> C[Controladores]
   C -->|pg: consultas parametrizadas| D[(PostgreSQL)]
-  B -->|Multer| UP[uploads y uploads/content]
-  F -->|URL pública| UP
+  B -->|Multer + firma + relación BD| UP[Almacenamiento privado de archivos]
+  F -->|Archivo por ID público o Bearer| B
   C --> L[logs/info.log y error.log]
   C --> X[ExcelJS: descarga XLSX]
 ```
@@ -148,3 +148,10 @@ El JWT es identidad mínima (id, sv, iat, exp), HS256 y ocho horas. authenticate
 La columna session_version permite revocar JWT después del reset sin almacenar tokens ni hashes adicionales. F16 incrementa la versión al actualizar la contraseña, en su transacción existente. Se eligió versionado porque consultar is_active/role/team no revoca una sesión de una cuenta que sigue activa después de reset. No se añadieron dependencias. La migración incremental y su verificación están en database; solo fueron ejecutadas en clústeres temporales.
 
 S02 conserva provisionalmente Bearer/localStorage, sin cookies ni duplicación. Los orígenes CORS se configuran explícitamente y credentials permanece false. S03 limita por IP y endpoint en memoria y normaliza errores de autenticación/errores propagados. Los detalles de límites y despliegue están en 08-OPERACION; comparación de alternativas y riesgo XSS pendiente en 09-CALIDAD-Y-PENDIENTES.
+
+
+## Flujo de archivos S04–S07
+
+Multer recibe un archivo acotado en almacenamiento privado; el servidor genera UUID y abre con wx. Un worker limitado a 10 segundos/64 MiB de heap ejecuta file-type y comprobaciones básicas de cierre. Solo después se invoca el controlador para asociar el URL interno a la fila. El nombre original no se persiste como ruta. Los archivos publicados también permanecen fuera de express.static: la API decide acceso por ID y estado de la fila.
+
+fileStore centraliza resolución de rutas, verificación de destino real y limpieza con consulta de referencias. contentFiles serializa edición/eliminación con FOR UPDATE y retira el archivo anterior después del COMMIT. Las evidencias conservan el ciclo transaccional F10 y no tienen edición/eliminación nueva. ProtectedFile obtiene Blob mediante Axios/Bearer, cancela peticiones y revoca object URLs. No hay tokens en query ni migración a cookies.

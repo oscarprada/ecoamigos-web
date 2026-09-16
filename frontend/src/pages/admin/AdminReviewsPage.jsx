@@ -1,7 +1,8 @@
+import ProtectedFile from '../../components/ProtectedFile';
 import LoadState from '../../components/LoadState';
 import { uiError } from '../../utils/uiError';
 import { useEffect, useMemo, useState } from 'react';
-import api, { getBackendUrl } from '../../api/client';
+import api from '../../api/client';
 import { useToast } from '../../context/ToastContext';
 
 export default function AdminReviewsPage() {
@@ -274,26 +275,7 @@ export default function AdminReviewsPage() {
                 <strong>Evidencia</strong>
 
                 {record.evidence_url ? (
-                  <>
-                    {record.evidence_url.match(
-                      /\.(jpg|jpeg|png|gif|webp)$/i
-                    ) ? (
-                      <img
-                        src={getBackendUrl(record.evidence_url)}
-                        alt="Evidencia"
-                        style={styles.previewImage}
-                      />
-                    ) : (
-                      <a
-                        href={getBackendUrl(record.evidence_url)}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={styles.link}
-                      >
-                        Abrir archivo
-                      </a>
-                    )}
-                  </>
+                  <ProtectedFile kind="evidence" id={record.id} label="Ver evidencia" />
                 ) : (
                   <p>Sin evidencia</p>
                 )}

@@ -123,7 +123,7 @@ Si el resultado no es el esperado, usar ROLLBACK en lugar de COMMIT. En una base
 | Contenido falla por category/type | Esquema histórico carece de category y admite tipos distintos |
 | `ENOENT uploads/content` | Crear carpeta y arrancar desde backend |
 | Imagen 404 | Revisar archivo físico, getBackendUrl y VITE_API_URL terminada en /api |
-| Evidencia rechazada | Revisar tamaño, extensión y MIME reales; filtro MOV/AVI puede ser restrictivo |
+| Evidencia rechazada | Revisar límites, extensión, MIME y firma; MOV/AVI pueden requerir reproductor compatible |
 | Aprobado con 0 puntos | Grupo/nivel sin coincidencia; CSV sin grupo institucional |
 | No existe periodo activo tras error | Creación desactivó otros antes de INSERT fallido |
 | Token expirado | Cerrar sesión e ingresar; no hay refresh |
@@ -133,7 +133,7 @@ Si el resultado no es el esperado, usar ROLLBACK en lugar de COMMIT. En una base
 
 ## Seguridad y alcance de acceso
 
-El código parametriza consultas y utiliza hashes y autorización por rol, pero eso no constituye una auditoría de seguridad. La creación de reciclaje valida en backend su referencia contra material, cantidad y catálogo. Persisten otros hallazgos concretos: uploads públicos, límite ausente en contenido, token en localStorage, errores internos visibles en otros endpoints y riesgos fuera del bloque de autenticación. Prioridades detalladas en [calidad](09-CALIDAD-Y-PENDIENTES.md). Definir acceso institucional antes de un despliegue externo.
+El código parametriza consultas y utiliza hashes y autorización por rol, pero eso no constituye una auditoría de seguridad. La creación de reciclaje valida en backend su referencia contra material, cantidad y catálogo. Persisten otros hallazgos concretos: token en localStorage, errores internos visibles en otros endpoints y riesgos fuera del bloque de autenticación. Prioridades detalladas en [calidad](09-CALIDAD-Y-PENDIENTES.md). Definir acceso institucional antes de un despliegue externo.
 
 
 F16 incorpora recuperación por token desde la aplicación; el envío institucional de correo aún requiere configurar el adaptador. El procedimiento SQL excepcional anterior no es un flujo de cambio voluntario de perfil ni una función de administración de contraseñas. Ver instalación/migración F16 en database/README.md; no se ha ejecutado en la base real.
@@ -148,3 +148,18 @@ CORS_ORIGINS: lista de orígenes completos separados por coma, por defecto http:
 AUTH_WINDOW_MS=900000; AUTH_LOGIN_MAX=10; AUTH_FORGOT_MAX=5; AUTH_RESET_MAX=10. Enteros positivos; configuración inválida aborta la construcción de rutas. Ventana fija por IP/endpoint; cuentan éxitos y fallos, 429 con Retry-After y reinicio al vencer. El mapa tiene como máximo 10000 IP activas por endpoint; al saturarse rechaza IP nuevas con 429, sin crecer indefinidamente. Limpieza al recibir peticiones, sin timers permanentes. NAT comparte cupo; reiniciar proceso reinicia límites y varias instancias tienen contadores independientes. No es defensa completa frente a ataques distribuidos ni bloqueo por cuenta. Antes de escalar, coordinar límite compartido o de proxy.
 
 TRUSTED_PROXIES vacío: conexión directa; no se confía en X-Forwarded-For. Si existe proxy, declarar solo IP/subredes reales autorizadas y verificar la IP observada; nunca confiar en cualquier cliente. Las pruebas verifican que cambiar X-Forwarded-For sin proxy no evita el límite. No se ha fijado una topología productiva.
+
+
+## Almacenamiento y retención S04–S07
+
+UPLOAD_ROOT es una raíz privada de confianza, por defecto uploads relativa al backend. En producción usar ruta absoluta persistente y permisos exclusivos del proceso. No publicar esa raíz con proxy, hosting, alias estático o CDN; quitar cualquier regla externa /uploads antes de considerar desplegada la protección S05. La aplicación ya no expone estáticos. No cambió CORS ni S02.
+
+Nuevas cargas: managed/content y managed/evidence bajo esa raíz; se crean al recibir archivos. Los contenidos públicos y borradores permanecen en almacenamiento privado y se distinguen por estado en BD, evitando movimientos cuando cambia la publicación. El navegador solicita contenido publicado por ID; lo privado usa Bearer/Blob.
+
+Compatibilidad: referencias heredadas /uploads/<nombre> y /uploads/content/<nombre> se resuelven en su ubicación anterior, únicamente después de consultar entidad/permisos. No se movieron archivos ni se migraron URLs en BD. Rutas absolutas, externas, traversal, segmentos extra, nombres con controles, porcentaje o separadores ambiguos y enlaces fuera de la raíz se rechazan; requieren revisión individual, no conversión automática. DOC heredado puede descargarse como adjunto; no se admite carga DOC nueva. Un archivo heredado no se certifica retroactivamente por firma. Respaldar BD y raíz juntos.
+
+Retención normal: evidencia se conserva mientras exista su registro; no hay edición/eliminación nueva. Contenido conserva adjunto hasta reemplazo/eliminación; se retira únicamente cuando ninguna de las dos tablas lo referencia. No hay retención institucional temporal inventada ni barrido automático de archivos históricos. Los archivos compartidos permanecen hasta la última referencia.
+
+Retención excepcional: errores de BD o unlink emiten FILE_CLEANUP_PENDING y conservan lo que no puede borrarse con seguridad. Una caída abrupta puede dejar archivos nuevos no asociados o sustituidos pendientes; filesystem y PostgreSQL no son atómicos entre sí. Revisar espacio y marcador en logs del proceso. Para reconciliar: respaldar, detener escrituras, inventariar los archivos de la raíz, cruzar contra AMBAS columnas file_url/evidence_url, revisar individualmente los candidatos y resolver cada ruta dentro de la raíz antes de retirar cualquier archivo. No usar antigüedad ni nombre como prueba de que un archivo es huérfano. No se suministra ni ejecuta un borrado masivo automático. Si falla la consulta, conservar. Los huérfanos previos no fueron eliminados por esta tarea.
+
+file-type 22.1.0 detecta firmas como indicio; los workers limitan duración a 10 segundos y heap a 64 MiB. Se añaden verificaciones de cierre JPEG/PNG/PDF, longitud RIFF para WEBP/AVI y cierre ZIP para DOCX. No decodifica imágenes, páginas, XML completo ni codecs, no elimina macros/contenido activo y no sustituye antivirus. Archivos cifrados, malformados o formatos ambiguos pueden rechazarse. Para videos se reconoce contenedor, no se certifica integridad/playback; la comprobación de truncado es parcial.

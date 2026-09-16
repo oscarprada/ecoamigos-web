@@ -46,6 +46,7 @@ test('F10: revision transaccional PostgreSQL aislado', {
     testPool = new pg.Pool({host:'127.0.0.1',port,user:'postgres',database:'postgres',max:5});
     const loadController = async file => {
       let source = fs.readFileSync(path.join(root,'backend/src/controllers',file),'utf8');
+      source=source.replaceAll("'../services/contentFiles.js'",()=>JSON.stringify(new URL('../src/services/contentFiles.js',import.meta.url).href)).replaceAll("'../services/fileStore.js'",()=>JSON.stringify(new URL('../src/services/fileStore.js',import.meta.url).href));
       source = source.replace(/import \{ query(?:, pool)? \} from '..\/config\/db.js';/, 'const pool = globalThis.__f10Pool; const query = async (...args) => { const c = await pool.connect(); try { return await c.query(...args); } finally { c.release(); } };');
       source = source.replace("import { logInfo, logError } from '../utils/logger.js';", 'const logInfo = () => {}; const logError = () => {};');
       source = source.replace("import bcrypt from 'bcrypt';", 'const bcrypt = null;');

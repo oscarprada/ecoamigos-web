@@ -49,6 +49,7 @@ test('F08: revision transaccional PostgreSQL aislado', {
     t.after(() => testPool.end());
     // Import the actual controller with only infrastructure replaced. Never load db.js/.env.
     let source = fs.readFileSync(path.join(root,'backend/src/controllers/recyclingController.js'),'utf8');
+      source=source.replaceAll("'../services/contentFiles.js'",()=>JSON.stringify(new URL('../src/services/contentFiles.js',import.meta.url).href)).replaceAll("'../services/fileStore.js'",()=>JSON.stringify(new URL('../src/services/fileStore.js',import.meta.url).href));
     source = source.replace("import { query, pool } from '../config/db.js';", 'const pool = globalThis.__f08Pool; const query = (...args) => pool.query(...args);');
     source = source.replace("import { logInfo, logError } from '../utils/logger.js';", 'const logInfo = () => {}; const logError = () => {};');
     source = source.replace("'../utils/catalogReference.js'", JSON.stringify(pathToFileURL(path.join(root,'backend/src/utils/catalogReference.js')).href));

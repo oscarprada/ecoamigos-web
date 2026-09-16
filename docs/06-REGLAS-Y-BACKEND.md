@@ -4,7 +4,7 @@
 
 ## Servidor y persistencia
 
-Express monta CORS con origen fijo `http://localhost:5173` y credentials true, express.json, estáticos uploads y cuatro routers. Escucha en PORT o 3000. No configura host de escucha, TLS, proxy de confianza, límites de tasa, manejador global de errores ni cierre ordenado del pool. La raíz de salud no consulta PostgreSQL.
+Express monta CORS configurado por S02, JSON, routers y manejador final controlado. S04–S07 eliminan express.static de uploads; todos los archivos se sirven por ID y relación con BD. No se cambia CORS dentro de este bloque.
 
 `pg.Pool` usa DB_HOST, DB_USER, DB_PASSWORD y DB_NAME; puerto 5432 fijo. No configura SSL, tamaño/tiempos del pool ni DATABASE_URL. `query` delega directamente. Las consultas usan placeholders para valores de usuario; no hay ORM, capa de servicios ni sistema de migraciones.
 
@@ -132,14 +132,14 @@ Renombrar usuarios/equipos cambia las etiquetas obtenidas mediante JOIN, no sus 
 | Aspecto | Evidencias | Contenidos |
 | --- | --- | --- |
 | Campo multipart | evidence | file |
-| Ubicación | backend/uploads | backend/uploads/content |
-| Creación de carpeta | Automática desde middleware | Manual |
-| Nombre | Fecha + aleatorio + extensión | Fecha + nombre original |
-| Límite | 20 MiB | Sin límite explícito |
-| Filtro | Regex extensión y MIME | Sin filtro de servidor |
-| Acceso | Público bajo /uploads | Público bajo /uploads/content |
+| Ubicación | UPLOAD_ROOT/managed/evidence | UPLOAD_ROOT/managed/content |
+| Creación de carpeta | Automática al recibir carga | Automática al recibir carga |
+| Nombre | UUID + extensión canónica | UUID + extensión canónica |
+| Límite | Imágenes 10 MiB; techo evidencia 20 MiB | Imagen 10 MiB, documento 20 MiB, video 100 MiB |
+| Filtro | Extensión + MIME + firma, imágenes/videos permitidos | Igual, más PDF/DOCX |
+| Acceso | Admin o líder propietario por endpoint | Publicado público por ID; borrador solo admin |
 
-Multer escribe antes del controlador. No hay antivirus, inspección de contenido real, limpieza de huérfanos ni eliminación de adjuntos al borrar filas. En varios servidores se necesitaría almacenamiento compartido/persistente y una estrategia de nombres y permisos.
+Multer escribe en área privada antes del controlador. La validación real antecede SQL; archivos nuevos rechazados se retiran. El helper comprueba ambas relaciones antes de eliminar, conservando el archivo ante fallo de BD. No hay antivirus ni certificación de validez completa; la detección de firma y cierres básicos no demuestra contenido benigno.
 
 ## Exportación Excel
 
@@ -167,3 +167,14 @@ La nueva clave requiere entre 1 y 72 bytes UTF-8, sin regla de complejidad adici
 La entrega automática de correo requiere un adaptador institucional posterior. passwordResetDelivery.js deja una interfaz explícita, devuelve false mientras no haya proveedor y ofrece construcción del enlace con CLIENT_URL (HTTPS en producción). No lee credenciales de correo ni imprime enlaces. Solo pruebas inyectan un capturador en memoria; no hay interruptor de entorno para exponer tokens.
 
 S01: recuperar incrementa session_version y revoca JWT anteriores. S02 permanece parcial por almacenamiento local accesible a JavaScript. S03 aplica límites por IP a login/solicitud/reset; sus parámetros y limitaciones constan en Operación. Respuestas genéricas eliminan distinción explícita de cuenta, no garantizan tiempo constante. Fallos de emisión/entrega también son genéricos para no revelar existencia; observabilidad institucional futura debe excluir email/token/clave y detalles sensibles.
+
+
+### Reglas vigentes de archivos
+
+JPEG/JPG (image/jpeg), PNG (image/png), WEBP (image/webp), MP4 (video/mp4), MOV (video/quicktime) y AVI (video/x-msvideo, video/avi, video/msvideo o video/vnd.avi). Contenido admite además PDF (application/pdf) y DOCX (application/vnd.openxmlformats-officedocument.wordprocessingml.document). No se admiten nuevas cargas DOC, SVG, GIF, ejecutables ni extensiones fuera de esta lista.
+
+Límites técnicos configurables, no política institucional: imágenes 10 MiB, documentos 20 MiB y videos de contenido 100 MiB; evidencia conserva techo total de 20 MiB (imágenes hasta 10 MiB). Un archivo por solicitud, 24 campos de hasta 64 KiB y 25 partes multipart. Nombres UUID generados por servidor con extensión canónica, escritura exclusiva sin sobrescritura.
+
+Crear: fallo SQL o validación funcional retira el nuevo archivo si no está referenciado. Reemplazar: FOR UPDATE serializa la fila; rollback conserva anterior y retira nuevo. Tras COMMIT se libera la conexión y se comprueban referencias antes de borrar anterior. DELETE de contenido toma el mismo bloqueo, confirma y limpia; no se añade DELETE de evidencias. La comprobación incluye content_items.file_url y recycling_records.evidence_url para proteger referencias compartidas/heredadas.
+
+Los errores de cleanup generan FILE_CLEANUP_PENDING sin rutas/SQL/secretos. Si BD no puede confirmar ausencia de referencias, se retiene. No se reporta fracaso de una mutación ya confirmada por fallar unlink. Disco y BD no constituyen una transacción distribuida: una caída entre escritura y cleanup puede dejar residuos; la política de revisión está en Operación.
