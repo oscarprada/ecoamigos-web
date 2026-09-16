@@ -6,7 +6,7 @@
 
 Express monta CORS configurado por S02, JSON, routers y manejador final controlado. S04–S07 eliminan express.static de uploads; todos los archivos se sirven por ID y relación con BD. No se cambia CORS dentro de este bloque.
 
-`pg.Pool` usa DB_HOST, DB_USER, DB_PASSWORD y DB_NAME; puerto 5432 fijo. No configura SSL, tamaño/tiempos del pool ni DATABASE_URL. `query` delega directamente. Las consultas usan placeholders para valores de usuario; no hay ORM, capa de servicios ni sistema de migraciones.
+`pg.Pool` usa la configuración pura de databaseOptions.js: DATABASE_URL no vacía prevalece sobre DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME; puerto predeterminado 5432. DB_SSL=false por defecto o true con verificación de certificado. No se alteraron tamaño/tiempos del pool. `query` delega directamente. Las consultas usan placeholders para valores de usuario; no hay ORM, capa de servicios ni sistema de migraciones.
 
 ## Autenticación y roles
 
@@ -149,7 +149,7 @@ Columnas: Fecha, Líder, Equipo, Material, Cantidad, Unidad, Estado, Puntos, Per
 
 ## Logs y gestión de errores
 
-`logger.js` crea logs relativos al directorio de trabajo y escribe de forma síncrona a info.log/error.log con fecha ISO. Registra accesos, IDs, correos, altas y revisiones. No es una auditoría inmutable, no rota archivos y no cubre todas las consultas públicas/exportaciones. La exportación usa console.error; numerosos controladores devuelven error.message al cliente. No publicar logs en GitHub.
+`logger.js` escribe eventos técnicos JSONL mediante una cola asíncrona acotada, en LOG_DIR, con tamaño y retención configurables. Solo conserva evento definido, nivel, fecha ISO, IDs numéricos admitidos y estado approved/rejected; descarta datos libres, anidados, errores completos y secretos. Los controladores ya no adjuntan error.message SQL a respuestas; los mensajes funcionales controlados se conservan. Exportación usa evento EXPORT_ERROR. No es auditoría inmutable: reviewed_by/reviewed_at/review_notes siguen en PostgreSQL sin cambios. Detalles y limitaciones en 08-OPERACION.
 
 
 ## Recuperación temporal — F16

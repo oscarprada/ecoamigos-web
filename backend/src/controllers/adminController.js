@@ -20,11 +20,10 @@ export async function getDashboard(_req, res) {
       pending: Number(pending.rows[0].count),
     });
   } catch (error) {
-    logError(`DASHBOARD ERROR: ${error.message}`);
+    logError('DASHBOARD_ERROR');
 
     res.status(500).json({
       message: 'Error al cargar dashboard',
-      error: error.message,
     });
   }
 }
@@ -47,11 +46,10 @@ export async function listUsers(_req, res) {
 
     res.json(result.rows);
   } catch (error) {
-    logError(`LIST USERS ERROR: ${error.message}`);
+    logError('LIST_USERS_ERROR');
 
     res.status(500).json({
       message: 'Error al listar usuarios',
-      error: error.message,
     });
   }
 }
@@ -100,9 +98,7 @@ export async function createUser(req, res) {
 
     await client.query('COMMIT');
     transactionOpen = false;
-    try { logInfo(
-      `Usuario creado: ${email} | rol=${role} | admin_id=${req.user.id}`
-    ); } catch { /* A committed user must not depend on file logging. */ }
+    try { logInfo('USER_CREATED', { actor_id: req.user.id, entity_id: result.rows[0].id }); } catch { /* A committed user must not depend on file logging. */ }
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -110,7 +106,7 @@ export async function createUser(req, res) {
       try { await client.query('ROLLBACK'); }
       catch (rollbackError) { releaseError = rollbackError; }
     }
-    try { logError(`CREATE USER ERROR: ${error.message}`); }
+    try { logError('CREATE_USER_ERROR'); }
     catch { /* Preserve the controlled response if logging fails. */ }
 
     res.status(500).json({
@@ -201,11 +197,10 @@ export async function listTeams(_req, res) {
 
     res.json(result.rows);
   } catch (error) {
-    logError(`LIST TEAMS ERROR: ${error.message}`);
+    logError('LIST_TEAMS_ERROR');
 
     res.status(500).json({
       message: 'Error al listar equipos',
-      error: error.message,
     });
   }
 }
@@ -223,17 +218,14 @@ export async function createTeam(req, res) {
       [name, dependency]
     );
 
-    logInfo(
-      `Equipo creado: ${name} | dependencia=${dependency} | admin_id=${req.user.id}`
-    );
+    logInfo('TEAM_CREATED', { actor_id: req.user.id, entity_id: result.rows[0].id });
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    logError(`CREATE TEAM ERROR: ${error.message}`);
+    logError('CREATE_TEAM_ERROR');
 
     res.status(500).json({
       message: 'Error al crear equipo',
-      error: error.message,
     });
   }
 }
@@ -248,11 +240,10 @@ export async function listPeriods(_req, res) {
 
     res.json(result.rows);
   } catch (error) {
-    logError(`LIST PERIODS ERROR: ${error.message}`);
+    logError('LIST_PERIODS_ERROR');
 
     res.status(500).json({
       message: 'Error al listar periodos',
-      error: error.message,
     });
   }
 }
@@ -282,7 +273,7 @@ export async function createPeriod(req, res) {
     await client.query('COMMIT');
     transactionOpen = false;
     try {
-      logInfo(`Periodo creado: ${name} | activo=${is_active} | admin_id=${req.user.id}`);
+      logInfo('PERIOD_CREATED', { actor_id: req.user.id, entity_id: result.rows[0].id });
     } catch { /* A committed decision must not depend on file logging. */ }
     return res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -290,7 +281,7 @@ export async function createPeriod(req, res) {
       try { await client.query('ROLLBACK'); }
       catch (rollbackError) { releaseError = rollbackError; }
     }
-    try { logError(`CREATE PERIOD ERROR: ${error.message}`); }
+    try { logError('CREATE_PERIOD_ERROR'); }
     catch { /* Preserve the controlled response if logging fails. */ }
     if (error.code === '23505' || error.code === '40001' || error.code === '40P01') {
       return res.status(409).json({ message: 'Conflicto al crear periodo' });
@@ -314,11 +305,10 @@ export async function listContent(_req, res) {
 
     res.json(result.rows);
   } catch (error) {
-    logError(`LIST CONTENT ERROR: ${error.message}`);
+    logError('LIST_CONTENT_ERROR');
 
     res.status(500).json({
       message: 'Error al listar contenidos',
-      error: error.message,
     });
   }
 }

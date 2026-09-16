@@ -1,3 +1,4 @@
+import { logInfo, loggerOptions } from './utils/logger.js';
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -11,6 +12,7 @@ import adminRoutes from './routes/adminRoutes.js';
 
 dotenv.config();
 
+loggerOptions(); // Fail early on invalid logging configuration, before listening.
 const app = express();
 
 configureProxy(app);
@@ -36,6 +38,6 @@ app.use(controlledError);
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log(`Servidor Ecoamigos escuchando en http://localhost:${PORT}`);
+  logInfo('SERVER_STARTED');
 });
 

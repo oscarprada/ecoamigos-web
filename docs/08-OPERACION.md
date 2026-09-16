@@ -14,8 +14,8 @@ Se requieren tres servicios: hosting estático para frontend, proceso Node persi
 | --- | --- |
 | Base de datos | Conciliar esquema real con código, versionar migración y validar restauración |
 | Catálogo | Definir grupo/puntos institucionales y probar cada nivel |
-| CORS | Configurar CORS_ORIGINS; CLIENT_URL se reserva para enlaces F16 |
-| Conexión DB | Adaptar puerto/SSL si lo exige el proveedor; no basta definir DATABASE_URL |
+| CORS | Configurar CLIENT_URL o lista explícita CORS_ORIGINS; sin cookies |
+| Conexión DB | Configurar DB_PORT o DATABASE_URL y DB_SSL según la infraestructura institucional futura |
 | API pública | Decidir acceso a evidencias, borradores y estadísticas antes de exponer datos |
 | HTTPS | Terminar TLS en infraestructura y usar URL HTTPS de API en frontend |
 | Proceso Node | Ejecutar desde backend, reinicio supervisado y apagado/monitoreo definidos |
@@ -47,7 +47,7 @@ Esto describe el comando del proceso, no instala un supervisor. Configurar varia
 
 `GET /` comprueba que Express responde. Para comprobar conexión y parte del modelo usar `GET /api/public/ranking`; no sustituye pruebas de usuario ni revisa disco escribible. Monitorear HTTP, errores, espacio, disponibilidad de PostgreSQL y crecimiento de uploads/logs.
 
-`backend/logs/info.log` y `error.log` son locales si se inicia desde backend. Contienen correos e IDs. No hay rotación ni alertas integradas. Configurar retención según necesidad operativa y acceso restringido. Evitar copiar logs completos a GitHub.
+El logger actual usa LOG_DIR/ecoamigos-tech.jsonl con rotación acotada. Los antiguos info.log/error.log pueden contener correos: no se migraron, leyeron ni eliminaron para esta corrección. Su revisión/retención posterior requiere autorización del operador. No publicar logs en Git; logs/ está ignorado, y cualquier LOG_DIR personalizado debe quedar también fuera del repositorio.
 
 ## Respaldo
 
@@ -114,8 +114,8 @@ Si el resultado no es el esperado, usar ROLLBACK en lugar de COMMIT. En una base
 | --- | --- |
 | `Missing script: dev` | Se ejecutó desde raíz; usar frontend o backend |
 | Puerto 5173 ocupado, Vite cambia puerto | Cerrar instancia duplicada o configurar CORS para el puerto correcto |
-| CORS bloqueado | Revisar CORS_ORIGINS; CLIENT_URL configura enlaces F16, no CORS |
-| ECONNREFUSED PostgreSQL | Servicio, DB_HOST, firewall y puerto fijo 5432 |
+| CORS bloqueado | Revisar CORS_ORIGINS o su fallback CLIENT_URL y el Origin exacto |
+| ECONNREFUSED PostgreSQL | Servicio, host/puerto de DATABASE_URL o DB_HOST/DB_PORT y firewall |
 | Authentication failed / database does not exist | DB_USER/DB_PASSWORD/DB_NAME y existencia de base |
 | Columna/relación no existe | Incompatibilidad de esquemas; comparar diccionario, no improvisar otro seed |
 | No hay admin tras seed | El seed no crea cuentas; seguir bootstrap con datos explícitos del responsable |
@@ -143,7 +143,7 @@ F16 incorpora recuperación por token desde la aplicación; el envío institucio
 
 En una instalación existente, después de las migraciones previas D01/F09/F16 y antes de iniciar este backend, el responsable debe aplicar database/20260914_s01_session_version.sql y revisar database/verify_s01_session_version.sql. Hacer respaldo y verificar el destino; no aplicar schema.sql a una base existente. La migración añade INTEGER NOT NULL DEFAULT 0 con CHECK no negativo, sin borrar filas; repetirla conserva versiones existentes. Los JWT anteriores sin sv requieren nuevo login. No se ejecutó esta migración en ecoamigos real. El esquema nuevo ya incluye la columna. No revertir el backend a uno que ignore sv: volvería a aceptar sesiones revocadas.
 
-CORS_ORIGINS: lista de orígenes completos separados por coma, por defecto http://localhost:5173; sin comodines, paths ni slash final. Para desarrollo con 127.0.0.1/otro puerto, declararlos explícitamente. Axios usa withCredentials:false y CORS no habilita cookies. CLIENT_URL sigue dedicado a enlaces de recuperación. La infraestructura institucional (HTTPS, dominios, proxy, mismo sitio o sitios distintos) sigue por definir; esto no es una configuración productiva certificada ni cierra S08.
+CORS_ORIGINS: lista de orígenes completos separados por coma, por defecto http://localhost:5173; sin comodines, paths ni slash final. Para desarrollo con 127.0.0.1/otro puerto, declararlos explícitamente. Axios usa withCredentials:false y CORS no habilita cookies. CLIENT_URL configura enlaces de recuperación y es fallback CORS si se omite CORS_ORIGINS. La infraestructura institucional (HTTPS, dominios, proxy, mismo sitio o sitios distintos) sigue por definir; esto no es una configuración productiva certificada. S08 se verifica en el bloque de configuración que sigue.
 
 AUTH_WINDOW_MS=900000; AUTH_LOGIN_MAX=10; AUTH_FORGOT_MAX=5; AUTH_RESET_MAX=10. Enteros positivos; configuración inválida aborta la construcción de rutas. Ventana fija por IP/endpoint; cuentan éxitos y fallos, 429 con Retry-After y reinicio al vencer. El mapa tiene como máximo 10000 IP activas por endpoint; al saturarse rechaza IP nuevas con 429, sin crecer indefinidamente. Limpieza al recibir peticiones, sin timers permanentes. NAT comparte cupo; reiniciar proceso reinicia límites y varias instancias tienen contadores independientes. No es defensa completa frente a ataques distribuidos ni bloqueo por cuenta. Antes de escalar, coordinar límite compartido o de proxy.
 
@@ -163,3 +163,50 @@ Retención normal: evidencia se conserva mientras exista su registro; no hay edi
 Retención excepcional: errores de BD o unlink emiten FILE_CLEANUP_PENDING y conservan lo que no puede borrarse con seguridad. Una caída abrupta puede dejar archivos nuevos no asociados o sustituidos pendientes; filesystem y PostgreSQL no son atómicos entre sí. Revisar espacio y marcador en logs del proceso. Para reconciliar: respaldar, detener escrituras, inventariar los archivos de la raíz, cruzar contra AMBAS columnas file_url/evidence_url, revisar individualmente los candidatos y resolver cada ruta dentro de la raíz antes de retirar cualquier archivo. No usar antigüedad ni nombre como prueba de que un archivo es huérfano. No se suministra ni ejecuta un borrado masivo automático. Si falla la consulta, conservar. Los huérfanos previos no fueron eliminados por esta tarea.
 
 file-type 22.1.0 detecta firmas como indicio; los workers limitan duración a 10 segundos y heap a 64 MiB. Se añaden verificaciones de cierre JPEG/PNG/PDF, longitud RIFF para WEBP/AVI y cierre ZIP para DOCX. No decodifica imágenes, páginas, XML completo ni codecs, no elimina macros/contenido activo y no sustituye antivirus. Archivos cifrados, malformados o formatos ambiguos pueden rechazarse. Para videos se reconoce contenedor, no se certifica integridad/playback; la comprobación de truncado es parcial.
+
+
+## S08: contrato CORS por entorno
+
+CORS_ORIGINS, si está definida, es una lista de orígenes exactos separados por comas; se recortan espacios. Si se omite, se usa CLIENT_URL (un único origen, también utilizado en F16). Sin ambas variables se permite solamente http://localhost:5173 fuera de producción; NODE_ENV=production exige configuración explícita. Una variable seleccionada vacía, wildcard, ruta, credenciales o slash final provoca error genérico al arrancar, sin mostrar su valor. CORS_ORIGINS no cambia el destino de enlaces de recuperación.
+
+Origin permitido recibe el origen exacto, nunca wildcard. Origin no permitido devuelve 403 con mensaje controlado antes de ejecutar la ruta. OPTIONS permitido responde 204, habilita Authorization/Content-Type y GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS. Esto no crea endpoints nuevos. Retry-After queda expuesto. Sin Origin se permite continuar para CLI/servidor a servidor, conservando autenticación y autorización en rutas protegidas: CORS no sustituye controles de acceso ni impide clientes no navegador.
+
+Bearer JWT sigue vigente, credentials=false y withCredentials=false; no hay cookies ni CSRF nuevos. S02 permanece PARCIAL. Un ejemplo local opcional es CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173; no representa dominios institucionales.
+
+
+## S09: contrato de conexión PostgreSQL
+
+Una sola estrategia en src/config/databaseOptions.js, utilizada por el Pool de src/config/db.js. El constructor no lee .env ni conecta; db.js carga dotenv y crea el Pool perezoso. No se alteran scripts psql ni las conexiones explícitas de los tests temporales.
+
+- DATABASE_URL no vacía tiene precedencia completa sobre DB_HOST, DB_PORT, DB_USER, DB_PASSWORD y DB_NAME. Admite postgres:// o postgresql:// con host, usuario, contraseña y base; puerto omitido usa 5432. Codificar caracteres reservados de credenciales. Se rechazan query y fragmento para impedir que opciones URL sustituyan la política SSL de pg.
+- Sin URL (omitida o vacía), host, usuario, contraseña y base individuales son obligatorios; DB_PORT omitido/vacío usa 5432 y un valor explícito debe estar entre 1 y 65535. No se usan credenciales predeterminadas ni una conexión de prueba para validar.
+- DB_SSL admite exactamente false o true, predeterminado false para PostgreSQL local. true produce ssl: { rejectUnauthorized: true }; usa la confianza TLS de Node, exige certificado válido y no degrada a una conexión insegura. No hay rejectUnauthorized:false ni desactivación TLS global. NODE_TLS_REJECT_UNAUTHORIZED=0 se rechaza.
+- Configuración inválida genera un mensaje fijo sin URL, contraseña ni valor recibido. Los errores de cliente al consultar no exponen datos internos; el error del Pool se registra como DATABASE_POOL_ERROR sin objeto Error.
+
+Ejemplo ficticio de sintaxis, no credencial ni proveedor elegido: DATABASE_URL=postgresql://USUARIO:CLAVE_CODIFICADA@HOST:5432/BASE, DB_SSL=true. La institución deberá definir host, TLS y confianza de certificados. No se inventaron certificados ni se implementó una excepción para certificados autofirmados. No se certificó conexión TLS institucional.
+
+La separación de SSL evita la sobrescritura documentada por [node-postgres](https://node-postgres.com/features/ssl) cuando una URL incluye opciones sslmode/sslcert/sslkey/sslrootcert. Se construyen campos explícitos para pg en vez de pasar una URL capaz de sobreescribir ssl.
+
+
+## S10: logs técnicos, límites y acceso
+
+Logger pequeño sin nueva dependencia, basado en node:fs/promises y path. Un proceso serializa sus escrituras con una cola acotada. Los requests no esperan IO síncrono. Eventos JSONL con fecha ISO y niveles info/warn/error; nombres de eventos permitidos por lista explícita, texto libre desconocido convertido a APPLICATION_EVENT. El contexto solo admite IDs enteros actor_id/record_id/entity_id/team_id y status approved/rejected. Se descartan objetos anidados completos y propiedades no admitidas; no se recorren serializadores ni getters del payload.
+
+Clasificación: se conservan IDs mínimos de actor/entidad para correlación técnica, que siguen siendo datos vinculables y requieren acceso restringido. No se conservan correos, nombres, notas, cantidades/materiales, IP, user agent, evidencias, filenames, rutas, headers, password/password_hash, JWT, Authorization, reset tokens, DB_PASSWORD ni DATABASE_URL. Error.message, stack, SQL y objeto Error no se escriben. Un evento de error identifica la operación, con menor detalle diagnóstico deliberado. No hay logging general de requests. No se afirma cumplimiento legal integral.
+
+| Variable | Predeterminado | Significado |
+| --- | --- | --- |
+| LOG_DIR | logs relativo al cwd del backend | Directorio privado; admite ruta absoluta de la infraestructura futura |
+| LOG_MAX_BYTES | 5242880 (5 MiB) | Máximo por archivo, de 1 a 104857600 bytes |
+| LOG_MAX_FILES | 5 | Archivos rotados además del actual; de 1 a 20 |
+| LOG_QUEUE_LIMIT | 1000 | Eventos pendientes máximos; de 1 a 10000 |
+
+El archivo actual es ecoamigos-tech.jsonl y los rotados ecoamigos-tech.1.jsonl hasta el número configurado. Antes de exceder tamaño se rota y se elimina únicamente el último slot de ese namespace. Predeterminado: seis archivos, aproximadamente 30 MiB como máximo generados por el logger. Una línea mayor que el límite se descarta. Los límites pequeños usados en tests no son valores recomendados de operación. No hay retención por días. Son valores técnicos ajustables, no una política institucional.
+
+No se enumeran ni borran archivos ajenos, info.log/error.log históricos o números fuera del rango configurado. Si se reduce el número de archivos, los slots anteriores fuera del nuevo rango requieren revisión manual; no se eliminan automáticamente. El directorio y archivos gestionados rechazan enlaces; archivos con múltiples enlaces físicos se rechazan. El operador debe controlar la raíz y sus ancestros. Se solicitan modos 0700/0600 en POSIX; en Windows deben configurarse ACL exclusivas para la cuenta del proceso y operadores autorizados. No se certificó ACL institucional ni se cambiaron permisos reales.
+
+Ante fallo de disco/rotación o saturación se descarta el evento y se emite TECH_LOG_UNAVAILABLE una sola vez por instancia a stderr, sin ruta/error original; la operación de negocio continúa. El marcador existente FILE_CLEANUP_PENDING de S06 sigue siendo fijo, sin datos personales, en stderr. La captura/retención de stderr pertenece al supervisor futuro; no se instaló ninguno. Revisar esos marcadores y espacio disponible.
+
+Limitaciones: cola en memoria, posible pérdida en caída abrupta o saturación, sin garantía de auditoría durable, sin coordinación multiproceso. Cada instancia futura necesita LOG_DIR independiente o colector institucional; no compartir estos archivos entre procesos. No se promete atomicidad de rotación frente a fallos físicos: puede quedar una rotación incompleta, sin afectar la transacción de negocio. flushLogs permite esperar pendientes, pero no se añade un supervisor/apagado institucional.
+
+La auditoría funcional de revisión sigue en PostgreSQL (reviewed_by, reviewed_at, review_notes y estado). No se eliminó información funcional persistida ni se añadió historial ficticio. Logs técnicos no sustituyen una auditoría inmutable.

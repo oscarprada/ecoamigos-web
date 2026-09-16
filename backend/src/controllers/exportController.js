@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { logError } from '../utils/logger.js';
 import { query } from '../config/db.js';
 
 export async function exportRecyclingReport(req, res) {
@@ -98,11 +99,10 @@ export async function exportRecyclingReport(req, res) {
     res.end();
 
   } catch (error) {
-    console.error(error);
+    logError('EXPORT_ERROR');
 
     res.status(500).json({
       message: 'Error al generar el reporte',
-      error: error.message,
     });
   }
 }

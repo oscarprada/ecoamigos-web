@@ -7,7 +7,7 @@
 | Requisito | Detalle |
 | --- | --- |
 | Node y npm | Usar Node 22.12+ o 24: file-type 22.1.0 exige Node >=22 y Vite requiere 22.12+ en esa línea. Se encontró Node 24.13.0 y npm 11.6.2 en esta revisión. |
-| PostgreSQL | Servidor TCP en 5432 y cliente `psql`. Se encontró cliente 18.1; no se confirmó el servidor. |
+| PostgreSQL | Servidor TCP (5432 por defecto, DB_PORT configurable) y cliente `psql`. Se encontró cliente 18.1; no se confirmó el servidor. |
 | Git | Clonación y publicación |
 | Red | Dependencias, fuentes Google y enlaces externos |
 | Disco persistente | PostgreSQL, uploads y logs |
@@ -56,6 +56,8 @@ PORT=3000
 CLIENT_URL=http://localhost:5173
 JWT_SECRET=REEMPLAZAR_POR_SECRETO_ALEATORIO_LARGO
 DB_HOST=localhost
+DB_PORT=5432
+DB_SSL=false
 DB_USER=postgres
 DB_PASSWORD=REEMPLAZAR_CLAVE_POSTGRESQL
 DB_NAME=ecoamigos
@@ -72,9 +74,11 @@ node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"
 | `PORT` | Servidor Express; respaldo 3000 |
 | `JWT_SECRET` | Firma y verificación JWT; sin respaldo |
 | `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Configuración de `pg.Pool` |
-| `CLIENT_URL` | Origen de enlaces F16; CORS usa CORS_ORIGINS |
+| `CLIENT_URL` | Un origen frontend para enlaces F16 y fallback CORS; CORS_ORIGINS tiene precedencia |
 | `VITE_API_URL` | URL pública frontend; respaldo `http://localhost:3000/api`; debe terminar en `/api` |
-| `DATABASE_URL`, `DB_PORT` | No consumidas; PostgreSQL usa puerto fijo 5432 |
+| `DATABASE_URL` | Si no está vacía, prevalece sobre las cinco variables DB_* de conexión; URL postgres/postgresql sin query ni fragmento |
+| `DB_PORT`, `DB_SSL` | Puerto 1–65535, respaldo 5432; SSL false/true, true verifica certificado |
+| `LOG_DIR`, `LOG_MAX_BYTES`, `LOG_MAX_FILES`, `LOG_QUEUE_LIMIT` | logs; 5242880 bytes por archivo; cinco archivos rotados; cola de 1000 eventos |
 
 Editar `frontend/.env`:
 
@@ -115,7 +119,7 @@ Repetir el archivo no duplica ni actualiza filas; duplicados/conflictos abortan 
 New-Item -ItemType Directory -Force backend/uploads/content | Out-Null
 ```
 
-El middleware de evidencia crea `uploads`; el de contenido no crea `uploads/content`. El directorio de trabajo del backend debe ser `backend`.
+Los dos flujos crean sus directorios privados bajo UPLOAD_ROOT; no es necesario crear uploads/content para cargas nuevas. El directorio de trabajo del backend debe ser `backend`.
 
 Terminal 1:
 
@@ -164,3 +168,6 @@ Instalar backend con su lockfile actualizado (file-type 22.1.0, ESM). Configurar
 Límites técnicos configurables, no política institucional: imágenes 10 MiB, documentos 20 MiB y videos de contenido 100 MiB; evidencia conserva techo total de 20 MiB (imágenes hasta 10 MiB). Un archivo por solicitud, 24 campos de hasta 64 KiB y 25 partes multipart. Nombres UUID generados por servidor con extensión canónica, escritura exclusiva sin sobrescritura.
 
 Variables UPLOAD_IMAGE_MB, UPLOAD_DOCUMENT_MB, UPLOAD_VIDEO_MB y UPLOAD_EVIDENCE_MB: enteros positivos de 1 a 500; unidades MiB. Revisar permisos de escritura del proceso y cuotas de disco. Los tests usan un UPLOAD_ROOT temporal y no tocan los archivos instalados.
+
+
+Configuración S08–S10: ver los contratos completos de [operación](08-OPERACION.md). Mantener CLIENT_URL=http://localhost:5173, PORT=3000 y DB_SSL=false para el desarrollo local. La institución definirá después despliegue, dominios y TLS; no hay proveedor seleccionado ni despliegue ejecutado.

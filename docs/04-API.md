@@ -320,3 +320,14 @@ JPEG/JPG (image/jpeg), PNG (image/png), WEBP (image/webp), MP4 (video/mp4), MOV 
 Límites técnicos configurables, no política institucional: imágenes 10 MiB, documentos 20 MiB y videos de contenido 100 MiB; evidencia conserva techo total de 20 MiB (imágenes hasta 10 MiB). Un archivo por solicitud, 24 campos de hasta 64 KiB y 25 partes multipart. Nombres UUID generados por servidor con extensión canónica, escritura exclusiva sin sobrescritura.
 
 Recepción: 413 tamaño, 415 tipo/firma no admitidos, 400 vacío/cantidad/campo multipart/tipo de contenido incompatible, 500 almacenamiento; mensajes controlados sin rutas/SQL/stack. Archivo opcional sigue siendo opcional; no se interpretan ni cambian los requisitos de evidencia del catálogo.
+
+
+## S08: contrato CORS por entorno
+
+CORS_ORIGINS, si está definida, es una lista de orígenes exactos separados por comas; se recortan espacios. Si se omite, se usa CLIENT_URL (un único origen, también utilizado en F16). Sin ambas variables se permite solamente http://localhost:5173 fuera de producción; NODE_ENV=production exige configuración explícita. Una variable seleccionada vacía, wildcard, ruta, credenciales o slash final provoca error genérico al arrancar, sin mostrar su valor. CORS_ORIGINS no cambia el destino de enlaces de recuperación.
+
+Origin permitido recibe el origen exacto, nunca wildcard. Origin no permitido devuelve 403 con mensaje controlado antes de ejecutar la ruta. OPTIONS permitido responde 204, habilita Authorization/Content-Type y GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS. Esto no crea endpoints nuevos. Retry-After queda expuesto. Sin Origin se permite continuar para CLI/servidor a servidor, conservando autenticación y autorización en rutas protegidas: CORS no sustituye controles de acceso ni impide clientes no navegador.
+
+Bearer JWT sigue vigente, credentials=false y withCredentials=false; no hay cookies ni CSRF nuevos. S02 permanece PARCIAL. Un ejemplo local opcional es CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173; no representa dominios institucionales.
+
+S10: los errores internos de consultas ya no incluyen el campo error con mensajes SQL; conservan códigos HTTP y mensajes funcionales controlados. No cambian rutas ni contratos exitosos.

@@ -13,11 +13,11 @@ flowchart LR
   C -->|pg: consultas parametrizadas| D[(PostgreSQL)]
   B -->|Multer + firma + relación BD| UP[Almacenamiento privado de archivos]
   F -->|Archivo por ID público o Bearer| B
-  C --> L[logs/info.log y error.log]
+  C --> L[Cola asíncrona acotada y JSONL con rotación]
   C --> X[ExcelJS: descarga XLSX]
 ```
 
-SPA cliente sin renderizado en servidor, API REST sin ORM y almacenamiento local de archivos. Hay pruebas acotadas de instalación en backend/tests/installation.test.js, sin script npm. No hay colas, WebSockets, servicios programados, microservicios, contenedores ni configuración CI/CD en el repositorio revisado. Premios y ganadores no forman parte de la aplicación actual.
+SPA cliente sin renderizado en servidor, API REST sin ORM y almacenamiento local de archivos. Hay pruebas acotadas de instalación en backend/tests/installation.test.js, sin script npm. No hay colas de trabajos externas, WebSockets, servicios programados, microservicios, contenedores ni configuración CI/CD en el repositorio revisado. Premios y ganadores no forman parte de la aplicación actual.
 
 `frontend/src/main.jsx` monta React StrictMode, ToastProvider y App. App monta AuthProvider, BrowserRouter y rutas. El layout incluye cabecera institucional y Outlet. Las rutas privadas atraviesan ProtectedRoute; la API repite la autorización en middleware.
 
@@ -61,8 +61,9 @@ Estas son versiones solicitadas, no necesariamente las instaladas. Cada lockfile
 | --- | --- |
 | `package.json`, `package-lock.json` | Dependencias; scripts `dev` y `start` |
 | `.env.example` | Plantilla sin secretos funcionales |
-| `src/server.js` | CORS, JSON, estáticos, montaje de rutas, raíz HTTP y escucha |
-| `src/config/db.js` | Pool PostgreSQL y función `query(text, params)` |
+| `src/server.js` | CORS, JSON, archivos por entidad, montaje de rutas, raíz HTTP y escucha |
+| `src/config/db.js` | Pool único y función query; consume databaseOptions.js sin duplicar configuración |
+| `src/config/databaseOptions.js` | Constructor puro de configuración DB local/URL/SSL, comprobable sin red |
 | `src/routes/authRoutes.js` | Login y sesión actual |
 | `src/routes/publicRoutes.js` | Ranking, estadísticas, catálogo y categorías |
 | `src/routes/recyclingRoutes.js` | Crear, historial personal, pendientes, revisados y revisión |
@@ -74,7 +75,7 @@ Estas son versiones solicitadas, no necesariamente las instaladas. Cada lockfile
 | `src/controllers/exportController.js` | Generación del archivo XLSX |
 | `src/middleware/authMiddleware.js` | Firma de token y lista de roles permitidos |
 | `src/middleware/uploadMiddleware.js` | Evidencias; carpeta, nombres, filtro y límite |
-| `src/utils/logger.js` | Escritura síncrona a logs locales |
+| `src/utils/logger.js` | Eventos técnicos JSONL asíncronos, minimizados y rotados |
 | `src/seed.sql` | Aviso sin escrituras: no hay datos predeterminados |
 | `uploads/`, `uploads/content/`, `logs/` | Datos generados, no código distribuido |
 

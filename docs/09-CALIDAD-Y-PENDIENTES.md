@@ -29,7 +29,7 @@ CORREGIDO se refiere al código y la instalación nueva probados, no a una base 
 
 Premios y ganadores están fuera del alcance actual del producto. Se retiraron sus páginas, rutas, enlaces, llamadas, controladores y endpoints, y `GET /public/ranking` volvió a limitarse a `currentPeriod` y `ranking`. No se modificó el cálculo de posiciones o puntos. Las tablas `prizes`, `winner_records` y `rewards` permanecen deliberadamente como legado; no se ejecutó SQL destructivo ni se modificaron datos.
 
-S01 y S03 corregidos según el bloque final; S02 parcial. S04–S07 corregidos según el bloque de archivos al final; S08–S12 permanecen sin cierre. F20 está corregido según su bloque final, con smoke visual pendiente. F19 está corregido según su bloque final. F18 está corregido según su verificación formal. F17 está corregido según su bloque final. F16 se detalla en su bloque de recuperación. F10–F15 están corregidos según lo descrito abajo; la matriz T01–T28 conserva sus comprobaciones manuales con T20 actualizado para F13. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
+S01 y S03 corregidos según el bloque final; S02 parcial. S04–S07 corregidos según el bloque de archivos al final; S08–S10 corregidos según el cierre de configuración; S11–S12 permanecen sin cierre. F20 está corregido según su bloque final, con smoke visual pendiente. F19 está corregido según su bloque final. F18 está corregido según su verificación formal. F17 está corregido según su bloque final. F16 se detalla en su bloque de recuperación. F10–F15 están corregidos según lo descrito abajo; la matriz T01–T28 conserva sus comprobaciones manuales con T20 actualizado para F13. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
 
 ## Fuente única de puntuación — F04
 
@@ -250,9 +250,9 @@ Pruebas: backend/tests/f15-admin-scope.test.js conserva el arnés PostgreSQL des
 | S05 | Evidencias y borradores disponibles por URL pública | **CORREGIDO: acceso por entidad y autorización; sin publicación estática de uploads**; ver cierre S04–S07 |
 | S06 | Archivos huérfanos al fallar SQL, editar o borrar | **CORREGIDO: limpieza transaccional con referencias; residuos físicos documentados**; ver cierre S04–S07 |
 | S07 | Filtro de evidencia regex/MIME limitado | **CORREGIDO: allowlist y firma con file-type; limitaciones expresas**; ver cierre S04–S07 |
-| S08 | CORS fijo y CLIENT_URL ignorada | Configuración por entorno antes de desplegar |
-| S09 | Puerto DB fijo, sin SSL parametrizable | Adaptar a infraestructura seleccionada |
-| S10 | Logs síncronos sin rotación | Controlar disco, retención y acceso a datos personales |
+| S08 | CORS fijo y CLIENT_URL ignorada | **CORREGIDO: CORS_ORIGINS/CLIENT_URL, política explícita y HTTP probado**; ver cierre S08–S10 |
+| S09 | Puerto DB fijo, sin SSL parametrizable | **CORREGIDO: configuración pura local/URL/puerto/TLS verificado, sin conexión real**; ver cierre S08–S10 |
+| S10 | Logs síncronos sin rotación | **CORREGIDO: logger asíncrono acotado, minimización y rotación probadas**; ver cierre S08–S10 |
 | S11 | Exportación completa en memoria | Medir límites y considerar volumen/paginación |
 | S12 | No pruebas/CI, lockfiles sin auditoría en esta tarea | Añadir verificaciones y evaluar dependencias por separado |
 
@@ -516,3 +516,57 @@ Archivos modificados o nuevos del bloque:
 - Pruebas backend: f08-review.test.js, f09-periods.test.js, f10-record-period.test.js, f11-registration-access.test.js, f12-user-limit.test.js, f15-admin-scope.test.js, s04-s07-files.test.js, fixtures/files.js.
 - Frontend: components/ProtectedFile.jsx; pages/admin/AdminContentPage.jsx, AdminReviewsPage.jsx; pages/leader/LeaderDashboard.jsx, RegisterRecyclingPage.jsx; pages/public/EducationCategoryPage.jsx; utils/uiError.js; tests/s05-protected-files.test.js.
 - Documentación: 01-INSTALACION.md, 02-ARQUITECTURA.md, 04-API.md, 06-REGLAS-Y-BACKEND.md, 07-MANUAL-DE-USUARIO.md, 08-OPERACION.md y este 09-CALIDAD-Y-PENDIENTES.md.
+
+
+## Cierre controlado S08–S10: configuración y logging
+
+**S08 CORREGIDO; S09 CORREGIDO; S10 CORREGIDO**, con alcance de código y pruebas locales aisladas. No certifica un despliegue institucional, una conexión TLS real ni cumplimiento legal integral. Estado inicial: git status --short vacío; los cambios S04–S07 ya estaban en HEAD y se conservaron. No se trabajaron S11/S12.
+
+### Auditoría antes de implementar
+
+| Área | Mapa encontrado | Decisión aplicada |
+| --- | --- | --- |
+| HTTP | server.js usa corsOptions; S02 ya había añadido CORS_ORIGINS, lista exacta sin cookies. CLIENT_URL solo formaba enlaces F16; origen ajeno no recibía cabecera pero podía ejecutar ruta | Mantener Bearer y lista, añadir fallback CLIENT_URL, rechazar origen ajeno antes de ruta y explicitar OPTIONS/métodos/headers |
+| PostgreSQL | Único Pool de aplicación en config/db.js, dotenv, DB_HOST/USER/PASSWORD/NAME, puerto 5432 literal; sin URL ni SSL. Tests crean Pool/Client temporales explícitos | Constructor puro databaseOptions.js y Pool único consumidor; no alterar conexiones de tests |
+| Logger | utils/logger.js ejecutaba mkdirSync al importar, appendFileSync por evento y console.log duplicado; info.log/error.log ilimitados relativos al cwd | Cola asíncrona acotada, archivos JSONL nuevos y rotación por tamaño; no tocar históricos |
+| Datos registrados | Altas incluían email, nombre/dependencia/equipo, actor; registros incluían material/cantidad y revisión; errores interpolaban error.message SQL | Eventos permitidos y IDs mínimos; no texto libre ni errores originales |
+| Otras salidas | Exportación hacía console.error(error); inicio mostraba puerto; S06 usa marcador fijo FILE_CLEANUP_PENDING; no logging general de requests, IP, user agent ni headers | Exportación e inicio con eventos técnicos; conservar marcador S06 sin datos sensibles |
+| Respuestas | Diversos catch de admin/reciclaje/público/exportación adjuntaban error.message a JSON | Retirar solo detalles internos; mantener mensajes, estados, reglas y contratos exitosos |
+| Auditoría funcional | reviewed_by/reviewed_at/review_notes/status en PostgreSQL, no historial inmutable en archivos | Conservar íntegra; no confundir retención de logs con retención funcional |
+| Dependencias/entorno | pg/cors/dotenv existentes, ningún logger especializado; .env ignorado | Sin dependencias ni cambios de lockfile; no leer/copiar .env real |
+
+Se revisaron package.json y lockfile, variables, rutas, servicios, consola, filesystem y documentación. La búsqueda no encontró otra configuración de conexión de la aplicación. No se introducen proveedor, dominio institucional o certificado inventados.
+
+### S08
+
+CORS_ORIGINS prevalece sobre CLIENT_URL; permite lista separada por comas con espacios recortados. CLIENT_URL conserva un único origen para F16. Si ambas faltan, únicamente http://localhost:5173 fuera de producción; producción exige definición explícita. Vacío, wildcard y origen inválido fallan de forma controlada. Un origen ajeno recibe 403 genérico sin llegar a la operación. Sin Origin se continúa para CLI/servidores, sin omitir autorización. OPTIONS válido devuelve 204; Authorization/Content-Type, métodos GET/HEAD/POST/PUT/PATCH/DELETE/OPTIONS y Retry-After explícitos. credentials=false, frontend withCredentials=false y Bearer sin cambios; S02 permanece PARCIAL, sin cookies ni CSRF.
+
+Pruebas HTTP cubren localhost, origen de lista, precedencia, espacios, origen ajeno (incluido POST sin ejecutar handler), preflight permitido/rechazado, Authorization y ausencia de Origin. Configuración vacía, inválida, wildcard y falta en producción rechazada. No se añadieron rutas de negocio.
+
+### S09
+
+Modo local: DB_HOST/DB_USER/DB_PASSWORD/DB_NAME requeridos, DB_PORT configurable 1–65535 o 5432 por omisión. DATABASE_URL no vacía prevalece completamente y se descompone en campos explícitos; admite postgres/postgresql y credenciales escapadas. Se rechazan query/fragmento para evitar ambigüedad con las opciones SSL de pg. URL vacía selecciona modo local. DB_SSL=false predeterminado; true exige verificación TLS mediante rejectUnauthorized:true. No hay modo inseguro; NODE_TLS_REJECT_UNAUTHORIZED=0 falla. Errores de configuración fijos sin secretos; DATABASE_POOL_ERROR no incluye Error original.
+
+Pruebas sin red comprueban ambos modos, puerto personalizado/fallback, precedencia, decodificación, faltantes, URLs inválidas, SSL false/true y configuración efectiva de pg.Client sin connect(). No se utilizó ecoamigos real ni infraestructura externa. Certificados privados/CA y conectividad institucional quedan para la infraestructura que defina Parques Nacionales, sin desactivar verificación.
+
+### S10
+
+Un logger asíncrono propio y pequeño utiliza node:fs/promises, sin nuevas dependencias. Niveles info/warn/error, fecha UTC, evento de una lista cerrada y contexto permitido: IDs enteros actor_id/record_id/entity_id/team_id, estado approved/rejected. Los IDs conservan capacidad de correlación y se tratan como datos vinculables; no se promete anonimización. Se descartan datos personales de texto, IP/user agent, notas/evidencias/rutas/nombres de archivos, secretos, headers, errores completos y objetos anidados. No se serializan getters ni toJSON del payload.
+
+LOG_DIR=logs; LOG_MAX_BYTES=5242880; LOG_MAX_FILES=5 archivos rotados además del actual; LOG_QUEUE_LIMIT=1000. Namespace ecoamigos-tech.jsonl y ecoamigos-tech.1.jsonl...5.jsonl, hasta aproximadamente 30 MiB generados por defecto. Retención por cantidad/tamaño, no días; valores técnicos ajustables, no política institucional. Los históricos y archivos ajenos permanecen intactos. Configuración inválida se detecta al arrancar; .gitignore incluye logs/ para no publicar JSONL.
+
+La cola serializa escrituras de una instancia. Saturación/fallo de escritura/rotación descartan el evento, emiten TECH_LOG_UNAVAILABLE una vez y no interrumpen el request ni revierten negocio confirmado. Los marcadores de stderr requieren retención del futuro supervisor. Sin garantía de auditoría durable, sin coordinación multiproceso y con pérdida posible ante caída abrupta. Reducir LOG_MAX_FILES no borra slots históricos fuera del nuevo rango: revisión manual. Directorio/archivos enlazados se rechazan; acceso Windows depende de ACL del operador. No se tocaron ACL ni logs históricos reales.
+
+Pruebas con directorios temporales y fixtures pequeños: tres niveles, secretos en campos/anidados/errores/texto libre, getters no ejecutados, rotación real/retención acotada y archivos ajenos preservados, cola saturada, fallo de directorio, appendFile y rename; promesas resueltas sin tumbar HTTP. Controladores reales con query sustituida fallan por SQL ficticio y devuelven solo mensaje controlado; logs no contienen el secreto de prueba. No se añadieron validaciones funcionales de S11.
+
+### Archivos y comprobaciones
+
+Modificados: .gitignore; backend/.env.example; backend/src/config/db.js; backend/src/middleware/httpConfig.js; backend/src/utils/logger.js; backend/src/server.js; controllers/adminController.js, recyclingController.js, publicController.js y exportController.js. Nuevos: backend/src/config/databaseOptions.js y backend/tests/s08-s10-config-logging.test.js. Documentación: 01-INSTALACION, 02-ARQUITECTURA, 04-API, 06-REGLAS-Y-BACKEND, 08-OPERACION y este 09. Sin cambios en frontend, database, catálogo, autenticación, recuperación ni servicios de archivos S04–S07. Los controladores públicos solo pierden el campo de error interno: SQL de ranking/puntos intacto.
+
+Variables nuevas consumidas: DB_PORT, DATABASE_URL, DB_SSL, LOG_DIR, LOG_MAX_BYTES, LOG_MAX_FILES y LOG_QUEUE_LIMIT. CLIENT_URL y CORS_ORIGINS conservadas con precedencia documentada. .env.example usa placeholders y .env sigue ignorado por Git. Sin cambios de package.json ni lockfiles.
+
+Regresión: S01 CORREGIDO, S02 PARCIAL sin cambio de estrategia, S03 y S04–S07 CORREGIDOS. F16 recuperación, F17 errores, F18 toast, F19 registro y F20 foco/menú intactos. ProtectedRoute, contenido educativo, registro, acceso S05 y firma S07 pasan regresión. Winners/prizes siguen 404. Ranking/puntos sin cambio de consultas ni cálculo; las 56 filas originales del catálogo se comparan intactas en PostgreSQL temporal, sin cambiar los archivos de database.
+
+No se inició conexión a ecoamigos real ni se modificó esa base; no se ejecutaron migraciones reales ni operaciones sobre uploads reales. Los tests de conexión solo construyen configuración y las regresiones usan clústeres desechables. No hubo deploy, proveedor elegido, commit ni push. Smoke manual de navegador local (login, preflight, registro, contenido y archivos protegidos) pendiente; conectividad/TLS/ACL/supervisor institucional pendientes para la futura infraestructura, sin certificarlos aquí.
+
+Validación final S08–S10: **178 pruebas backend y 47 frontend aprobadas (225 total), cero fallos ni omisiones**. Las 12 pruebas específicas nuevas están incluidas en backend. Build Vite correcto (solo avisos de deprecación existentes), sintaxis de 60 archivos JavaScript correcta, JSX cubierto por build y git diff --check correcto. Se ejecutó la suite completa final después del ajuste de CLIENT_URL y la prueba adicional de fallo de appendFile/rotación. No se reinstalaron dependencias ni se cambiaron lockfiles.

@@ -48,7 +48,6 @@ export async function getRanking(_req, res) {
   } catch (error) {
     res.status(500).json({
       message: 'Error al consultar información pública',
-      error: error.message,
     });
   }
 }
@@ -131,7 +130,6 @@ export async function getPublicStats(_req, res) {
   } catch (error) {
     res.status(500).json({
       message: 'Error al consultar estadísticas',
-      error: error.message,
     });
   }
 }
@@ -158,7 +156,6 @@ export async function getPointsCatalog(_req, res) {
   } catch (error) {
     res.status(500).json({
       message: 'Error al consultar catálogo',
-      error: error.message,
     });
   }
 }
@@ -189,7 +186,6 @@ export async function getPublicContentByCategory(req, res) {
   } catch (error) {
     res.status(500).json({
       message: 'Error al consultar contenido educativo',
-      error: error.message,
     });
   }
 }

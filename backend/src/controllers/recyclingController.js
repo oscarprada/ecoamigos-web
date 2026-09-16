@@ -183,9 +183,7 @@ export async function createRecord(req, res) {
     await client.query('COMMIT');
     transactionOpen = false;
     fileCommitted = true;
-    try { logInfo(
-      `Registro de reciclaje creado: record_id=${result.rows[0].id} | user_id=${req.user.id} | team_id=${req.user.team_id} | material=${material_type} | cantidad=${quantity}${unit}`
-    ); } catch { /* A committed record must not depend on file logging. */ }
+    try { logInfo('RECYCLING_CREATED', { actor_id: req.user.id, record_id: result.rows[0].id, team_id: req.user.team_id }); } catch { /* A committed record must not depend on file logging. */ }
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -193,7 +191,7 @@ export async function createRecord(req, res) {
       try { await client.query('ROLLBACK'); }
       catch (rollbackError) { releaseError = rollbackError; }
     }
-    try { logError(`CREATE RECYCLING ERROR user_id=${req.user?.id}: ${error.message}`); }
+    try { logError('CREATE_RECYCLING_ERROR'); }
     catch { /* Preserve the controlled response if logging fails. */ }
 
     if (error instanceof CatalogReferenceValidationError) {
@@ -228,11 +226,10 @@ export async function listMyRecords(req, res) {
 
     res.json(result.rows);
   } catch (error) {
-    logError(`LIST MY RECORDS ERROR user_id=${req.user?.id}: ${error.message}`);
+    logError('LIST_MY_RECORDS_ERROR');
 
     res.status(500).json({
       message: 'Error al listar registros',
-      error: error.message,
     });
   }
 }
@@ -257,11 +254,10 @@ export async function listPendingRecords(_req, res) {
 
     res.json(result.rows);
   } catch (error) {
-    logError(`LIST PENDING RECORDS ERROR: ${error.message}`);
+    logError('LIST_PENDING_RECORDS_ERROR');
 
     res.status(500).json({
       message: 'Error al listar pendientes',
-      error: error.message,
     });
   }
 }
@@ -275,9 +271,7 @@ export async function reviewRecord(req, res) {
     const { status, review_notes } = req.body;
 
     if (!['approved', 'rejected'].includes(status)) {
-      logInfo(
-        `Intento de validación con estado inválido: record_id=${id} | status=${status} | admin_id=${req.user.id}`
-      );
+      logInfo('REVIEW_INVALID', { actor_id: req.user.id, record_id: Number(id) });
 
       return res.status(400).json({
         message: 'Estado inválido',
@@ -295,9 +289,7 @@ export async function reviewRecord(req, res) {
     if (!current.rows[0]) {
       await client.query('ROLLBACK');
       transactionOpen = false;
-      logInfo(
-        `Intento de validar registro inexistente: record_id=${id} | admin_id=${req.user.id}`
-      );
+      logInfo('REVIEW_NOT_FOUND', { actor_id: req.user.id, record_id: Number(id) });
 
       return res.status(404).json({
         message: 'Registro no encontrado',
@@ -338,9 +330,7 @@ export async function reviewRecord(req, res) {
 
     await client.query('COMMIT');
     transactionOpen = false;
-    try { logInfo(
-      `Registro validado: record_id=${id} | status=${status} | points=${points} | admin_id=${req.user.id}`
-    ); } catch { /* La decision confirmada no depende del archivo de log. */ }
+    try { logInfo('RECORD_REVIEWED', { actor_id: req.user.id, record_id: Number(id), status }); } catch { /* La decision confirmada no depende del archivo de log. */ }
 
     res.json(result.rows[0]);
   } catch (error) {
@@ -351,9 +341,7 @@ export async function reviewRecord(req, res) {
         releaseError = rollbackError;
       }
     }
-    try { logError(
-      `REVIEW RECORD ERROR record_id=${req.params?.id} admin_id=${req.user?.id}: ${error.message}`
-    ); } catch { /* Mantener la respuesta controlada aunque falle el log. */ }
+    try { logError('REVIEW_RECORD_ERROR'); } catch { /* Mantener la respuesta controlada aunque falle el log. */ }
 
     res.status(500).json({
       message: 'Error al validar registro',
@@ -385,11 +373,10 @@ export async function listReviewedRecords(_req, res) {
 
     res.json(result.rows);
   } catch (error) {
-    logError(`LIST REVIEWED RECORDS ERROR: ${error.message}`);
+    logError('LIST_REVIEWED_RECORDS_ERROR');
 
     res.status(500).json({
       message: 'Error al listar historial',
-      error: error.message,
     });
   }
 }
