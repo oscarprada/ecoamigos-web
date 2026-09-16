@@ -62,7 +62,7 @@ npm --prefix frontend run build
 git diff --check
 ```
 
-No existen scripts de pruebas automatizadas ni lint. Compilar no verifica PostgreSQL ni los flujos funcionales. Consultar la [matriz de pruebas](docs/09-CALIDAD-Y-PENDIENTES.md).
+Existen pruebas automatizadas backend/frontend, migraciones y concurrencia con PostgreSQL temporal. Ejecutar npm test con ECOAMIGOS_TEST_PG_BIN configurado, npm run check y npm run build. El workflow de GitHub Actions implementa CI, sin despliegue automático; su primera ejecución remota está pendiente. Consultar [calidad](docs/09-CALIDAD-Y-PENDIENTES.md) y [auditoría de dependencias](docs/13-AUDITORIA-DEPENDENCIAS-S12.md). No se añadió un linter completo.
 
 ## GitHub e identidad
 

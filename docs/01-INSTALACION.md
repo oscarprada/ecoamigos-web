@@ -171,3 +171,8 @@ Variables UPLOAD_IMAGE_MB, UPLOAD_DOCUMENT_MB, UPLOAD_VIDEO_MB y UPLOAD_EVIDENCE
 
 
 Configuración S08–S10: ver los contratos completos de [operación](08-OPERACION.md). Mantener CLIENT_URL=http://localhost:5173, PORT=3000 y DB_SSL=false para el desarrollo local. La institución definirá después despliegue, dominios y TLS; no hay proveedor seleccionado ni despliegue ejecutado.
+
+
+## Verificación reproducible S12
+
+Tras npm ci --prefix backend y npm ci --prefix frontend, configurar ECOAMIGOS_TEST_PG_BIN y ejecutar npm test, npm run check y npm run build desde raíz. Los scripts internos son Node multiplataforma; [operación](08-OPERACION.md) detalla Windows/Linux y aislamiento. No ejecutar las pruebas contra una base existente. yaml 2.9.1 se usa solo para validar el workflow; plugin React 5.2.0 corrige el conflicto de peers con Vite 8. Auditoría de dependencias y CI remoto pendientes según [S12](13-AUDITORIA-DEPENDENCIAS-S12.md). EXPORT_MAX_ROWS=1000 limita la exportación, con rango 1–10000 y rechazo explícito del exceso.

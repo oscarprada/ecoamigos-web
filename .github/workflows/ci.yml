@@ -1,0 +1,91 @@
+name: Ecoamigos CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      NODE_ENV: test
+      CLIENT_URL: http://localhost:5173
+      JWT_SECRET: fake_ci_only_jwt_secret
+      ECOAMIGOS_TEST_PG_BIN: /usr/lib/postgresql/18/bin
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: ecoamigos_ci_s12
+          POSTGRES_PASSWORD: fake_ci_only_password
+          POSTGRES_DB: ecoamigos_ci_s12
+        ports: ['55432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ecoamigos_ci_s12 -d ecoamigos_ci_s12"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24.13.0
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: npm de referencia
+        run: npm install --global npm@11.6.2
+      - name: Instalar backend desde lockfile
+        run: npm ci --prefix backend
+      - name: Instalar frontend desde lockfile
+        run: npm ci --prefix frontend
+      - name: Binarios para regresiones que crean sus propios clústeres
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-18
+      - name: Verificar servicio efímero
+        run: node scripts/check-ci-postgres.mjs
+      - name: Backend completo sin omisiones de PostgreSQL
+        run: npm test --prefix backend
+      - name: Frontend completo
+        run: npm test --prefix frontend
+      - name: Build frontend
+        run: npm run build --prefix frontend
+      - name: Sintaxis, YAML y diff
+        run: npm run check
+      - name: Whitespace del commit
+        run: git diff --check HEAD^ HEAD
+  dependency-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24.13.0
+      - run: npm install --global npm@11.6.2
+      - run: npm ci --prefix backend --ignore-scripts
+      - run: npm ci --prefix frontend --ignore-scripts
+      - name: Audit backend completo
+        run: npm audit --prefix backend
+      - name: Audit backend producción
+        if: success() || failure()
+        run: npm audit --prefix backend --omit=dev
+      - name: Audit frontend completo
+        if: success() || failure()
+        run: npm audit --prefix frontend
+      - name: Audit frontend producción
+        if: success() || failure()
+        run: npm audit --prefix frontend --omit=dev

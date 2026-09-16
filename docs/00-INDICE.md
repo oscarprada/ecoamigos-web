@@ -17,6 +17,7 @@ La fuente principal es el árbol de trabajo actual, incluyendo ajustes visuales 
 | Capacitar usuarios | [Manual](07-MANUAL-DE-USUARIO.md) |
 | Interpretar indicadores ambientales | [Metodología y trazabilidad F14](12-METODOLOGIA-INDICADORES.md) |
 | Administrar servidor | [Operación](08-OPERACION.md), [Calidad](09-CALIDAD-Y-PENDIENTES.md) |
+| Evaluar dependencias | [Auditoría S12](13-AUDITORIA-DEPENDENCIAS-S12.md) |
 | Publicar código | [GitHub](10-GITHUB.md) |
 
 ## Convenciones

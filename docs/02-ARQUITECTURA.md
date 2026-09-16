@@ -17,7 +17,7 @@ flowchart LR
   C --> X[ExcelJS: descarga XLSX]
 ```
 
-SPA cliente sin renderizado en servidor, API REST sin ORM y almacenamiento local de archivos. Hay pruebas acotadas de instalación en backend/tests/installation.test.js, sin script npm. No hay colas de trabajos externas, WebSockets, servicios programados, microservicios, contenedores ni configuración CI/CD en el repositorio revisado. Premios y ganadores no forman parte de la aplicación actual.
+SPA cliente sin renderizado en servidor, API REST sin ORM y almacenamiento local de archivos. Hay suites backend/frontend con scripts npm y PostgreSQL temporal. No hay colas de trabajos externas, WebSockets, servicios programados, microservicios, contenedores ni despliegue automatizado. El workflow .github/workflows/ci.yml incorpora integración continua. Premios y ganadores no forman parte de la aplicación actual.
 
 `frontend/src/main.jsx` monta React StrictMode, ToastProvider y App. App monta AuthProvider, BrowserRouter y rutas. El layout incluye cabecera institucional y Outlet. Las rutas privadas atraviesan ProtectedRoute; la API repite la autorización en middleware.
 
@@ -29,7 +29,7 @@ SPA cliente sin renderizado en servidor, API REST sin ORM y almacenamiento local
 | react-router-dom | ^6.23.1 | BrowserRouter, rutas, navegación |
 | axios | ^1.7.2 | Cliente API e interceptor Bearer |
 | vite | ^8.0.8 | Desarrollo y build |
-| @vitejs/plugin-react | ^4.3.1 | Transformación React |
+| @vitejs/plugin-react | 5.2.0 | Transformación React |
 | express | ^4.19.2 | Servidor HTTP |
 | cors | ^2.8.5 | Política de origen |
 | dotenv | ^16.4.5 | Lectura de `.env` |
@@ -156,3 +156,6 @@ S02 conserva provisionalmente Bearer/localStorage, sin cookies ni duplicación. 
 Multer recibe un archivo acotado en almacenamiento privado; el servidor genera UUID y abre con wx. Un worker limitado a 10 segundos/64 MiB de heap ejecuta file-type y comprobaciones básicas de cierre. Solo después se invoca el controlador para asociar el URL interno a la fila. El nombre original no se persiste como ruta. Los archivos publicados también permanecen fuera de express.static: la API decide acceso por ID y estado de la fila.
 
 fileStore centraliza resolución de rutas, verificación de destino real y limpieza con consulta de referencias. contentFiles serializa edición/eliminación con FOR UPDATE y retira el archivo anterior después del COMMIT. Las evidencias conservan el ciclo transaccional F10 y no tienen edición/eliminación nueva. ProtectedFile obtiene Blob mediante Axios/Bearer, cancela peticiones y revoca object URLs. No hay tokens en query ni migración a cookies.
+
+
+S11: el controlador de exportación conserva ExcelJS Workbook en memoria, pero la consulta está limitada a EXPORT_MAX_ROWS + 1 y se rechaza el exceso antes de construir el libro. Exclusión de una generación simultánea por proceso; sin cola distribuida. S12: scripts/run-tests.mjs aísla el entorno de pruebas; scripts/check.mjs valida sintaxis, YAML y diff. yaml 2.9.1 es dependencia de desarrollo backend exclusiva de esas verificaciones.

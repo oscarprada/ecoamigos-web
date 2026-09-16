@@ -4,7 +4,7 @@
 
 ## Estado de despliegue
 
-El repositorio no incluye Docker, Nginx, servicio de sistema, infraestructura como código ni pipeline de despliegue. Lo siguiente es una guía de preparación, no una configuración ya aplicada. Subir código a GitHub no publica la aplicación en Internet.
+El repositorio no incluye Dockerfile de aplicación, Nginx, servicio de sistema, infraestructura como código ni pipeline de despliegue. Existe CI de verificación en .github/workflows/ci.yml. Lo siguiente es una guía de preparación, no una configuración ya aplicada. Subir código a GitHub no publica la aplicación en Internet.
 
 Se requieren tres servicios: hosting estático para frontend, proceso Node persistente para backend y PostgreSQL. También almacenamiento persistente para uploads y logs. GitHub Pages solo serviría archivos estáticos: no ejecuta esta API ni PostgreSQL. Además, un sitio bajo `/ecoamigos-web/` necesita configurar `base` de Vite y el basename de BrowserRouter o usar dominio raíz; esos ajustes no están implementados.
 
@@ -128,7 +128,7 @@ Si el resultado no es el esperado, usar ROLLBACK en lugar de COMMIT. En una base
 | No existe periodo activo tras error | Creación desactivó otros antes de INSERT fallido |
 | Token expirado | Cerrar sesión e ingresar; no hay refresh |
 | Recargar /admin devuelve 404 de hosting | Falta fallback SPA a index.html |
-| Excel falla o tarda | Token/rol, consulta SQL, memoria y volumen de registros |
+| Excel falla o tarda | Token/rol, EXPORT_MAX_ROWS, exportación en curso, SQL y memoria |
 | Letras acentuadas extrañas en terminal | Revisar lectura UTF-8; no reemplazar textos basándose solo en PowerShell mal decodificado |
 
 ## Seguridad y alcance de acceso
@@ -210,3 +210,52 @@ Ante fallo de disco/rotación o saturación se descarta el evento y se emite TEC
 Limitaciones: cola en memoria, posible pérdida en caída abrupta o saturación, sin garantía de auditoría durable, sin coordinación multiproceso. Cada instancia futura necesita LOG_DIR independiente o colector institucional; no compartir estos archivos entre procesos. No se promete atomicidad de rotación frente a fallos físicos: puede quedar una rotación incompleta, sin afectar la transacción de negocio. flushLogs permite esperar pendientes, pero no se añade un supervisor/apagado institucional.
 
 La auditoría funcional de revisión sigue en PostgreSQL (reviewed_by, reviewed_at, review_notes y estado). No se eliminó información funcional persistida ni se añadió historial ficticio. Logs técnicos no sustituyen una auditoría inmutable.
+
+
+## S11: exportación acotada y medición
+
+EXPORT_MAX_ROWS=1000 es un **valor técnico predeterminado configurable**, no política de Parques. Solo admite entero 1–10000; vacío, cero, negativo, decimal o excesivo falla con error controlado, nunca habilita exportación ilimitada. El controlador hace una consulta SELECT con LIMIT máximo+1, sin consulta previa ilimitada ni conteo independiente que pueda competir con el resultado. Ante exceso responde 422, no genera un libro parcial ni permite filtros inexistentes. Ajustar el límite requiere evaluación técnica de memoria; no borrar datos para hacerlo caber. Implementar filtros sería una decisión posterior, no una funcionalidad añadida aquí.
+
+La consulta y el libro usan memoria: al menos array de filas PostgreSQL, modelo de celdas ExcelJS y buffers de serialización ZIP/XLSX; no hay un número fijo universal de copias internas. ExcelJS 4.4.0 sí ofrece writer streaming, pero no se cambió porque el límite de filas con una generación por proceso resuelve el crecimiento arbitrario con menor complejidad y mantiene formato. El control no es distribuido ni un límite duro de RSS. El trabajo de ordenación PostgreSQL puede crecer con la tabla aunque la respuesta esté acotada. No se midió carga institucional ni tráfico concurrente distribuido.
+
+Medición sintética aproximada en Node 24.13.0, procesos nuevos con --expose-gc y filas de tamaño representativo, sin BD real:
+
+| Caso | Filas devueltas a Node | Heap incremental muestreado | RSS incremental observado | Resultado |
+| --- | --- | --- | --- | --- |
+| Antes, 100 filas | 100 | 5.58 MiB | 4.90 MiB | XLSX |
+| Antes, 1000 filas | 1000 | 28.08 MiB | 23.89 MiB | XLSX |
+| Antes, 5000 filas | 5000 | 56.37 MiB | 114.66 MiB | XLSX |
+| Después, 1000 filas | 1000 | 28.08 MiB | 24.57 MiB | XLSX |
+| Después, 5000 candidatas | 1001 | 0.40 MiB | 0.01 MiB | 422, cero bytes XLSX |
+
+Estas cifras son muestras, no máximos garantizados ni benchmarks comparables a producción. scripts/measure-export.mjs inyecta filas sintéticas, sustituye transporte y no importa db.js/.env. Reproducir con node --expose-gc backend/scripts/measure-export.mjs 1000 o 5000. El script mide el código actual; la medición anterior queda como evidencia de la auditoría previa.
+
+Excel mantiene nueve columnas, encabezado verde, fila inmovilizada, autofiltro, nombre de hoja/archivo, unidades y estados. No exporta notas ni evidencias. Los prefijos = + - @ son strings XLSX, sin fórmula; no se añadió apóstrofo visible ni se alteró el número de puntos. NUMERIC quantity conserva la representación de texto decimal que pg/ExcelJS ya utilizaban. Una conversión futura a CSV exige su propio análisis.
+
+## S12: comandos reproducibles y CI
+
+Instalación desde la raíz: npm ci --prefix backend y npm ci --prefix frontend. Ambos lockfiles están versionados y se probaron con instalación limpia; no usar npm install en CI. El conflicto inicial de peers Vite/plugin React se corrigió con plugin 5.2.0, sin force ni legacy-peer-deps. Node 24.13.0 y npm 11.6.2 son la referencia.
+
+En PowerShell, definir únicamente la ubicación de binarios de prueba:
+
+```powershell
+$env:ECOAMIGOS_TEST_PG_BIN='C:\Program Files\PostgreSQL\18\bin'
+npm test --prefix backend
+npm test --prefix frontend
+npm run build --prefix frontend
+npm run check
+```
+
+En Linux exportar ECOAMIGOS_TEST_PG_BIN=/usr/lib/postgresql/18/bin y usar los mismos comandos npm. npm test desde raíz ejecuta ambas suites; npm run test:ci es alias. El runner enumera archivos sin depender de glob del shell y rechaza la falta de binarios PostgreSQL, evitando una suite verde con migraciones omitidas. Ejecuta dos archivos de prueba a la vez, con clústeres/puertos temporales propios y pg_ctl -w esperando inicio antes de cada suite. Los finally detienen los clústeres. Las carpetas temporales de evidencia no se eliminan automáticamente.
+
+El runner fija datos ficticios y puertos no operativos para un Pool de aplicación accidental; sobrescribe DB_*, DATABASE_URL, JWT_SECRET, CLIENT_URL, LOG_DIR y UPLOAD_ROOT. Las pruebas de integración inyectan exclusivamente sus conexiones temporales. No se inicia server.js, no se lee .env real y no se usa la base ecoamigos. Los tests unitarios de configuración construyen objetos sin red.
+
+.github/workflows/ci.yml corre en push a main y pull_request hacia main. Usa actions/checkout@v7.0.1, actions/setup-node@v7.0.0, ubuntu-24.04, Node 24.13.0, npm 11.6.2 y permisos contents:read; no persiste credenciales. Las versiones oficiales fueron consultadas, no se afirma ejecución remota realizada. No usa pull_request_target, secrets institucionales ni pasos de deploy.
+
+El job quality declara un **service container postgres:18**, usuario/base ecoamigos_ci_s12 y password ficticia, puerto efímero del job 55432 y healthcheck pg_isready. check-ci-postgres.mjs verifica ese servicio y una tabla temporal, solo bajo GITHUB_ACTIONS/CI/test. Las suites históricas de migración/concurrencia necesitan además initdb/pg_ctl/psql locales: el workflow instala binarios 18 mediante el repositorio oficial PostgreSQL y conserva sus clústeres independientes. No se reinterpretan esos tests para compartir una BD y arriesgar colisiones. Ninguno usa una base institucional. Son dos comprobaciones distintas documentadas, no un service declarado sin uso.
+
+Después ejecuta tests backend/frontend, build y check; comprueba whitespace del commit. Un job separado dependency-audit instala desde locks con scripts deshabilitados (no necesita bcrypt para auditar) y ejecuta cuatro npm audit, completos y omit=dev. No oculta fallos con continue-on-error; los avisos actuales mantendrán rojo ese job. Consultar [clasificación y decisiones](13-AUDITORIA-DEPENDENCIAS-S12.md).
+
+Se validó YAML con yaml 2.9.1, claves únicas, triggers, permisos, servicio/healthcheck/puerto, scripts y rutas. Se ejecutaron localmente npm ci, tests, build y check. **Pendiente ejecución real de GitHub**, incluido apt, container/healthcheck y acciones, después del commit/push del usuario. Un YAML válido no certifica ese resultado. Smoke manual de Excel real/navegador y validación del runner Linux quedan pendientes. No se añadió ESLint: node --check, pruebas, build y diff forman la verificación actual, con lint completo como mejora posterior.
+
+Ecoamigos incorpora **automatización del aseguramiento de calidad**: pruebas funcionales, regresión, seguridad, concurrencia, migraciones temporales, build y verificaciones técnicas con CI. No se denomina desarrollo automatizado ni CI/CD: no hay despliegue automático.

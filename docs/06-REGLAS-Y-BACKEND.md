@@ -143,9 +143,9 @@ Multer escribe en área privada antes del controlador. La validación real antec
 
 ## Exportación Excel
 
-GET admin/export/excel requiere admin. Consulta todos los registros con usuario/equipo existentes y periodo opcional, orden record_date DESC. Crea libro en memoria con autor Ecoamigos, compañía institucional y fecha actual; una hoja “Reporte Ecoamigos”.
+GET admin/export/excel requiere admin. Consulta registros con usuario/equipo existentes y periodo opcional, orden record_date DESC, con LIMIT parametrizado igual a EXPORT_MAX_ROWS + 1. Crea libro en memoria con autor Ecoamigos, compañía institucional y fecha actual; una hoja “Reporte Ecoamigos”.
 
-Columnas: Fecha, Líder, Equipo, Material, Cantidad, Unidad, Estado, Puntos, Período. Encabezado verde #71B956 con texto blanco, filtro A1:I1 y primera fila inmovilizada. Descarga Reporte_Ecoamigos.xlsx. No incluye evidencia, criterios, catálogo ni comentarios; no tiene filtros ni varias hojas. El volumen aumenta uso de memoria y duración de respuesta.
+Columnas: Fecha, Líder, Equipo, Material, Cantidad, Unidad, Estado, Puntos, Período. Encabezado verde #71B956 con texto blanco, filtro A1:I1 y primera fila inmovilizada. Descarga Reporte_Ecoamigos.xlsx. No incluye evidencia, criterios, catálogo ni comentarios; no tiene filtros ni varias hojas. El volumen aumenta uso de memoria y duración dentro del límite técnico configurable. Si excede el máximo, no se construye libro. Una generación por proceso, liberada en finally ante éxito/error SQL/error XLSX. Texto de usuario se convierte a string XLSX, nunca a objeto formula; valores numéricos existentes no se prefijan ni alteran. Esto no es una protección de futuras conversiones a CSV.
 
 ## Logs y gestión de errores
 

@@ -1,3 +1,4 @@
+import { exportError } from '../../utils/exportError';
 import LoadState from '../../components/LoadState';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -66,8 +67,7 @@ export default function AdminDashboard() {
 
     window.URL.revokeObjectURL(url);
   } catch (error) {
-    console.error(error);
-    alert('No fue posible generar el reporte.');
+    alert(await exportError(error));
   }
 };
 

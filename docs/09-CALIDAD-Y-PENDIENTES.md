@@ -29,7 +29,7 @@ CORREGIDO se refiere al código y la instalación nueva probados, no a una base 
 
 Premios y ganadores están fuera del alcance actual del producto. Se retiraron sus páginas, rutas, enlaces, llamadas, controladores y endpoints, y `GET /public/ranking` volvió a limitarse a `currentPeriod` y `ranking`. No se modificó el cálculo de posiciones o puntos. Las tablas `prizes`, `winner_records` y `rewards` permanecen deliberadamente como legado; no se ejecutó SQL destructivo ni se modificaron datos.
 
-S01 y S03 corregidos según el bloque final; S02 parcial. S04–S07 corregidos según el bloque de archivos al final; S08–S10 corregidos según el cierre de configuración; S11–S12 permanecen sin cierre. F20 está corregido según su bloque final, con smoke visual pendiente. F19 está corregido según su bloque final. F18 está corregido según su verificación formal. F17 está corregido según su bloque final. F16 se detalla en su bloque de recuperación. F10–F15 están corregidos según lo descrito abajo; la matriz T01–T28 conserva sus comprobaciones manuales con T20 actualizado para F13. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
+S01 y S03 corregidos según el bloque final; S02 parcial. S04–S07 corregidos según el bloque de archivos al final; S08–S10 corregidos según el cierre de configuración; S11 corregido y S12 parcial según el cierre final: CI implementado, vulnerabilidades y ejecución GitHub pendientes. F20 está corregido según su bloque final, con smoke visual pendiente. F19 está corregido según su bloque final. F18 está corregido según su verificación formal. F17 está corregido según su bloque final. F16 se detalla en su bloque de recuperación. F10–F15 están corregidos según lo descrito abajo; la matriz T01–T28 conserva sus comprobaciones manuales con T20 actualizado para F13. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
 
 ## Fuente única de puntuación — F04
 
@@ -253,8 +253,8 @@ Pruebas: backend/tests/f15-admin-scope.test.js conserva el arnés PostgreSQL des
 | S08 | CORS fijo y CLIENT_URL ignorada | **CORREGIDO: CORS_ORIGINS/CLIENT_URL, política explícita y HTTP probado**; ver cierre S08–S10 |
 | S09 | Puerto DB fijo, sin SSL parametrizable | **CORREGIDO: configuración pura local/URL/puerto/TLS verificado, sin conexión real**; ver cierre S08–S10 |
 | S10 | Logs síncronos sin rotación | **CORREGIDO: logger asíncrono acotado, minimización y rotación probadas**; ver cierre S08–S10 |
-| S11 | Exportación completa en memoria | Medir límites y considerar volumen/paginación |
-| S12 | No pruebas/CI, lockfiles sin auditoría en esta tarea | Añadir verificaciones y evaluar dependencias por separado |
+| S11 | Exportación completa en memoria | **CORREGIDO**: medición, límite+1, rechazo sin truncamiento y exclusión por proceso |
+| S12 | Hallazgo histórico: no pruebas/CI y lockfiles sin auditoría | **PARCIAL**: suite/CI e instalación reproducibles; vulnerabilidades pendientes y primer run GitHub por ejecutar |
 
 Esta lista deriva del código; no es un escaneo de vulnerabilidades ni una afirmación de explotación. No se modificó la lógica para corregir estos puntos en la entrega de documentación.
 
@@ -570,3 +570,89 @@ Regresión: S01 CORREGIDO, S02 PARCIAL sin cambio de estrategia, S03 y S04–S07
 No se inició conexión a ecoamigos real ni se modificó esa base; no se ejecutaron migraciones reales ni operaciones sobre uploads reales. Los tests de conexión solo construyen configuración y las regresiones usan clústeres desechables. No hubo deploy, proveedor elegido, commit ni push. Smoke manual de navegador local (login, preflight, registro, contenido y archivos protegidos) pendiente; conectividad/TLS/ACL/supervisor institucional pendientes para la futura infraestructura, sin certificarlos aquí.
 
 Validación final S08–S10: **178 pruebas backend y 47 frontend aprobadas (225 total), cero fallos ni omisiones**. Las 12 pruebas específicas nuevas están incluidas en backend. Build Vite correcto (solo avisos de deprecación existentes), sintaxis de 60 archivos JavaScript correcta, JSX cubierto por build y git diff --check correcto. Se ejecutó la suite completa final después del ajuste de CLIENT_URL y la prueba adicional de fallo de appendFile/rotación. No se reinstalaron dependencias ni se cambiaron lockfiles.
+
+
+## Cierre final S11–S12
+
+**S11: CORREGIDO. S12: PARCIAL.** El trabajo inicial S11–S12 partió de git status limpio. Al retomar había cambios S11 correctos y cuatro capturas audit no versionadas; se conservaron y completaron, sin reimplementar S11 ni revertir trabajo. No se trabajaron otros hallazgos. La auditoría histórica “sin pruebas” ya no describe el estado actual: antes del bloque había 178 pruebas backend y 47 frontend, creadas durante D/F/S.
+
+### S11: auditoría, decisión y evidencia
+
+Solo admin, GET /api/admin/export/excel, desde AdminDashboard. No había filtros. SELECT con JOIN de usuarios/equipos y LEFT JOIN períodos, todos los estados/períodos, orden record_date DESC; no limitaba filas. ExcelJS 4.4.0 construía array result.rows, modelo Workbook/celdas y buffers XLSX/ZIP en memoria. El frontend descargaba Blob. No se conoce un número fijo de copias internas; la memoria crecía con el resultado.
+
+Antes de implementar se midieron datasets sintéticos sin BD: 1000 filas alrededor de +28 MiB heap; 5000, +56 MiB heap y +115 MiB RSS. Se eligió un límite explícito con una generación simultánea por proceso, conservando ExcelJS/formato. ExcelJS sí permite streaming, pero sustituir solo writer no limitaría las filas PostgreSQL y sería complejidad innecesaria para el objetivo acotado. La [medición completa y limitaciones](08-OPERACION.md) incluye comando reproducible.
+
+EXPORT_MAX_ROWS=1000 es valor técnico predeterminado configurable, no política institucional. Rango 1–10000; configuraciones inválidas, cero/negativos/decimales/excesos fallan controladamente. SQL hace una sola consulta con LIMIT $1 y parámetro máximo+1. No existe lectura ilimitada previa. Exceso → 422 EXPORT_LIMIT_EXCEEDED/maxRows, sin construir XLSX ni adjunto truncado. La UI interpreta JSON recibido como Blob y explica que administración técnica debe revisar volumen o configuración; no inventa filtros.
+
+Concurrencia → 429 EXPORT_BUSY si ya hay una generación en el proceso. finally libera tras éxito, SQL fallido o excepción XLSX. Si falla después de enviar cabeceras, corta la conexión para no anexar JSON a un XLSX corrupto. No es exclusión distribuida ni garantía contra proceso caído/IO que nunca finalice.
+
+Excel conserva hoja/archivo, nueve encabezados, anchos, estilo verde, autofiltro, fila inmovilizada, unidades y datos. Texto se escribe como string XLSX; los prefijos =,+,-,@ no se convierten en objetos formula. Se verificó tipo String y ausencia de fórmula al leer el libro; puntos numéricos, incluidos negativos del fixture, permanecen Number. quantity conserva su representación decimal heredada de pg. No se implementó CSV.
+
+Pruebas S11: 14 subpruebas backend más contenedor (15) y dos frontend. Incluyen admin/no autenticado/líder; cero/pequeño/999/1000/1001 filas; ausencia de filtros; configuración personalizada e inválida; encabezados/tipos/texto; cuatro prefijos; errores SQL/XLSX, recuperación del bloqueo y dos exportaciones concurrentes; no datos técnicos al cliente. Los datos y las 56 filas del catálogo se comprueban solo en PostgreSQL temporal.
+
+### S12: implementación y validación
+
+Scripts npm test/test:ci en backend/frontend y agregadores raíz test/test:ci/check/build. run-tests.mjs enumera suites sin glob de shell, valida binarios PostgreSQL y usa entorno ficticio/directorios temporales. Sin binarios aborta en vez de omitir migraciones. Usa conexiones temporales explícitas; un Pool de aplicación accidental obtiene 127.0.0.1:1 y cuenta/base ficticias. No carga entorno institucional. check.mjs ejecuta node --check, parser YAML real, verificaciones de contrato CI y git diff --check.
+
+Workflow .github/workflows/ci.yml: push a main y pull_request hacia main, actions oficiales checkout 7.0.1/setup-node 7.0.0, Ubuntu 24.04, Node 24.13.0 y npm 11.6.2. Solo contents:read, sin credenciales persistidas ni secretos reales. service container postgres:18 con usuario/base ecoamigos_ci_s12, clave ficticia, puerto 55432 y healthcheck. Un probe verifica ese servicio; las suites de migración/concurrencia conservan sus clústeres propios creados con binarios PostgreSQL 18. No se conecta a ecoamigos real. Detalles de ambos mecanismos en 08-OPERACION.
+
+El job quality instala mediante npm ci, ejecuta backend/frontend/build/check y revisa whitespace. Un segundo job audita dependencias con cuatro comandos separados y **no ignora sus fallos**. No existe deploy/CD. Las comprobaciones YAML prueban sintaxis, claves únicas, triggers, servicio, healthcheck, rutas, scripts y ausencia de secretos/continue-on-error; no equivalen a una ejecución en GitHub.
+
+npm ci backend pasó. npm ci frontend inicialmente falló ERESOLVE: plugin React 4.7.0 no admite Vite 8 en peerDependencies. Tras revisar cambios, se actualizó solo el tooling directo a @vitejs/plugin-react 5.2.0, que sí lo admite y es compatible con Node 24; npm ci limpio volvió a pasar sin force ni legacy-peer-deps. Ambos locks están versionados y el nuevo contenido se verificó mediante instalación limpia. yaml 2.9.1 es una nueva devDependency backend para validar YAML. No se ejecutó audit fix ni se actualizó bcrypt/tar. El [reporte separado](13-AUDITORIA-DEPENDENCIAS-S12.md) inventaría cada ajuste de lockfile y riesgos.
+
+Audits finales: backend completo/producción, 17 paquetes señalados (4 moderados, 12 altos, 1 crítico) en ambos; frontend completo, 18 (3 bajos, 6 moderados, 9 altos); frontend producción, 6 (4 moderados, 2 altos). Capturas originales/finales preservadas en docs/audits/s12-2026-09-16. tar 6.2.1 llega por bcrypt/node-pre-gyp y se usa en instalación nativa: no se descartó su riesgo por ser transitivo. Tar 7 queda fuera del rango del padre y bcrypt 6 es un major no aplicado. Hay otras correcciones candidatas pendientes, clasificadas por cadena, versión, alcance y exposición. **S12 no se cierra solo por tener CI.**
+
+### Regresión final y límites de lo comprobado
+
+**196 pruebas backend y 49 frontend aprobadas (245 total), cero fallos/omisiones.** Se ejecutaron los comandos npm del workflow, npm ci en ambos paquetes, build Vite y check (70 archivos JavaScript/mjs, YAML/contrato y diff). El backend incluye instalación, D01/F09/F16/S01, concurrencia, auth, archivos, configuración/logging y exportación. No se introdujo un linter que requiriera refactorización cosmética.
+
+S01 CORREGIDO; S02 PARCIAL; S03–S10 CORREGIDOS. Se conserva F01–F20 según estados previos: F05/F07 siguen PARCIALES, D06 pendiente institucional, F16 proveedor de email pendiente. ProtectedRoute, registro, contenido educativo, archivos S05, firma S07, CORS S08, configuración DB S09 y logging S10 intactos. F09 rollback, F10 fecha/período, F12 límite 15, F13 approved+kg y F14 indicadores retirados pasan regresión. Ranking/puntos y catálogo distribuido sin cambios; 56 filas originales comparadas intactas en las bases temporales. Winners/prizes siguen 404. No se reintrodujo ningún indicador, premio o ganador.
+
+No se conectó ni modificó ecoamigos real. No se movieron/modificaron/eliminaron uploads reales. Sin migración real, proveedor cloud elegido, deploy, commit o push. Pendientes: smoke manual Excel/navegador y **primera ejecución real GitHub Actions tras commit/push del usuario**, incluidos runner Linux, apt, imagen PostgreSQL y healthcheck. El job de audit se espera fallido mientras persistan avisos. No se presenta CI remoto como probado.
+
+Este bloque aporta automatización del aseguramiento de calidad y mecanismos automatizados de verificación y regresión, no “desarrollo automatizado” ni despliegue automático.
+
+Archivos modificados: package.json raíz; backend/package.json/package-lock.json/.env.example/src/controllers/exportController.js; frontend/package.json/package-lock.json/src/pages/admin/AdminDashboard.jsx; README.md; docs/00,01,02,04,06,08,09. Nuevos: .github/workflows/ci.yml; scripts/run-tests.mjs, check.mjs, check-workflow.mjs, check-ci-postgres.mjs; backend/scripts/measure-export.mjs; backend/tests/s11-export.test.js, s12-ci.test.js; frontend/src/utils/exportError.js; frontend/tests/s11-export.test.js; docs/13-AUDITORIA-DEPENDENCIAS-S12.md y capturas audit. Única nueva variable funcional: EXPORT_MAX_ROWS. No cambió ningún SQL de esquema ni configuración S01–S10.
+
+
+### Inventario reproducible de archivos de prueba
+
+**backend: 21 archivos .test.js.** Helpers/fixtures no cuentan como suites.
+
+| Archivo | Cobertura |
+| --- | --- |
+| backend/tests/d01-migration.test.js | Migración D01, equivalencia de esquema y preservación de datos |
+| backend/tests/f01-f03-retirement.test.js | Premios/ganadores retirados y 404 |
+| backend/tests/f04-points-source.test.js | Fuente única de puntos |
+| backend/tests/f05-catalog-validation.test.js | Referencias autorizadas por catálogo |
+| backend/tests/f06-f07-catalog-semantics.test.js | Metadatos/rangos; decisiones institucionales pendientes |
+| backend/tests/f08-review.test.js | Revisión atómica, rollback y concurrencia |
+| backend/tests/f09-periods.test.js | Un período activo, migración F09 y rollback |
+| backend/tests/f10-record-period.test.js | Coherencia fecha/período |
+| backend/tests/f11-registration-access.test.js | Líder/equipo actual y autorización |
+| backend/tests/f12-user-limit.test.js | 15 cuentas y altas concurrentes |
+| backend/tests/f13-approved-stats.test.js | approved + kg, estadísticas y regresión ranking |
+| backend/tests/f14-indicator-methodology.test.js | Retiro de indicadores no sustentados |
+| backend/tests/f15-admin-scope.test.js | Administración autorizada y referencias |
+| backend/tests/f16-password-recovery.test.js | Recuperación, tokens, migración, concurrencia y rollback |
+| backend/tests/installation.test.js | D01–D10: instalación vacía, SQL preparado, catálogo e idempotencia |
+| backend/tests/s01-s03-auth.test.js | Sesión vigente, revocación, límites y migración S01 |
+| backend/tests/s03-rate-limit.test.js | IP/proxy, ventanas y capacidad |
+| backend/tests/s04-s07-files.test.js | Multer, firmas, acceso, legacy, cleanup y concurrencia |
+| backend/tests/s08-s10-config-logging.test.js | CORS, DB sin red, logs/retención y errores |
+| backend/tests/s11-export.test.js | Exportación acotada, roles, XLSX, SQL y exclusión |
+| backend/tests/s12-ci.test.js | YAML/contrato, preflight PostgreSQL y bloqueo de probe fuera de CI |
+
+**frontend: 7 archivos .test.js.** Helpers/fixtures no cuentan como suites.
+
+| Archivo | Cobertura |
+| --- | --- |
+| frontend/tests/f17-ui.test.js | Errores UI, carga/empty/reintento, rutas/ProtectedRoute |
+| frontend/tests/f18-toast.test.js | Notificaciones y ciclo de vida |
+| frontend/tests/f19-evidence.test.js | Registro/reset de evidencia |
+| frontend/tests/f20-accessibility.test.js | Foco, diálogo y menú |
+| frontend/tests/s02-session.test.js | Bearer, sesión y respuestas tardías |
+| frontend/tests/s05-protected-files.test.js | Blob, abort/revoke y consumidores privados |
+| frontend/tests/s11-export.test.js | Errores Blob de límite/ocupado, fallback seguro y consumidor de exportación |
+
+La repetición específica final S11 aprobó 15/15, incluyendo fallo simulado del writer XLSX después de preparar cabeceras y recuperación posterior. Docker CLI no está disponible en el equipo local; service container/healthcheck no se ejecutaron aquí y permanecen como validación remota pendiente.

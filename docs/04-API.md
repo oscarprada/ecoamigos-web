@@ -252,7 +252,7 @@ Elimina la fila y, después del COMMIT, retira su archivo si no quedan referenci
 
 ### GET /admin/export/excel
 
-Sin body ni parámetros de filtro implementados. MIME `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`; Content-Disposition attachment; filename `Reporte_Ecoamigos.xlsx`. Incluye todos los estados y periodos. Columnas y alcance en [reglas](06-REGLAS-Y-BACKEND.md).
+Sin body ni parámetros de filtro implementados. MIME `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`; Content-Disposition attachment; filename `Reporte_Ecoamigos.xlsx`. Incluye todos los estados y periodos, siempre que no exceda EXPORT_MAX_ROWS (1000 predeterminado técnico configurable). Recupera como máximo límite+1: el exceso devuelve 422 JSON con code EXPORT_LIMIT_EXCEEDED y maxRows, sin adjunto XLSX ni truncamiento. La UI informa que administración técnica debe revisar el volumen/configuración; no existen filtros. Exportación simultánea en el mismo proceso: 429 EXPORT_BUSY. Errores internos: 500 genérico; si ya comenzó el envío, se interrumpe la conexión. Columnas y alcance en [reglas](06-REGLAS-Y-BACKEND.md).
 
 ## Ejemplos PowerShell
 

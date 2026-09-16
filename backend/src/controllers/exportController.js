@@ -2,8 +2,20 @@ import ExcelJS from 'exceljs';
 import { logError } from '../utils/logger.js';
 import { query } from '../config/db.js';
 
+// A single export per process bounds simultaneous workbook allocation.
+let exporting = false;
+export function exportMaxRows(env = process.env) {
+  const raw = env.EXPORT_MAX_ROWS ?? '1000';
+  if (!/^\d+$/.test(raw) || Number(raw)<1 || Number(raw)>10000) throw Error('Configuración de exportación inválida');
+  return Number(raw);
+}
+// XLSX string cells are not formulas. Never pass user objects as ExcelJS cell values.
+const textCell = value => value == null ? null : String(value);
 export async function exportRecyclingReport(req, res) {
+  if (exporting) return res.status(429).json({message:'Ya hay una exportación en curso',code:'EXPORT_BUSY'});
+  exporting = true;
   try {
+    const maxRows = exportMaxRows();
     const result = await query(`
       SELECT
         rr.record_date,
@@ -20,7 +32,12 @@ export async function exportRecyclingReport(req, res) {
       JOIN teams t ON t.id = rr.team_id
       LEFT JOIN periods p ON p.id = rr.period_id
       ORDER BY rr.record_date DESC
-    `);
+      LIMIT $1
+    `, [maxRows + 1]);
+
+    if (result.rows.length > maxRows) {
+      return res.status(422).json({message: 'El reporte supera el límite de exportación', code: 'EXPORT_LIMIT_EXCEEDED', maxRows});
+    }
 
     const workbook = new ExcelJS.Workbook();
 
@@ -61,14 +78,14 @@ export async function exportRecyclingReport(req, res) {
     result.rows.forEach((row) => {
       worksheet.addRow({
         fecha: row.record_date,
-        leader: row.leader,
-        team: row.team,
-        material: row.material_type,
+        leader: textCell(row.leader),
+        team: textCell(row.team),
+        material: textCell(row.material_type),
         quantity: row.quantity,
-        unit: row.unit,
-        status: row.status,
+        unit: textCell(row.unit),
+        status: textCell(row.status),
         points: row.points_awarded,
-        period: row.period,
+        period: textCell(row.period),
       });
     });
 
@@ -100,9 +117,14 @@ export async function exportRecyclingReport(req, res) {
 
   } catch (error) {
     logError('EXPORT_ERROR');
+    if (res.headersSent) return res.destroy();
+    res.removeHeader?.('Content-Disposition');
+    res.removeHeader?.('Content-Type');
 
     res.status(500).json({
       message: 'Error al generar el reporte',
     });
+  } finally {
+    exporting = false;
   }
 }

@@ -1,5 +1,11 @@
 {
   "dependencies": {
     "exceljs": "^4.4.0"
+  },
+  "scripts": {
+    "test": "npm test --prefix backend && npm test --prefix frontend",
+    "test:ci": "npm test",
+    "check": "node scripts/check.mjs",
+    "build": "npm run build --prefix frontend"
   }
 }
