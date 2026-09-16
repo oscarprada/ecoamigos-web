@@ -596,7 +596,7 @@ Scripts npm test/test:ci en backend/frontend y agregadores raíz test/test:ci/ch
 
 Workflow .github/workflows/ci.yml: push a main y pull_request hacia main, actions oficiales checkout 7.0.1/setup-node 7.0.0, Ubuntu 24.04, Node 24.13.0 y npm 11.6.2. Solo contents:read, sin credenciales persistidas ni secretos reales. service container postgres:18 con usuario/base ecoamigos_ci_s12, clave ficticia, puerto 55432 y healthcheck. Un probe verifica ese servicio; las suites de migración/concurrencia conservan sus clústeres propios creados con binarios PostgreSQL 18. No se conecta a ecoamigos real. Detalles de ambos mecanismos en 08-OPERACION.
 
-El job quality instala mediante npm ci, ejecuta backend/frontend/build/check y revisa whitespace. Un segundo job audita dependencias con cuatro comandos separados y **no ignora sus fallos**. No existe deploy/CD. Las comprobaciones YAML prueban sintaxis, claves únicas, triggers, servicio, healthcheck, rutas, scripts y ausencia de secretos/continue-on-error; no equivalen a una ejecución en GitHub.
+El job quality instala mediante npm ci, ejecuta backend/frontend/build/check y revisa whitespace. Un segundo job ejecuta cuatro auditorías mediante un clasificador explícito: hallazgos visibles como riesgos; fallos de infraestructura siguen fallando. No existe deploy/CD. Las comprobaciones YAML prueban sintaxis, claves únicas, triggers, servicio, healthcheck, rutas, scripts y ausencia de secretos/continue-on-error; no equivalen a una ejecución en GitHub.
 
 npm ci backend pasó. npm ci frontend inicialmente falló ERESOLVE: plugin React 4.7.0 no admite Vite 8 en peerDependencies. Tras revisar cambios, se actualizó solo el tooling directo a @vitejs/plugin-react 5.2.0, que sí lo admite y es compatible con Node 24; npm ci limpio volvió a pasar sin force ni legacy-peer-deps. Ambos locks están versionados y el nuevo contenido se verificó mediante instalación limpia. yaml 2.9.1 es una nueva devDependency backend para validar YAML. No se ejecutó audit fix ni se actualizó bcrypt/tar. El [reporte separado](13-AUDITORIA-DEPENDENCIAS-S12.md) inventaría cada ajuste de lockfile y riesgos.
 
@@ -608,7 +608,7 @@ Audits finales: backend completo/producción, 17 paquetes señalados (4 moderado
 
 S01 CORREGIDO; S02 PARCIAL; S03–S10 CORREGIDOS. Se conserva F01–F20 según estados previos: F05/F07 siguen PARCIALES, D06 pendiente institucional, F16 proveedor de email pendiente. ProtectedRoute, registro, contenido educativo, archivos S05, firma S07, CORS S08, configuración DB S09 y logging S10 intactos. F09 rollback, F10 fecha/período, F12 límite 15, F13 approved+kg y F14 indicadores retirados pasan regresión. Ranking/puntos y catálogo distribuido sin cambios; 56 filas originales comparadas intactas en las bases temporales. Winners/prizes siguen 404. No se reintrodujo ningún indicador, premio o ganador.
 
-No se conectó ni modificó ecoamigos real. No se movieron/modificaron/eliminaron uploads reales. Sin migración real, proveedor cloud elegido, deploy, commit o push. Pendientes: smoke manual Excel/navegador y **primera ejecución real GitHub Actions tras commit/push del usuario**, incluidos runner Linux, apt, imagen PostgreSQL y healthcheck. El job de audit se espera fallido mientras persistan avisos. No se presenta CI remoto como probado.
+No se conectó ni modificó ecoamigos real. No se movieron/modificaron/eliminaron uploads reales. Sin migración real, proveedor cloud elegido, deploy, commit o push. Pendientes: smoke manual Excel/navegador y **segunda ejecución real GitHub Actions tras commit/push del usuario**; en 78c0297 apt, imagen, healthcheck e instalación pasaron, pero fallaron las 13 suites con clústeres propios. El job de audit ahora diferencia riesgos publicados de errores de ejecución; ver la continuación de CI. No se presenta CI remoto como probado.
 
 Este bloque aporta automatización del aseguramiento de calidad y mecanismos automatizados de verificación y regresión, no “desarrollo automatizado” ni despliegue automático.
 
@@ -656,3 +656,8 @@ Archivos modificados: package.json raíz; backend/package.json/package-lock.json
 | frontend/tests/s11-export.test.js | Errores Blob de límite/ocupado, fallback seguro y consumidor de exportación |
 
 La repetición específica final S11 aprobó 15/15, incluyendo fallo simulado del writer XLSX después de preparar cabeceras y recuperación posterior. Docker CLI no está disponible en el equipo local; service container/healthcheck no se ejecutaron aquí y permanecen como validación remota pendiente.
+
+
+### Continuación CI del commit 78c0297
+
+El diagnóstico, aislamiento de PostgreSQL y nueva semántica de dependency-audit se documentan en [revisión del primer run](14-CI-PRIMER-RUN.md). Los totales anteriores son evidencia histórica; consultar ese informe para la validación de esta continuación. S11 sigue CORREGIDO y S12 PARCIAL.

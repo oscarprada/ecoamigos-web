@@ -1,12 +1,11 @@
+import { postgresHarness } from './helpers/postgresCluster.js';
 // F13: only a new disposable PostgreSQL cluster; never loads .env or application DB.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import net from 'node:net';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import pg from 'pg';
 import express from 'express';
@@ -24,24 +23,14 @@ test('F13: estadísticas aprobadas en kg por HTTP y PostgreSQL aislado', {
 }, async (t) => {
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'ecoamigos-f13-test-'));
   const dataDir = path.join(temporary, 'data');
-  const env = { ...process.env, PGCLIENTENCODING: 'UTF8' };
-  for (const key of Object.keys(env)) if (key.startsWith('PG') && key !== 'PGCLIENTENCODING') delete env[key];
-  const run = (name, args, options = {}) => spawnSync(
-    path.join(bin, name + (process.platform === 'win32' ? '.exe' : '')),
-    args, { cwd: root, env, encoding: 'utf8', windowsHide: true, timeout: 60000, ...options },
-  );
-  const ok = result => assert.equal(result.status, 0, result.stderr || result.error?.message || result.stdout);
-  ok(run('initdb', ['-D', dataDir, '-U', 'postgres', '-A', 'trust', '--encoding=UTF8', '--no-locale']));
-  const socket = net.createServer();
-  await new Promise((resolve, reject) => { socket.once('error', reject); socket.listen(0, '127.0.0.1', resolve); });
-  const port = socket.address().port;
-  await new Promise(resolve => socket.close(resolve));
+  const { run, ok, start } = postgresHarness({ bin, root, temporary, suite: 'f13-approved-stats.test.js' });
+  let port;
   let started = false;
   let client;
   let testPool;
   let server;
   try {
-    ok(run('pg_ctl', ['-D', dataDir, '-l', path.join(temporary, 'postgres.log'), '-o', `-h 127.0.0.1 -p ${port}`, '-w', 'start'], { stdio: 'ignore' }));
+    port = await start();
     started = true;
     client = new pg.Client({ host: '127.0.0.1', port, user: 'postgres', database: 'postgres' });
     await client.connect();

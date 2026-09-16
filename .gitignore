@@ -13,6 +13,7 @@ logs/
 # Build
 dist/
 build/
+audit-results/
 
 # Uploads (evidencias)
 backend/uploads/*

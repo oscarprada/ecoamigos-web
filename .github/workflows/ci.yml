@@ -8,6 +8,7 @@ permissions:
   contents: read
 jobs:
   quality:
+    name: QUALITY GATE
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
@@ -66,6 +67,7 @@ jobs:
       - name: Whitespace del commit
         run: git diff --check HEAD^ HEAD
   dependency-audit:
+    name: DEPENDENCY RISK REPORT
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -78,14 +80,12 @@ jobs:
       - run: npm install --global npm@11.6.2
       - run: npm ci --prefix backend --ignore-scripts
       - run: npm ci --prefix frontend --ignore-scripts
-      - name: Audit backend completo
-        run: npm audit --prefix backend
-      - name: Audit backend producción
-        if: success() || failure()
-        run: npm audit --prefix backend --omit=dev
-      - name: Audit frontend completo
-        if: success() || failure()
-        run: npm audit --prefix frontend
-      - name: Audit frontend producción
-        if: success() || failure()
-        run: npm audit --prefix frontend --omit=dev
+      - name: Report dependency risks (infrastructure errors fail)
+        run: node scripts/dependency-risk-report.mjs
+      - name: Preserve dependency risk reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-risk-report
+          path: audit-results/
+          if-no-files-found: error

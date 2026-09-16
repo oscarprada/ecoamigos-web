@@ -62,7 +62,7 @@ npm --prefix frontend run build
 git diff --check
 ```
 
-Existen pruebas automatizadas backend/frontend, migraciones y concurrencia con PostgreSQL temporal. Ejecutar npm test con ECOAMIGOS_TEST_PG_BIN configurado, npm run check y npm run build. El workflow de GitHub Actions implementa CI, sin despliegue automático; su primera ejecución remota está pendiente. Consultar [calidad](docs/09-CALIDAD-Y-PENDIENTES.md) y [auditoría de dependencias](docs/13-AUDITORIA-DEPENDENCIAS-S12.md). No se añadió un linter completo.
+Existen pruebas automatizadas backend/frontend, migraciones y concurrencia con PostgreSQL temporal. Ejecutar npm test con ECOAMIGOS_TEST_PG_BIN configurado, npm run check y npm run build. El workflow de GitHub Actions implementa CI, sin despliegue automático; su primera ejecución remota (78c0297) falló en el arranque de 13 suites PostgreSQL; el ajuste común requiere un segundo run. Consultar [calidad](docs/09-CALIDAD-Y-PENDIENTES.md) y [auditoría de dependencias](docs/13-AUDITORIA-DEPENDENCIAS-S12.md). No se añadió un linter completo.
 
 ## GitHub e identidad
 

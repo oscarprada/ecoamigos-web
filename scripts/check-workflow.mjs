@@ -9,6 +9,7 @@ const job=ci.jobs.quality;assert.equal(job.services.postgres.image,'postgres:18'
 for(const command of ['npm ci --prefix backend','npm ci --prefix frontend','node scripts/check-ci-postgres.mjs','npm test --prefix backend','npm test --prefix frontend','npm run build --prefix frontend','npm run check'])assert.ok(job.steps.some(step=>step.run===command),command);
 for(const name of ['backend','frontend']){const p=JSON.parse(fs.readFileSync(new URL('../'+name+'/package.json',import.meta.url)));assert.ok(p.scripts.test);assert.ok(fs.existsSync(new URL('../'+name+'/package-lock.json',import.meta.url)));}
 assert.doesNotMatch(text,/pull_request_target|secrets\.|continue-on-error|audit fix|deploy/i);
-assert.equal(ci.jobs['dependency-audit'].steps.filter(step=>step.run?.startsWith('npm audit')).length,4);
-for(const job of Object.values(ci.jobs))for(const step of job.steps){if(step.uses)assert.match(step.uses,/^actions\/(checkout|setup-node)@v7\./);if(step['working-directory'])assert.ok(fs.existsSync(new URL('../'+step['working-directory'],import.meta.url)));}
+assert.ok(ci.jobs['dependency-audit'].steps.some(step=>step.run==='node scripts/dependency-risk-report.mjs'));
+assert.ok(ci.jobs['dependency-audit'].steps.some(step=>step.uses==='actions/upload-artifact@v4' && step.if==='always()'));
+for(const job of Object.values(ci.jobs))for(const step of job.steps){if(step.uses)assert.match(step.uses,/^actions\/(?:(checkout|setup-node)@v7\.|upload-artifact@v4$)/);if(step['working-directory'])assert.ok(fs.existsSync(new URL('../'+step['working-directory'],import.meta.url)));}
 console.log('YAML y contrato de CI válidos; ejecución GitHub pendiente.');

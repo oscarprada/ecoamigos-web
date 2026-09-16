@@ -1,3 +1,4 @@
+import { postgresHarness } from './helpers/postgresCluster.js';
 import { authModuleUrl } from './helpers/authModule.js';
 // F16 only. Starts a NEW disposable PostgreSQL cluster, never reads .env.
 // No application database URL is accepted. Files remain in OS temp for inspection.
@@ -6,9 +7,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import net from 'node:net';
 import { fileURLToPath } from 'node:url';
-import { spawnSync } from 'node:child_process';
 import pg from 'pg';
 import express from 'express';
 import jwt from 'jsonwebtoken';
@@ -25,25 +24,15 @@ test('F16: revision transaccional PostgreSQL aislado', {
 }, async (t) => {
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'ecoamigos-f16-test-'));
   const dataDir = path.join(temporary, 'data');
-  const env = { ...process.env, PGCLIENTENCODING: 'UTF8' };
-  for (const key of Object.keys(env)) if (key.startsWith('PG') && key !== 'PGCLIENTENCODING') delete env[key];
-  const run = (name, args, options = {}) => spawnSync(
-    path.join(bin, name + (process.platform === 'win32' ? '.exe' : '')),
-    args, { cwd: root, env, encoding: 'utf8', windowsHide: true, timeout: 60000, ...options },
-  );
-  const ok = (result) => assert.equal(result.status, 0, result.stderr || result.error?.message || result.stdout);
-  ok(run('initdb', ['-D', dataDir, '-U', 'postgres', '-A', 'trust', '--encoding=UTF8', '--no-locale']));
-  const socket = net.createServer();
-  await new Promise((resolve, reject) => { socket.once('error', reject); socket.listen(0, '127.0.0.1', resolve); });
-  const port = socket.address().port;
-  await new Promise(resolve => socket.close(resolve));
+  const { run, ok, start } = postgresHarness({ bin, root, temporary, suite: 'f16-password-recovery.test.js' });
+  let port;
   let started = false;
   let client;
   let testPool;
   let server;
   const oldSecret=process.env.JWT_SECRET;
   try {
-    ok(run('pg_ctl', ['-D', dataDir, '-l', path.join(temporary, 'postgres.log'), '-o', `-h 127.0.0.1 -p ${port}`, '-w', 'start'], { stdio: 'ignore' }));
+    port = await start();
     started = true;
     client = new pg.Client({ host: '127.0.0.1', port, user: 'postgres', database: 'postgres' });
     await client.connect();
