@@ -1,5 +1,7 @@
 # Primer run real de CI: 78c0297
 
+> **HISTÓRICO:** incidente del primer run 78c0297 y corrección posterior f21b2a6. El segundo run de f21b2a6 terminó **SUCCESS**, informado y validado por el usuario en la interfaz de GitHub Actions. No se inspeccionó mediante API en esta consolidación. **CI IMPLEMENTADO Y VALIDADO**; S12 PARCIAL exclusivamente por dependencias. La hipótesis del primer fallo no se convierte retroactivamente en causa confirmada. Estado actual: [trazabilidad](15-TRAZABILIDAD-Y-DECISIONES.md).
+
 ## Evidencia y límite del diagnóstico
 
 El usuario aportó backend 54 pruebas, 41 aprobadas y 13 suites padre fallidas. Instalación, binarios y servicio efímero ya pasaban. El workspace estaba limpio al iniciar esta continuación.
@@ -8,7 +10,7 @@ Las 13 suites duplicaban initdb/pg_ctl/psql. pg_ctl start descartaba stdout/stde
 
 **Hipótesis principal, no causa remota confirmada:** un socket Unix en el directorio del paquete Linux sin permisos para el usuario del runner. Los logs recibidos no contienen el error del servidor ni la etapa exacta. La consulta de Actions mediante el conector devolvió 404. No se afirma que initdb como root haya causado el fallo.
 
-El YAML usa ubuntu-24.04, no un job container; solo apt usa sudo. Los tests no usan sudo y heredan el usuario del runner. Su identidad efectiva anterior no consta en la evidencia. El nuevo helper imprime usuario/UID y rechaza UID 0 antes de initdb. La variable Linux es exactamente /usr/lib/postgresql/18/bin. No hay Docker disponible; wsl --list informó que WSL no está instalado. La validación Linux definitiva requiere el segundo run.
+El YAML usa ubuntu-24.04, no un job container; solo apt usa sudo. Los tests no usan sudo y heredan el usuario del runner. Su identidad efectiva anterior no consta en la evidencia. El nuevo helper imprime usuario/UID y rechaza UID 0 antes de initdb. La variable Linux es exactamente /usr/lib/postgresql/18/bin. No hay Docker disponible; wsl --list informó que WSL no está instalado. En ese momento no había validación Linux completa; el segundo run f21b2a6 SUCCESS aporta posteriormente la validación remota informada por el usuario.
 
 ## Corrección común
 
@@ -39,9 +41,11 @@ S11 conserva default 1000, rango 1–10000, LIMIT + 1, 422 sin truncamiento, 429
 
 No se modificó código de aplicación, SQL, catálogo, ranking ni puntos. No se conectó ni modificó ecoamigos real ni sus uploads. Los controles de catálogo se ejecutan sobre copias temporales. Sin commit, push ni deploy.
 
-## Segundo run que debe revisar el usuario
+## Resultado posterior del segundo run
 
-Comprobar usuario/UID no root, ruta y versiones PostgreSQL 18, arranque de las 13 suites y totales completos sin omisiones, frontend, build/check y QUALITY GATE verde. Si falla un clúster, conservar el error enriquecido (etapa y log), sin inferir la causa por actual 1/expected 0. Revisar las advertencias, resumen y cuatro artifacts JSON del informe de riesgos; si ese job falla, revisar si falló la generación del informe. El commit y push quedan a cargo del usuario.
+El usuario validó SUCCESS en GitHub Actions para f21b2a6, «Corrige infraestructura PostgreSQL del CI». CI queda implementado y validado. Esta consolidación no reproduce la ejecución ni atribuye una inspección API de logs/artifacts. No se dispone aquí del identificador/URL del run ni de capturas para adjuntarlos como evidencia independiente. El smoke manual XLSX S11 fue asimismo aprobado e informado por el usuario. S12 continúa PARCIAL exclusivamente por los riesgos de dependencias; un job de auditoría exitoso no los resuelve.
+
+Las restricciones sobre base real, commit y push descritas en la sección anterior corresponden a la intervención técnica histórica. El proyecto sí informa aplicación/verificación local de D01/F09/F16/S01; no existe despliegue institucional. Esta consolidación solo cambia documentación y el mensaje autorizado del comprobador.
 
 ## Archivos de esta continuación
 

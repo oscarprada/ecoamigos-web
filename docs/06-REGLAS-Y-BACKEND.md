@@ -4,9 +4,9 @@
 
 ## Servidor y persistencia
 
-Express monta CORS configurado por S02, JSON, routers y manejador final controlado. S04–S07 eliminan express.static de uploads; todos los archivos se sirven por ID y relación con BD. No se cambia CORS dentro de este bloque.
+Express monta CORS configurado por S08, JSON, routers y manejador final controlado. S04–S07 eliminan express.static de uploads; todos los archivos se sirven por ID y relación con BD. Los contratos de entorno están en 08-OPERACION.
 
-`pg.Pool` usa la configuración pura de databaseOptions.js: DATABASE_URL no vacía prevalece sobre DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME; puerto predeterminado 5432. DB_SSL=false por defecto o true con verificación de certificado. No se alteraron tamaño/tiempos del pool. `query` delega directamente. Las consultas usan placeholders para valores de usuario; no hay ORM, capa de servicios ni sistema de migraciones.
+`pg.Pool` usa la configuración pura de databaseOptions.js: DATABASE_URL no vacía prevalece sobre DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME; puerto predeterminado 5432. DB_SSL=false por defecto o true con verificación de certificado. No se alteraron tamaño/tiempos del pool. `query` delega directamente. Las consultas usan placeholders para valores de usuario; no hay ORM ni motor automático de migraciones. Hay servicios específicos de archivos/recuperación y scripts SQL versionados de aplicación controlada.
 
 ## Autenticación y roles
 
@@ -24,7 +24,7 @@ Frontend restringe /leader/register a leader; navegación directa de admin/otros
 
 ## Cupo de usuarios — F12
 
-Máximo 15 cuentas totales almacenadas en users para toda la aplicación, incluidos administradores e inactivos. La evidencia es MAX_USERS=15, totalUsers=users.length sobre GET /admin/users sin filtros, y el manual que especifica cuentas totales. No es un límite de líderes, activos, por equipo, por período ni acumulado histórico de altas. Desactivar/reactivar no libera/consume cupo; no hay rutas para ello ni eliminación física en la aplicación. Un admin puede crear otro admin o un líder.
+Máximo 15 cuentas totales almacenadas en users para toda la aplicación, incluidos administradores e inactivos. La evidencia es MAX_USERS=15, totalUsers=users.length sobre GET /admin/users sin filtros, y el manual que especifica cuentas totales. No es un límite de líderes, activos, por equipo, por período ni acumulado histórico de altas. Desactivar/reactivar no libera/consume cupo; PATCH permite cambiar is_active; no hay eliminación física de cuentas en la aplicación. Un admin puede crear otro admin o un líder.
 
 createUser conserva bcrypt 10, password_hash, cuenta activa y asignación de equipo según rol. Calcula el hash antes de BEGIN y toma LOCK TABLE users IN SHARE ROW EXCLUSIVE MODE antes de COUNT(*) e INSERT. Mantiene el bloqueo hasta COMMIT/ROLLBACK; libera la conexión en finally y la descarta si falla rollback. El bloqueo solo afecta escritores de users, permite lectores y evita una clave advisory que otro escritor del repositorio pudiera omitir. No se bloquean periods ni recycling_records; la comprobación FK de equipo mantiene el orden users antes de la referencia. Las lecturas/FK de F08–F11 no requieren ese bloqueo de escritura. Dos altas concurrentes no consumen el mismo cupo.
 
@@ -154,7 +154,7 @@ Columnas: Fecha, Líder, Equipo, Material, Cantidad, Unidad, Estado, Puntos, Per
 
 ## Recuperación temporal — F16
 
-Auditoría: users.password_hash es autoritativo tras D01/D02; login usa bcrypt.compare y el alta bcrypt.hash(...,10), sin política fuerte de longitud/complejidad. La columna password heredada no se consulta ni escribe. No hay servicio de correo, rate limit ni revocación de JWT configurados. No se modifica D01, roles, F15 ni credenciales administrativas.
+Auditoría: users.password_hash es autoritativo tras D01/D02; login usa bcrypt.compare y el alta bcrypt.hash(...,10), sin política fuerte de longitud/complejidad. La columna password heredada no se consulta ni escribe. El proveedor de correo sigue pendiente. S03 aplica rate limiting y S01 revoca JWT mediante session_version. No se modifica D01, roles, F15 ni credenciales administrativas.
 
 password_reset_tokens contiene id, user_id (FK ON DELETE RESTRICT), token_hash UNIQUE con formato SHA-256 hexadecimal, expires_at, used_at y created_at (TIMESTAMPTZ). Un índice user_id facilita invalidar tokens de la cuenta. No almacena texto plano del token ni contraseña nueva. La FK impide cascadas sobre recuperación; no introduce borrado de historial. No se añade purga automática ni política de retención no autorizada.
 

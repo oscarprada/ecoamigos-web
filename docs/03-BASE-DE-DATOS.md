@@ -18,6 +18,7 @@ erDiagram
   users o|--o{ recycling_records : revisa
   periods o|--o{ recycling_records : agrupa
   users o|--o{ content_items : crea
+  users ||--o{ password_reset_tokens : recupera
   periods ||--o{ winner_records : historico
   teams ||--o{ winner_records : participa
   prizes o|--o{ winner_records : premia
@@ -27,7 +28,7 @@ La asignación de equipo a usuario es opcional. `points_catalog` no tiene FK con
 
 ## Diccionario completo
 
-`SERIAL` significa entero autoincremental con clave primaria. Las fechas de creación son `TIMESTAMP` sin zona horaria. Ver el esquema oficial para las restricciones exactas.
+`SERIAL` significa entero autoincremental con clave primaria. Las fechas de creación de negocio son `TIMESTAMP` sin zona horaria; recuperación usa `TIMESTAMPTZ`. Ver el esquema oficial para las restricciones exactas.
 
 ### teams
 
@@ -46,10 +47,24 @@ La asignación de equipo a usuario es opcional. `points_catalog` no tiene FK con
 | name | VARCHAR(120) | Obligatorio |
 | email | VARCHAR(150) | Obligatorio, único; código no normaliza mayúsculas |
 | password_hash | TEXT | Hash bcrypt requerido por login |
+| session_version | INTEGER NOT NULL | DEFAULT 0, CHECK >= 0; versión comparada con sv del JWT; reset la incrementa |
 | role | user_role | `admin` o `leader` |
 | team_id | INT, nullable | FK teams; ON DELETE SET NULL |
-| is_active | BOOLEAN | Por defecto true; comprobado al iniciar sesión |
+| is_active | BOOLEAN | Por defecto true; comprobado en login y cada solicitud protegida |
 | created_at | TIMESTAMP | NOW() |
+
+### password_reset_tokens
+
+| Campo | Tipo | Regla / uso |
+| --- | --- | --- |
+| id | BIGSERIAL | Clave primaria |
+| user_id | INTEGER NOT NULL | FK users, ON DELETE RESTRICT; índice por usuario |
+| token_hash | VARCHAR(64) NOT NULL | UNIQUE; SHA-256 hexadecimal en minúsculas, nunca token original |
+| expires_at | TIMESTAMPTZ NOT NULL | Debe ser posterior a created_at; emisión de 30 minutos en API |
+| used_at | TIMESTAMPTZ nullable | Consumo o invalidación del enlace |
+| created_at | TIMESTAMPTZ NOT NULL | DEFAULT clock_timestamp() |
+
+Nueva solicitud invalida pendientes anteriores; reset consume una sola vez y actualiza password_hash/session_version en transacción. No existe purga automática ni política institucional de retención definida. [Recuperación y reglas](06-REGLAS-Y-BACKEND.md).
 
 ### periods
 
@@ -63,7 +78,7 @@ La asignación de equipo a usuario es opcional. `points_catalog` no tiene FK con
 
 F09 garantiza **máximo un período activo**, permitiendo cero, con `CREATE UNIQUE INDEX periods_one_active_uidx ON public.periods (is_active) WHERE is_active = true`. Protege tanto INSERT como UPDATE, incluso fuera del backend. La creación activa desactiva los anteriores e inserta dentro de una transacción con bloqueo de escritores; los lectores siguen viendo el estado confirmado.
 
-La instalación nueva y la migración D01 actualizada incluyen ese índice. Para una instalación que ya ejecutó D01 antes de F09, se preparó [20260909_f09_periods_one_active.sql](../database/20260909_f09_periods_one_active.sql): aplicar una sola vez con psql y ON_ERROR_STOP, sin volver a ejecutar D01. Bloquea escritores, detecta varios activos y aborta sin elegir ninguno ni cambiar filas. Cero activos es válido. Si el índice ya existe, el script falla de forma segura; no omite silenciosamente un índice homónimo de definición desconocida. No se ejecutó sobre la base real.
+La instalación nueva y la migración D01 actualizada incluyen ese índice. Para una instalación que ya ejecutó D01 antes de F09, se preparó [20260909_f09_periods_one_active.sql](../database/20260909_f09_periods_one_active.sql): aplicar una sola vez con psql y ON_ERROR_STOP, sin volver a ejecutar D01. Bloquea escritores, detecta varios activos y aborta sin elegir ninguno ni cambiar filas. Cero activos es válido. Si el índice ya existe, el script falla de forma segura; no omite silenciosamente un índice homónimo de definición desconocida. F09 cuenta con aplicación/verificación en desarrollo/QA local informada por el responsable; no en producción institucional. Esta consolidación no ejecuta SQL.
 
 ### content_items
 
@@ -75,7 +90,7 @@ La instalación nueva y la migración D01 actualizada incluyen ese índice. Para
 | type | VARCHAR(20) | `text`, `image`, `video`, `file` |
 | description | TEXT | Texto y descripción; nullable |
 | youtube_url | TEXT | Histórico, no lo lee/escribe el controlador actual |
-| file_url | TEXT | `/uploads/content/...`; nullable |
+| file_url | TEXT | Referencia interna nullable; nuevas cargas /uploads/managed/content/UUID.ext, compatibles con rutas heredadas; acceso por endpoint de entidad |
 | status | VARCHAR(20) | `draft` o `published`; por defecto published |
 | created_by | INT, nullable | FK users; ON DELETE SET NULL |
 | created_at | TIMESTAMP | NOW() |

@@ -1,5 +1,7 @@
 # Metodología de indicadores ambientales
 
+> **Contexto de conservación:** auditoría del 12 de septiembre de 2026 y retiro posterior consolidado en fc3389a. F14 está CORREGIDO mediante retiro; los factores, la mitigación inicial y las menciones «sin commit» del registro histórico no describen funciones vigentes. Los apartados de unidades y evidencia científica posteriores al encabezado histórico solo sirven para explicar la decisión y las condiciones de una eventual propuesta nueva. Estado vigente: [trazabilidad y decisiones](15-TRAZABILIDAD-Y-DECISIONES.md).
+
 **Estado F14 CORREGIDO por retiro autorizado; factores RETIRADOS, no validados.** Fecha de retiro: 12 de septiembre de 2026, cambio local sin commit sobre HEAD 91178e02f62fee614934b06b168af767a6510456. No existe hash del retiro porque se solicitó no hacer commit. Se retiraron cálculo, objeto indicators de API, utilidad y cuatro tarjetas; no hay valores ni ceros sustitutos. General.total_quantity conserva el SQL F13 sin duplicación.
 
 El cierre significa que se eliminó del producto activo el uso de factores sin trazabilidad suficiente. La siguiente auditoría se conserva como **documentación histórica del estado anterior al retiro**; sus menciones de factores activos, conservación provisional y F14 PARCIAL describen esa etapa, no el contrato vigente.

@@ -2,13 +2,77 @@
 
 [Índice](00-INDICE.md)
 
-## Revisión controlada D01–D10
+## Estado vigente y procedencia de evidencia
+
+La fuente única del estado D/F/S es [15: trazabilidad y decisiones](15-TRAZABILIDAD-Y-DECISIONES.md): **37 CORREGIDOS, 4 PARCIALES (F05/F07/S02/S12) y 1 PENDIENTE INSTITUCIONAL (D06)**. Retirados por decisión de alcance: F01/F02/F03 y F14. Los informes de las intervenciones se conservan abajo como historia, no como estados adicionales contradictorios.
+
+| Evidencia | Resultado y alcance |
+| --- | --- |
+| Código e historial f21b2a6 | Contratos contrastados con rutas, controladores, UI, SQL y pruebas; 22 archivos de pruebas backend y 7 frontend |
+| Última regresión local registrada en 14 | 199/199 backend y 49/49 frontend, sin fallos/omisiones; build y check aprobados, 73 archivos de sintaxis. No se reejecuta esa regresión de BD durante la consolidación |
+| Migraciones D01/F09/F16/S01 | Aplicadas y verificadas en PostgreSQL local de desarrollo/QA, informado por el proyecto; no en infraestructura institucional de producción |
+| Segundo CI f21b2a6 | SUCCESS informado y validado por el usuario en la interfaz GitHub Actions. CI IMPLEMENTADO Y VALIDADO; sin inspección API de este run aquí |
+| Smoke S11 | XLSX manual aprobado, informado por el usuario; no atribuido a una prueba propia de esta consolidación |
+| Auditorías de dependencias | Capturas fechadas en 13 y audits, preservadas; no auditoría nueva ni certificación de seguridad. S12 PARCIAL exclusivamente por esos riesgos |
+
+No existe CD ni despliegue institucional. Las verificaciones manuales restantes no se marcan aprobadas por disponer de tests unitarios. No hay aquí URL/ID del run, capturas del smoke ni acta de restauración institucional para adjuntarlos como evidencia independiente.
+
+## Matriz T01–T28 VIGENTE
+
+Usar exclusivamente un entorno QA autorizado, cuentas y datos ficticios. Registrar fecha, versión, configuración no secreta, ejecución y evidencia de cada caso. La columna de soporte identifica cobertura existente, **no significa que los 28 casos manuales hayan sido ejecutados en esta consolidación**. Fixtures de catálogo institucional son solo de prueba.
+
+| Caso | Preparación/acción | Resultado esperado actual | Soporte y límite de evidencia |
+| --- | --- | --- | --- |
+| T01 Build | Dependencias instaladas desde locks; compilar frontend | dist generado; registrar warnings sin confundirlos con fallo | Build local registrado en 14 y CI informado |
+| T02 Salud | Instancia QA compatible: GET / y /api/public/ranking | Express responde y ranking consulta el esquema; no es prueba completa de disponibilidad | Instalación/F09; smoke por registrar |
+| T03 Login válido | Cuenta activa de prueba, contraseña válida | JWT HS256 8h id/sv; rol/equipo actuales en cada petición, redirección según rol | S01–S03; sesión UI S02 |
+| T04 Login inválido/inactivo | Contraseña errónea o cuenta inactiva | 401 controlado, sin sesión; límites S03 pueden producir 429 | S01–S03 |
+| T05 Autorización | Sin token, vencido/revocado, líder en admin | 401 para sesión inválida y 403 para rol no autorizado; repetir en API | S01/F11/F15 |
+| T06 Persistencia | Recargar sesión válida y cerrar sesión | Recupera identidad; logout limpia almacenamiento local, no revoca copias de JWT; reset sí invalida versiones previas | S01 y frontend S02 |
+| T07 Equipo/usuario | Admin crea equipo y líder; edita campos autorizados | 201 y listados; PATCH limitado; hash no expuesto, sin DELETE de usuarios/equipos/períodos | F15 e instalación |
+| T08 Cupo | 15 cuentas incluyendo admins/inactivos; dos altas con 14 | Máximo 15; API 409/USER_LIMIT_REACHED, una alta concurrente gana; bootstrap conserva límite | F12/F15 |
+| T09 Período | Crear activo, provocar fallo y solicitudes concurrentes | Máximo uno activo; rollback conserva el anterior, índice protege incluso SQL externo; cero permitido | F09 y D01 |
+| T10 Período/fecha | Sin activo, ID ajeno/inactivo, fecha inválida/fuera de rango/futura | UI bloquea sin activo; backend rechaza y no guarda registro incoherente | F09/F10 |
+| T11 Registro | Líder con equipo actual, referencia válida, PNG válido | 201 pending con 0 puntos; identidad no tomada del body, acceso a evidencia solo autorizado | F05/F11/S04–S07 |
+| T12 Validación | Cantidad cero, material/tipo/firma inválidos, evidencia >20 MiB | Rechazo controlado según contrato, sin registro ni residuo nuevo normal; no asumir código uniforme | F05/F10/S04–S07 |
+| T13 Catálogo | Fixtures aisladas de las cinco referencias; aprobar | Puntos exactamente points_catalog.points, sin fórmula alternativa ni modificar CSV original | F04/F05 e instalación |
+| T14 Sin coincidencia | Referencia inexistente o manipulada | 400 y ningún registro; no inventar grupo institucional para hacer pasar la prueba | F05; limitación D06 |
+| T15 Rangos | 5, 5.1, 15, 15.1, 30, 30.1 y orgánico | Conservar resultados heredados documentados, detectar huecos; no declarar resueltas F05/F07/D06 | F06–F07; reglas 06 |
+| T16 Rechazo | Revisar pending como rejected | 0 puntos, revisor actual, fecha y notas persistidas; operación atómica | F08 |
+| T17 Revisión repetida | Volver a aprobar/rechazar un registro resuelto; dos revisores concurrentes | 409 sin cambio de estado, auditoría ni puntos; una única decisión gana | F08 |
+| T18 Historial personal | Dos líderes del mismo equipo | mine solo devuelve los registros del usuario actual; evidencia no accesible al otro líder | F11/S05 |
+| T19 Ranking | Estados y períodos distintos, empate por puntos | Solo approved del activo, desempate por nombre; sin activo ranking vacío; puntos sin cambios | F13/F09 |
+| T20 Estadísticas | Mezclar estados y unidades | Cantidades solo approved + kg, sin conversión y con alcance histórico; conteos operativos conservan su alcance. No existen indicadores derivados F14 | F13 HTTP y F14 estático |
+| T21 Contenido | Cuatro tipos/categorías, draft y published | Público solo ve publicados y sus adjuntos por entidad; borradores requieren admin | S04–S07 |
+| T22 Adjuntos | Editar con/sin archivo, sustituir y borrar contenido | Conserva archivo sin reemplazo; retira el anterior solo sin referencias en ambas tablas. Rollback/errores conservan datos; crash puede requerir reconciliación | S06; operación 08 |
+| T23 Ganadores retirados | Solicitar /api/public/winners y antigua página /winners | Endpoint inexistente 404; SPA muestra página no encontrada, sin enlaces ni función de ganadores | F01–F03/F17; no exigir HTTP 404 del servidor SPA |
+| T24 Premios retirados | Solicitar antiguas rutas públicas de prizes y rutas admin con sesión admin válida | 404, sin escritura ni UI de premios; tablas históricas preservadas | F01–F03 |
+| T25 XLSX | Admin; límites, exceso, simultaneidad y textos = + - @ | EXPORT_MAX_ROWS default técnico 1000, rango 1–10000; LIMIT + 1; exceso 422 sin truncamiento; una exportación por proceso y otra 429; lock liberado ante error; strings sin fórmulas. Nueve columnas, sin inventar filtros API | S11 backend/frontend; smoke XLSX aprobado informado |
+| T26 Accesibilidad | 360/768/1440 px, menú y modal con teclado | Sin recortes, tablas desplazables, foco visible, Escape/restauración de foco y menú accesible | F20 automatizado; smoke visual integral por registrar |
+| T27 Navegación directa | Ahora: servidor local SPA, recarga /educacion/agua, /admin y ruta desconocida | Comprobar rutas/404 visual y rol API local. Cuando Parques despliegue: verificar fallback del hosting, HTTPS/proxy. Producción inexistente no es requisito de QA actual | F17/ProtectedRoute; hosting futuro fuera del alcance |
+| T28 Restauración | En ensayo autorizado: dump y UPLOAD_ROOT coherentes hacia destinos aislados | Datos y evidencias asociados, login/exportación; registrar recuperación. Esta consolidación no restaura ni certifica un backup institucional | Procedimiento 08; acta de restauración por registrar |
+
+## Cómo reproducir verificaciones
+
+Comandos y aislamiento PostgreSQL: [operación](08-OPERACION.md). npm test desde raíz ejecuta ambas suites; npm run build compila frontend; npm run check revisa sintaxis, YAML/contrato y git diff --check, sin conectarse a BD. Instalar solo mediante el procedimiento de [instalación](01-INSTALACION.md). Las rutas de pruebas se enumeran al final del registro histórico con inventario actualizado en f21b2a6.
+
+## Verificación de esta consolidación documental
+
+Se ejecutó npm run check: sintaxis de 73 archivos, YAML/contrato y git diff --check correctos. Las tres pruebas estáticas F14 aprobaron y confirman que se preserva su evidencia histórica. La comprobación estructural de Markdown cubrió 19 documentos, 73 tablas y 141 enlaces relativos sin errores ni destinos ausentes; no es una inspección visual de todos los renderizadores. Se compararon las 28 filas de la matriz histórica con HEAD y permanecen idénticas.
+
+Se verificaron los 42 estados (37/4/1), las 56 filas del CSV idénticas a HEAD, el cambio exclusivo de mensaje en check-workflow y los valores intactos de .env.example (solo comentarios nuevos). La búsqueda de patrones de secretos no encontró coincidencias; no certifica todo el historial. No se ejecutaron regresiones con BD, migraciones, instalaciones ni auditorías nuevas; los resultados completos anteriores conservan su procedencia.
+
+## Registro HISTÓRICO de auditoría e intervenciones
+
+Se preservan diagnósticos, decisiones y resultados en el orden de trabajo. Frases como «no se conectó la base real», «sin commit» o «F siguiente fuera de alcance» describen **aquella intervención**, no toda la historia del proyecto. D01 se cerró después del informe inicial; F13 antecede al retiro F14; F11/F15/F16 anteceden a S01–S03. Las menciones a JWT con rol/equipo, ausencia de edición, indicadores y límites de auth de esos pasos no son el contrato vigente. D01/F09/F16/S01 sí cuentan con aplicación/verificación local informada. No reinterpretar las tablas históricas como requisitos actuales.
+
+### Revisión controlada D01–D10
 
 Los diez hallazgos se contrastaron nuevamente con código, rutas, SQL, seed y CSV antes de editar. El esquema oficial único es [database/schema.sql](../database/schema.sql); las otras dos rutas solo lo incluyen. Durante esa entrega D01–D10 no se modificaron frontend, rutas ni reglas de puntuación.
 
 Se ejecutaron seis pruebas aprobadas en un cluster PostgreSQL 18.1 nuevo, temporal y aislado, sin leer .env ni conectar a la base de la aplicación. Se prepararon 39 consultas estáticas de controladores, se comprobó la instalación vacía, seed sin escrituras, importación de 56 filas repetida sin cambios, conflictos sin sobrescrituras, restricciones de contenido, bcrypt y alta con solo password_hash. Los únicos usuarios creados fueron fixtures de prueba en ese cluster, que quedó detenido. Ver [procedimiento](../database/README.md) y [reporte](11-CORRECCION-D01-D10.md).
 
-## Hallazgos de instalación y datos
+### Hallazgos de instalación y datos
 
 CORREGIDO se refiere al código y la instalación nueva probados, no a una base existente migrada. No se ejecutó ninguna migración ni se borraron datos existentes.
 
@@ -25,35 +89,35 @@ CORREGIDO se refiere al código y la instalación nueva probados, no a una base 
 | D09 | Repetir seed podía duplicar premios/contenidos | **CORREGIDO en instalación**: seed ejecutado dos veces sin escrituras; bootstrap repetido aborta sin cambiar cuenta. Duplicados anteriores requieren revisión manual. |
 | D10 | Importación absoluta y sin control de duplicados | **CORREGIDO**: ruta relativa desde raíz, staging, transacción y bloqueo; segunda carga no cambia filas, conflicto aborta y el índice de identidad evita duplicados nuevos. |
 
-## Retiro controlado de premios y ganadores — F01–F03
+### Retiro controlado de premios y ganadores — F01–F03
 
 Premios y ganadores están fuera del alcance actual del producto. Se retiraron sus páginas, rutas, enlaces, llamadas, controladores y endpoints, y `GET /public/ranking` volvió a limitarse a `currentPeriod` y `ranking`. No se modificó el cálculo de posiciones o puntos. Las tablas `prizes`, `winner_records` y `rewards` permanecen deliberadamente como legado; no se ejecutó SQL destructivo ni se modificaron datos.
 
-S01 y S03 corregidos según el bloque final; S02 parcial. S04–S07 corregidos según el bloque de archivos al final; S08–S10 corregidos según el cierre de configuración; S11 corregido y S12 parcial según el cierre final: CI implementado, vulnerabilidades y ejecución GitHub pendientes. F20 está corregido según su bloque final, con smoke visual pendiente. F19 está corregido según su bloque final. F18 está corregido según su verificación formal. F17 está corregido según su bloque final. F16 se detalla en su bloque de recuperación. F10–F15 están corregidos según lo descrito abajo; la matriz T01–T28 conserva sus comprobaciones manuales con T20 actualizado para F13. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
+S01 y S03 corregidos según el bloque final; S02 parcial. S04–S07 corregidos según el bloque de archivos al final; S08–S10 corregidos según el cierre de configuración; S11 corregido y S12 parcial según el cierre final: CI implementado y validado con f21b2a6; S12 PARCIAL exclusivamente por dependencias. F20 está corregido según su bloque final, con smoke visual pendiente. F19 está corregido según su bloque final. F18 está corregido según su verificación formal. F17 está corregido según su bloque final. F16 se detalla en su bloque de recuperación. F10–F15 están corregidos según lo descrito abajo; la matriz original T01–T28 se conserva como evidencia histórica y tiene una versión vigente separada al inicio. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
 
-## Fuente única de puntuación — F04
+### Fuente única de puntuación — F04
 
 La utilidad `calculatePoints.js` era código muerto: ninguna ruta o controlador la importaba y aplicaba una fórmula distinta al flujo vigente. Se eliminó sin integrarla. La fuente actual continúa siendo `points_catalog.points`, consultada durante la aprobación y almacenada en `recycling_records.points_awarded`; el ranking continúa sumando ese campo para registros aprobados del periodo activo.
 
-## Autoridad de referencias de catálogo — F05
+### Autoridad de referencias de catálogo — F05
 
 El formulario conserva los tres campos `catalog_*` para compatibilidad, pero dejaron de ser autoridad. Al crear un registro, el backend deriva la referencia vigente a partir de `material_type` y `quantity`, comprueba que los tres valores enviados coincidan y exige que la identidad exista en `points_catalog`. Una combinación manipulada, incoherente o no configurada devuelve 400; el INSERT utiliza los textos canónicos leídos del catálogo y fija `points_awarded` en cero.
 
 La aprobación no cambió: `reviewRecord` obtiene `points_catalog.points`, el rechazo asigna cero y el ranking suma `points_awarded` de aprobados. No se aceptan `points` ni `points_awarded` del cliente. La protección contra referencias manipuladas está implementada, pero F05 queda **PARCIAL** porque la identidad orgánica ofrecida por la interfaz no existe en el catálogo y ahora se rechaza de forma segura. Cerrar el flujo sin regresión requiere definición funcional y valores institucionales autorizados.
 
-## Metadatos descriptivos del catálogo — F06
+### Metadatos descriptivos del catálogo — F06
 
 Las 56 filas contienen `evidence_required` no vacío, con 53 instrucciones distintas que pueden exigir fotos, videos, enlaces, GPS, documentos o validaciones de sistema/historial. `max_frequency` contiene diez expresiones textuales: `Ilimitado`, `Mensual`, `Semanal`, `Trimestral`, `Semestral`, `Única vez`, `1 por visita`, `2 al mes`, `2 por semana` y `3 por semana`. No se definen ventanas, sujeto del conteo, visitas ni procedimiento de comprobación. No existe lógica ejecutable de rachas.
 
 No se implementó una interpretación incompleta. API, reglas y manual dejan explícito que evidencia de catálogo, frecuencia y rachas son metadatos informativos y no participan en creación, revisión, aprobación o puntos. Bajo el alcance original —no presentarlas como automatizadas— F06 queda **CORREGIDO**; automatizarlas sería una regla institucional futura, no una corrección deducible.
 
-## Rangos y referencia orgánica — F07
+### Rangos y referencia orgánica — F07
 
 Frontend y backend conservan los límites heredados `q <= 5`, `5 < q <= 15`, `15 < q <= 30` y `q > 30`. El catálogo solo aporta etiquetas descriptivas: no determina cómo tratar 5.1–5.9 ni 15.1–15.9, aunque `step="0.1"` los permite. Tampoco aclara si los 5 kg orgánicos son valor exacto, mínimo, bloque, frecuencia o descripción. La fila semejante de `Hogares` no autoriza su uso para `Dependencias institucionales`.
 
 Se documentaron y probaron estos hechos sin cambiar límites, redondear, reutilizar 40 puntos ni crear catálogo. F07 queda **PARCIAL**: la caracterización técnica está cerrada, pero requiere definición institucional de decimales y orgánico. Con F05 activo, orgánico continúa rechazado cuando su identidad no existe.
 
-## Revisión administrativa atómica — F08
+### Revisión administrativa atómica — F08
 
 Auditoría previa: `AdminReviewsPage` envía PATCH `/api/recycling/:id/review`; `recyclingRoutes` aplica `authenticateToken` (firma y expiración JWT) y `authorizeRoles('admin')` antes de `reviewRecord`. La UI solo ofrece decisiones sobre pendientes, pero el controlador permitía todas las combinaciones entre pending, approved y rejected: SELECT sin bloqueo, consulta de catálogo al aprobar y UPDATE independiente. Aprobar repetidamente recalculaba puntos; aprobar/rechazar invertía decisiones y sustituía administrador, fecha y notas. Dos solicitudes podían completar con última escritura ganadora. `getCatalogPoints` y UPDATE no compartían transacción.
 
@@ -67,23 +131,23 @@ Validación: `node --test backend/tests/*.test.js` con `ECOAMIGOS_TEST_PG_BIN` a
 
 También pasaron sintaxis de los 24 archivos JavaScript del backend, build frontend (solo avisos de deprecación de Vite) y git diff --check. El test de instalación solo se adaptó para excluir BEGIN/COMMIT/ROLLBACK de PREPARE, que admite consultas preparables y no órdenes de transacción. Sin commit ni push. F09–F20 fuera de alcance.
 
-## Regla comprobada antes de corregir F09
+### Regla comprobada antes de corregir F09
 
 La regla existente es máximo un período activo, con cero permitido: el esquema instala vacío y usa false como valor predeterminado; POST permite crear inactivos; getRanking devuelve currentPeriod null y ranking vacío sin activo. AdminSettingsPage solo crea/lista períodos; no existen endpoints de activación de períodos existentes, edición ni desactivación independiente. Crear uno activo desactiva los anteriores. Las fechas no activan ni vencen períodos automáticamente. El formulario de reciclaje consume currentPeriod desde ranking y bloquea el envío sin activo; el backend de registros acepta period_id o null, asunto que permanece para F10.
 
 Antes de F09, createPeriod ejecuta UPDATE de todos los períodos y luego INSERT mediante consultas independientes. Un INSERT fallido deja el anterior inactivo y las solicitudes concurrentes pueden dejar varios activos. Ni schema.sql ni D01 incluyen unicidad parcial de is_active. Ranking oculta esa multiplicidad con ORDER BY y LIMIT 1; la interfaz de ranking y el formulario de registro dependen de ese resultado único.
 
-### Resultado F09 — CORREGIDO
+#### Resultado F09 — CORREGIDO
 
 `POST /api/admin/periods`, protegido por JWT y rol admin, es la única ruta que escribe períodos. Ahora utiliza una conexión dedicada con BEGIN, LOCK TABLE periods IN SHARE ROW EXCLUSIVE MODE, UPDATE si se crea activo, INSERT y COMMIT. Ante fallo ejecuta ROLLBACK; finally libera la conexión y la descarta si falla el rollback. No se agregaron endpoints. Los logs no condicionan una confirmación ya persistida. Se conserva 201 y la fila creada; errores controlados 400/409/500, sin SQL al cliente. No corresponde 404 porque no hay operación sobre un período existente por ID.
 
-El bloqueo serializa los escritores incluso cuando no hay filas, sin bloquear lecturas ordinarias. El índice único parcial `periods_one_active_uidx` sobre is_active WHERE is_active = true impide más de un activo incluso desde SQL externo. Cero activos continúa permitido. schema.sql y D01 actualizado incluyen la misma definición. Para instalaciones ya migradas con D01 anterior se preparó `database/20260909_f09_periods_one_active.sql`, de una sola aplicación. Ambas migraciones detectan múltiples activos bajo bloqueo y abortan toda la transacción sin reconciliar datos. No se ejecutaron sobre ecoamigos real.
+El bloqueo serializa los escritores incluso cuando no hay filas, sin bloquear lecturas ordinarias. El índice único parcial `periods_one_active_uidx` sobre is_active WHERE is_active = true impide más de un activo incluso desde SQL externo. Cero activos continúa permitido. schema.sql y D01 actualizado incluyen la misma definición. Para instalaciones ya migradas con D01 anterior se preparó `database/20260909_f09_periods_one_active.sql`, de una sola aplicación. Ambas migraciones detectan múltiples activos bajo bloqueo y abortan toda la transacción sin reconciliar datos. Durante aquella intervención se ensayaron en clústeres aislados. El proyecto informa su aplicación/verificación posterior en PostgreSQL local de desarrollo/QA.
 
 Validación F09: 10 subpruebas específicas (11 contando su contenedor) en PostgreSQL 18 temporal comprueban creación activa/inactiva, reemplazo, cero activos, errores 400/409/500, rollback después de desactivar, protección de INSERT/UPDATE SQL, migración compatible y aborto ante múltiples activos. Dos pruebas concurrentes —tabla vacía y con activo previo— observaron espera real `wait_event_type='Lock'`: ambas solicitudes respondieron 201 en orden serializado y solo el segundo período quedó activo. Durante la pausa posterior al UPDATE, getRanking siguió leyendo el estado confirmado anterior. La prueba D01 adicional verifica aborto íntegro por múltiples activos y la comparación de índices confirma equivalencia con la instalación nueva.
 
 Suite completa `node --test backend/tests/*.test.js`, con `ECOAMIGOS_TEST_PG_BIN` definido: **57 pruebas aprobadas, cero fallos y cero omisiones**, incluidas F01–F08, instalación y migración. F08 conserva sus cuatro pruebas concurrentes y rollback. Sintaxis de 25 archivos JavaScript del backend, build frontend y git diff --check correctos; build solo emitió avisos de deprecación de Vite. Las 56 filas del catálogo temporal permanecieron idénticas antes/después de F09 y su CSV no cambió. Clústeres aislados detenidos. Sin cambios en ranking, reciclaje, puntos, indicadores ni reglas F05–F07; sin commit ni push. F10–F20 permanecen fuera de alcance.
 
-## Autoridad del período y fecha de actividad — F10 CORREGIDO
+### Autoridad del período y fecha de actividad — F10 CORREGIDO
 
 Auditoría previa: POST `/api/recycling` aplica JWT, roles leader/admin, upload.single('evidence') y createRecord. RegisterRecyclingPage envía material_type, quantity, unit, quality_level, criteria_count, notes, period_id, record_date, los tres catalog_* y evidence opcional. period_id procede de currentPeriod de GET `/public/ranking`, sin selector de períodos. record_date se iniciaba/reiniciaba con new Date().toISOString().slice(0,10) y un input date editable, sin min/max. El manual pide indicar la fecha y el diccionario la llama fecha declarada; created_at conserva separadamente el momento de creación.
 
@@ -101,7 +165,7 @@ Suite completa: **78 pruebas aprobadas, cero fallos/omisiones**, incluidas F01�
 
 F10: **CORREGIDO**. La regla funcional autorizada está implementada y probada desde backend con comparación DATE y CURRENT_DATE de PostgreSQL. Los estados de F05/F06/F07/F08/F09 se conservan.
 
-## Rol y equipo del registro — F11 CORREGIDO
+### Rol y equipo del registro — F11 CORREGIDO
 
 Auditoría: el enum oficial/D01 contiene admin y leader; supervisor no existe como rol (la mención operativa de supervisor de procesos no es un rol de usuario). JWT conserva id/role/team_id al login y el middleware verifica firma/expiración; authorizeRoles controla rutas. Antes, POST /recycling permitía leader/admin. App.jsx permitía ambos en /leader y /leader/register; aunque la navegación admin apunta a /admin y AdminDashboard no ofrece registro, un admin podía abrir /leader directamente y usar el enlace incondicional de LeaderDashboard. ProtectedRoute redirige roles excluidos a /. Navbar solo ofrece panel líder a leader; AppLayout dirige admin a su panel. No hay selector de equipo en RegisterRecyclingPage.
 
@@ -115,7 +179,7 @@ Frontend: /leader/register solo admite leader; el panel /leader conserva leader/
 
 Validación: **87 pruebas aprobadas, cero fallos/omisiones**, incluidas 8 subpruebas F11 (9 contando contenedor), F01–F10, instalación, migraciones D01/F09 y concurrencia F08/F09/F10. F11 ejercita POST HTTP local con ruta, JWT, middleware y controlador reales contra PostgreSQL temporal (solo se sustituye almacenamiento de archivos, no hay adjuntos): líder válido, admin/supervisor 403, identidad sin equipo/inválida/inexistente 403, sin token 401, body sin autoridad, F05 y F10 preservados. El acceso/enlace frontend se verifica estáticamente. Las 56 filas originales de catálogo se comparan intactas; la identidad institucional adicional es fixture aislada para F05. Sintaxis de 28 archivos backend, build frontend y git diff --check correctos; build solo avisos de deprecación. Clústeres aislados detenidos. No se modificó ecoamigos real, esquema, puntos ni estados anteriores. Sin commit/push; F12–F20 fuera de alcance.
 
-## Cupo total de usuarios — F12 CORREGIDO
+### Cupo total de usuarios — F12 CORREGIDO
 
 Evidencia exacta: AdminUsersPage declara MAX_USERS=15, totalUsers=users.length, remainingSlots=Math.max(MAX_USERS-totalUsers,0), canCreateMore=totalUsers<MAX_USERS; detiene handleSubmit al agotarse y deshabilita el alta. listUsers consulta users sin WHERE ni filtros de actividad/equipo/rol, con LEFT JOIN teams que no excluye usuarios sin equipo. El manual especifica “15 cuentas totales”. La frase visual “habilitados para la campaña” no corresponde a un filtro de activos ni a una relación users/periods: se aclaró el texto conforme al conteo real y manual. No se encontró requisito RF numerado diferente.
 
@@ -129,9 +193,9 @@ Pruebas: **96 aprobadas, cero fallos/omisiones**, incluidas 8 subpruebas F12 (9 
 
 Sintaxis de 29 archivos backend, build frontend y git diff --check correctos; build solo avisos de deprecación. Clústeres temporales detenidos, ninguna conexión a ecoamigos real. No se añadió migración, no se cambiaron estados anteriores, no hubo commit/push. No hace falta otra decisión funcional. F13–F20 fuera de alcance.
 
-## Estadísticas de reciclaje aprobado — F13 CORREGIDO
+### Estadísticas de reciclaje aprobado — F13 CORREGIDO
 
-### Inventario previo a la corrección
+#### Inventario previo a la corrección
 
 Fuentes auditadas: controladores/rutas, todas las agregaciones SUM/COUNT y reduce del frontend, dashboards, ranking público, exportación, esquema oficial/aliases/D01, seed, CSV, README, docs y pruebas. No se encontró otra estadística dinámica pública ni métrica de cumplimiento derivada de recycling_records. El texto educativo público de árboles/agua es contenido fijo, no una consulta de registros, y no se cambia en F13.
 
@@ -159,7 +223,7 @@ En la tabla, RR = recycling_records; “todos” los materiales son papel_carton
 | Historial personal / revisión administrativa | recycling/mine, pending, reviewed; filas RR | Personal todos; revisión pending o approved/rejected | Todos | quantity junto a unit por fila | No | No |
 | Excel: Cantidad, Unidad, Estado, Puntos, Período | admin/export/excel; RR JOIN users/teams LEFT JOIN periods | Todos, sí | Todos | Cantidad y unidad independientes por fila | No; no hay SUM ni total kg | No |
 
-### Decisión e implementación
+#### Decisión e implementación
 
 Evidencia: schema.sql declara quantity NUMERIC(10,2) positiva y unit VARCHAR(20) con default kg, sin enum de unidad. RegisterRecyclingPage tiene dos campos “Cantidad” y “Unidad”, inicia kg pero permite texto libre. createRecord conserva quantity y normaliza texto unit, sin conversión. F05 valida material/cantidad/referencia, no kg. El manual recomienda kg; los fixtures anteriores usan kg, pero ninguno demuestra que todas las filas reales sean kg. CSV ofrece actividades de distintos grupos en kg, litros, unidades, etc.; no una equivalencia universal. No se consultaron datos reales.
 
@@ -175,13 +239,13 @@ Validación: **109 pruebas aprobadas, cero fallos/omisiones**, incluidas 13 F13 
 
 Regresión F01–F12, instalación, migraciones D01/F09 y concurrencias F08/F09/F09-F10/F12 aprobadas; F05 y acceso F11 preservados. Sintaxis de 30 archivos backend y build frontend correctos (solo avisos de deprecación); git diff --check correcto. Las 56 filas de points_catalog se compararon idénticas antes/después en el clúster aislado, y el CSV original no cambió. No se modificaron ranking, reglas de puntos, F05/F07, factores ni exportación. Clústeres temporales detenidos; ninguna conexión a ecoamigos real. Sin migración, commit ni push. F14 no trabajado. No queda decisión de unidad pendiente para F13: se utiliza exclusivamente la unidad declarada, con exclusión explícita de cualquier texto distinto de kg.
 
-## Metodología de indicadores ambientales — F14 CORREGIDO por retiro
+### Metodología de indicadores ambientales — F14 CORREGIDO por retiro
 
 Decisión autorizada del 12 de septiembre de 2026: retirar las cuatro equivalencias, sus factores, utility e indicadores API y tarjetas. No se devuelven valores ni ceros sustitutos. Solo permanece general.total_quantity con el SQL F13 approved+kg. Cierre por eliminación del uso activo de factores no demostrados, no por validación científica. Cambio local sin commit sobre 91178e0. La metodología 12 conserva fuentes y condiciones obligatorias para reintroducción.
 
 Validación final del retiro: **112 pruebas aprobadas, cero fallos/omisiones**, incluidas F14 estáticas y HTTP F13 con contrato sin indicators. Total mixto 42.25 kg correcto; pending/rejected y otras unidades no suman; decimales, ranking y puntos preservados. F01–F12, instalación, migraciones D01/F09 y concurrencias F08/F09/F10/F12 pasan. Sintaxis de 30 archivos, build frontend (avisos de deprecación) y git diff --check correctos. Sin coincidencias de factores equivalentes ni sus consumidores en backend/src y frontend/src; las menciones de agua/energía como categorías educativas no son cálculos. Las 56 filas del catálogo temporal permanecieron idénticas y el CSV no cambió. No hubo conexión a ecoamigos real, commit ni push.
 
-### Auditoría histórica y primera mitigación (sustituidas por el retiro)
+#### Auditoría histórica y primera mitigación (sustituidas por el retiro)
 
 Auditoría completada antes de modificar comentarios/interfaz. git log --follow, blame y show identificaron da6ab9a (2026-05-12) como introducción de fórmulas preliminares y 308f070 (2026-07-09) como sustitución por 0.017, 26.5, 1.0 y 4.1 solo sobre papel. Este último añadió comentarios EPA sin fuente bibliográfica. F13 (91178e0) conservó factores. El repositorio no contenía enlaces WARM ni fuente técnica por indicador. No se puede reconstruir desde git la procedencia científica de los valores.
 
@@ -193,7 +257,7 @@ Pendientes concretos: fuente técnica con unidad/alcance/material que derive 0.0
 
 Validación de software: **114 pruebas aprobadas, cero fallos/omisiones**, incluidas cinco F14 que congelan resultados de 0, 1, 0.25 y 80 kg y verifican las cuatro etiquetas/unidades y advertencia. F13 mantiene HTTP/SQL reales approved+kg, precisión e histórico; F01–F12, instalación, migraciones D01/F09 y concurrencias F08/F09/F10/F12 pasan. Sintaxis de 31 archivos backend, build frontend (solo avisos de deprecación) y git diff --check correctos. Estas pruebas no son validación científica. F05, ranking y puntos intactos; las 56 filas del catálogo temporal se compararon idénticas y CSV original sin cambios. Clústeres temporales detenidos; ecoamigos real no conectada ni modificada. Sin commit/push; F15 no trabajado.
 
-## Alcance administrativo — F15 CORREGIDO
+### Alcance administrativo — F15 CORREGIDO
 
 La auditoría inicial revisó README, docs 01–12, esquema/aliases, D01, seeds, rutas/controllers y pantallas. Demostró alta/listado para usuarios, equipos y períodos; contenido ya tenía edición/borrado. No encontró requisitos inequívocos de CRUD completo y quedó PARCIAL. La decisión funcional explícita posterior autoriza el mantenimiento limitado siguiente; no se deriva por simetría ni por ausencia de requisitos.
 
@@ -214,7 +278,7 @@ Ranking y puntuación conservan algoritmo y valores. Los nombres se obtienen por
 
 Pruebas: backend/tests/f15-admin-scope.test.js conserva el arnés PostgreSQL desechable y HTTP real con rutas/middleware/controller. Amplía altas/listados, permisos, campos prohibidos, duplicados, errores internos provocados sin filtrar SQL, desactivación/reactivación y login, límite quince incluyendo inactivo, reasignación sin reescritura histórica, ranking/puntos, DELETE ausentes y fechas de períodos históricos/vacíos intactas. Compara las 56 filas del catálogo antes/después. Resultado final: **123 pruebas aprobadas, cero fallos y cero omisiones**, incluidas diez subpruebas F15 y su contenedor. Pasan F01–F14, instalación (42 consultas preparadas), migraciones D01/F09 y concurrencias F08/F09/F09-F10/F12. Se adaptó la afirmación obsoleta de F12 sobre ausencia de PATCH; el límite de quince y sus pruebas de concurrencia se conservan. F09 mantiene el período anterior ante rollback; F10 valida período y fecha; F12 cuenta todas las cuentas; F13 conserva approved+kg; F14 mantiene retirados los indicadores no sustentados; F05 sigue rechazando referencias manipuladas. Sintaxis de 31 archivos backend y build frontend correctos (solo avisos de deprecación Vite); git diff --check correcto. Ranking/puntos sin cambios de algoritmo; 56 filas del catálogo temporal idénticas antes/después y CSV original sin cambios. Se usaron únicamente clústeres nuevos aislados, detenidos al finalizar; ecoamigos real no conectada ni modificada. No se ejecutaron commit/push ni trabajo de F16. F15 CORREGIDO dentro de la decisión autorizada; S01/S02 permanecen pendientes. La verificación frontend consistió en revisión del código y build, sin prueba interactiva de navegador.
 
-## Hallazgos funcionales y técnicos
+### Hallazgos funcionales y técnicos
 
 | ID | Hallazgo | Consecuencia / prioridad de revisión |
 | --- | --- | --- |
@@ -239,7 +303,7 @@ Pruebas: backend/tests/f15-admin-scope.test.js conserva el arnés PostgreSQL des
 | F19 | Evidencia del registro: estado e input nativo | **CORREGIDO**: useRef limpia el input solo tras éxito; fallo conserva selección y FormData no reutiliza evidencia |
 | F20 | CORREGIDO: modal con foco/Escape y menú móvil accesible | 5 pruebas F20 aprobadas; smoke visual en navegador pendiente |
 
-## Seguridad y operación
+### Seguridad y operación
 
 | ID | Evidencia | Acción pendiente |
 | --- | --- | --- |
@@ -254,13 +318,13 @@ Pruebas: backend/tests/f15-admin-scope.test.js conserva el arnés PostgreSQL des
 | S09 | Puerto DB fijo, sin SSL parametrizable | **CORREGIDO: configuración pura local/URL/puerto/TLS verificado, sin conexión real**; ver cierre S08–S10 |
 | S10 | Logs síncronos sin rotación | **CORREGIDO: logger asíncrono acotado, minimización y rotación probadas**; ver cierre S08–S10 |
 | S11 | Exportación completa en memoria | **CORREGIDO**: medición, límite+1, rechazo sin truncamiento y exclusión por proceso |
-| S12 | Hallazgo histórico: no pruebas/CI y lockfiles sin auditoría | **PARCIAL**: suite/CI e instalación reproducibles; vulnerabilidades pendientes y primer run GitHub por ejecutar |
+| S12 | Hallazgo histórico: no pruebas/CI y lockfiles sin auditoría | **PARCIAL**: suite/CI e instalación reproducibles; riesgos de dependencias pendientes; CI f21b2a6 SUCCESS informado por el usuario |
 
 Esta lista deriva del código; no es un escaneo de vulnerabilidades ni una afirmación de explotación. No se modificó la lógica para corregir estos puntos en la entrega de documentación.
 
-## Matriz de pruebas manuales
+### Matriz T01–T28 HISTÓRICA — conservar, no ejecutar como contrato vigente
 
-Usar base aislada, dos roles y datos ficticios. Registrar resultado, fecha, entorno y evidencia sin secretos. “Esperado” indica el contrato implementado o el fallo conocido que debe detectarse, no una prueba ya aprobada.
+La tabla siguiente se conserva íntegra como evidencia del diagnóstico original. Sus resultados esperados pueden describir fallos o funcionalidades retiradas. Para nuevas comprobaciones utilizar exclusivamente la matriz VIGENTE al inicio; esta tabla no afirma aprobación manual.
 
 | Caso | Procedimiento | Resultado esperado |
 | --- | --- | --- |
@@ -293,7 +357,7 @@ Usar base aislada, dos roles y datos ficticios. Registrar resultado, fecha, ento
 | T27 Navegación directa | Recargar /educacion/agua y /admin en hosting | Fallback SPA; rol sigue protegido por API |
 | T28 Restauración | Restaurar dump/uploads a entorno aislado | Datos y evidencias coherentes; login/exportación operativos |
 
-## Comandos disponibles
+### Comandos disponibles
 
 ```powershell
 npm --prefix frontend run build
@@ -304,7 +368,7 @@ git diff --check
 El control de sintaxis no ejecuta consultas. Vite emitió avisos de deprecación por opciones usadas por el plugin React; el build finalizó. Cualquier actualización de dependencias debe tratarse como una tarea independiente con pruebas, no como parte implícita de la documentación.
 
 
-## Recuperación de contraseña — F16 CORREGIDO técnicamente
+### Recuperación de contraseña — F16 CORREGIDO técnicamente
 
 Estado previo: solo login/me, password_hash y bcrypt costo 10; login sin revocación de JWT ni rate limit, UI sin recuperación y soporte SQL excepcional. No se encontró proveedor de correo ni política fuerte de contraseñas. La decisión autoriza recuperación, no cambio voluntario de contraseña ni asignación directa por admin.
 
@@ -317,7 +381,7 @@ Límites abiertos: S01/S02 (JWT previos siguen válidos después del reset, comp
 Pruebas F16: HTTP con authRoutes/controladores reales y PostgreSQL temporal; cuentas existentes/inexistentes/inactivas, validaciones, aleatoriedad/hash/expiración, enlace anterior/reutilización, login nuevo/anterior, bcrypt, datos privados ausentes, rollback diferido, consumo simultáneo, producción sin token, entrega fallida, migración con datos previos/repetición segura/FK/índices y catálogo intacto. Resultado final: **135 pruebas aprobadas, cero fallos y cero omisiones**, incluidas once subpruebas F16 y su contenedor. Pasan F01–F15, instalación (51 consultas SQL preparadas), D01, migración F09, concurrencias F08/F09/F09-F10/F12 y migración F16. La prueba de FK se ajustó al SQLSTATE RESTRICT de PostgreSQL, sin cambiar la restricción. Sintaxis de 34 archivos backend correcta, build frontend correcto (solo avisos Vite de deprecación), git diff --check correcto. La UI se verificó por revisión de código/build, no mediante navegador interactivo. F15 sigue correcto; F12 conserva quince cuentas; F09 mantiene el período anterior ante rollback; F10 valida período/fecha; F13 approved+kg y F14 sin indicadores no sustentados. Algoritmo de ranking/puntos y catálogo original sin cambios; 56 filas del catálogo aislado idénticas antes/después. Solo clústeres temporales, detenidos al finalizar; ecoamigos real no conectada ni modificada. F16 se cierra técnicamente según el criterio autorizado, con entrega automática institucional aún pendiente. No se trabajó F17, ni se hizo commit/push.
 
 
-## Promesas UI y 404 SPA — F17 CORREGIDO
+### Promesas UI y 404 SPA — F17 CORREGIDO
 
 Auditoría completa de frontend/src: dashboard admin, contenidos, configuración, ranking, panel líder (dos peticiones) y educación tenían cargas con rechazos sin tratamiento; creación de períodos tampoco los capturaba. Usuarios, revisión y registro capturaban errores, pero podían mostrar vacíos, ceros o ausencia de período después de una carga fallida. Faltaba catch-all. Se conservó el diff correcto de la ejecución interrumpida.
 
@@ -345,7 +409,7 @@ Regresión completa: **135 pruebas backend aprobadas**, cero fallos/omisiones (1
 Smoke manual pendiente: apariencia responsive de 404/errores, clics en navegador real, recarga completa y estados con red interrumpida, navegación rápida entre categorías. Routing automatizado usa páginas sustitutas para las rutas válidas y un layout Outlet; no valida visualmente Navbar/AppLayout. Los efectos se prueban con hooks controlados, no un DOM de navegador. El hosting debe servir index.html al abrir URLs SPA directamente; la 404 React no configura ese fallback ni cambia el código HTTP del servidor. Sin commit/push; detenido antes de F18.
 
 
-## Identidad del toast y efectos — F18 CORREGIDO
+### Identidad del toast y efectos — F18 CORREGIDO
 
 F17 ya había corregido la causa de las consultas repetidas: showToast usa useCallback con [], y solo captura setToast (setter estable). Usa sus argumentos actuales, sin leer estado toast ni capturar valores obsoletos. No existen otras funciones públicas equivalentes en el contexto. Duración 3500 ms, API y estilos originales conservados.
 
@@ -376,7 +440,7 @@ Resultados: **4 pruebas F18 y 26 F17 aprobadas** (30 frontend), **135 pruebas F0
 El navegador integrado no estaba disponible (lista de navegadores vacía); no se certifica prueba visual en navegador. El host DOM de prueba comprueba contenido y ejecución React, no geometría, accesibilidad o interacción nativa. Archivos cambiados: ToastContext.jsx, f18-toast.test.js, helpers/minimalDom.js y este documento. No se trabajó F19 ni se ejecutaron commit/push.
 
 
-## Evidencia del registro — F19 CORREGIDO
+### Evidencia del registro — F19 CORREGIDO
 
 Auditoría: RegisterRecyclingPage guarda el File en form.evidence y lo adjunta condicionalmente a un FormData nuevo en cada submit. Tras éxito ya reiniciaba evidence a null junto con los campos actuales, pero no tenía ref ni vaciaba el input nativo. Esto dejaba el nombre anterior visible aunque el siguiente payload no llevara archivo; la selección consecutiva del mismo archivo podía no emitir change. No hay preview ni nombre personalizado: solo la presentación nativa del input. Ante error el estado ya se conservaba.
 
@@ -389,7 +453,7 @@ Pruebas: frontend/tests/f19-evidence.test.js ejecuta RegisterRecyclingPage con h
 Se adaptó únicamente el arnés F17 para admitir useRef. **33 pruebas frontend aprobadas: 3 F19, 4 F18 y 26 F17**, cero fallos/omisiones. F18 mantiene una sola consulta al período al mostrar/actualizar/ocultar avisos; F17 conserva 404, manejo de errores y reintento. Build Vite, sintaxis de prueba y git diff --check correctos (solo avisos de deprecación Vite). Registro/FormData probado con API sustituida, sin escrituras reales. No se repitió backend porque no cambió ningún contrato ni código backend. F10 permanece conceptualmente intacto; ranking/puntos, backend, esquema y catálogo sin cambios. ecoamigos real no conectada ni modificada. No se trabajó F20; sin commit/push.
 
 
-## Modal y navegación móvil — F20 CORREGIDO
+### Modal y navegación móvil — F20 CORREGIDO
 
 Auditoría de frontend/src: el único modal de aplicación está en EducationCategoryPage, abierto por «Ver contenido completo». Antes usaba dos div con overlay, cierre por botón/fondo, sin nombre semántico, foco inicial, trap, Escape ni restauración; el fondo seguía accesible por teclado. AppLayout es la navegación activa; Navbar.jsx es un componente sin uso y no se modifica. No se encontraron otros drawers/modales propios; las confirmaciones nativas del navegador permanecen intactas.
 
@@ -406,7 +470,7 @@ Smoke manual pendiente: navegador integrado sin instancias disponibles. Comproba
 Archivos F20: AppLayout.jsx, EducationCategoryPage.jsx, refinements.css, utils/dialogFocus.js, tests/f20-accessibility.test.js y documentos 07/09. Backend, esquema, migraciones, ranking/puntos y catálogo distribuido sin cambios. No se conectó ni modificó ecoamigos real; no se repitieron pruebas backend ni conteo SQL del catálogo en F20. No se trabajó S01 ni otro hallazgo de seguridad, sin commit/push.
 
 
-## Autenticación y sesión — S01 CORREGIDO / S02 PARCIAL / S03 CORREGIDO
+### Autenticación y sesión — S01 CORREGIDO / S02 PARCIAL / S03 CORREGIDO
 
 Este bloque sustituye las limitaciones S01–S03 descritas históricamente en F11/F15/F16; esos apartados conservan evidencia de su fecha. No se trabajó S04 ni se certifican los demás hallazgos, incluido S08 pese al ajuste CORS necesario para S02.
 
@@ -414,7 +478,7 @@ Auditoría previa: JWT HS256 de ocho horas contenía id, role, email y team_id; 
 
 S01: se eligió identidad mínima id/sv más iat/exp, conservando duración, Bearer y respuesta token/user. No existe consumidor funcional que necesite decodificar role/team/email del JWT. Middleware fija HS256, verifica firma/expiración e identidad/versiones válidas; consulta users/teams una vez, rechaza inexistente/inactivo/version distinta con 401 y solo coloca datos públicos actuales en req.user. /me reutiliza esa consulta; permisos insuficientes siguen siendo 403. Errores de consulta fallan cerrados con 500 genérico. F15 no habilita edición de rol; una modificación SQL autorizada toma efecto en la siguiente consulta igual que team/is_active. La autorización refleja el estado leído al inicio del request, no cancela operaciones ya en curso. React puede conservar una vista de rol/equipo hasta recargar; eso no concede autoridad al cliente.
 
-Se añadió session_version INTEGER NOT NULL DEFAULT 0 CHECK >=0: comprobar solo is_active no revocaría JWT tras reset de una cuenta activa. La migración 20260914_s01_session_version.sql es incremental/idempotente; schema.sql incluye la columna y verify_s01_session_version.sql verifica sin escribir. F16 incrementa versión en la misma transacción que contraseña y consumo del enlace: éxito revoca todos los JWT previos; rollback conserva versión, contraseña y validez previa. JWT antiguos sin sv requieren login. Desactivar bloquea mientras la cuenta esté inactiva; reactivar puede volver a admitir JWT no vencidos si no cambió su versión. Logout es local y no revoca una copia del token. Nada se aplicó a ecoamigos real.
+Se añadió session_version INTEGER NOT NULL DEFAULT 0 CHECK >=0: comprobar solo is_active no revocaría JWT tras reset de una cuenta activa. La migración 20260914_s01_session_version.sql es incremental/idempotente; schema.sql incluye la columna y verify_s01_session_version.sql verifica sin escribir. F16 incrementa versión en la misma transacción que contraseña y consumo del enlace: éxito revoca todos los JWT previos; rollback conserva versión, contraseña y validez previa. JWT antiguos sin sv requieren login. Desactivar bloquea mientras la cuenta esté inactiva; reactivar puede volver a admitir JWT no vencidos si no cambió su versión. Logout es local y no revoca una copia del token. En esa intervención los ensayos fueron aislados; el proyecto informa aplicación/verificación de S01 en PostgreSQL local de desarrollo/QA.
 
 Comparación S02 para React/Vite y API Express separadas:
 
@@ -438,16 +502,16 @@ Se demostraron JWT válido/inactivo/inexistente/expirado/alterado/legacy/algorit
 
 Regresión expresa: F08 revisión transaccional; F09 conserva activo anterior ante rollback; F10 valida fecha/período; F11 solo líder y equipo actual; F12 límite 15 y concurrencia 201/409; F13 approved + kg; F14 indicadores retirados; F15 administración/referencias; F16 recuperación/consumo único; F17 errores/404; F18 toast estable; F19 reset de archivo; F20 foco/menú conservados. Winners/prizes siguen 404 y ProtectedRoute no cambia. Ranking/puntos sin cambios de algoritmo. Las 56 filas de points_catalog en clústeres temporales se compararon intactas y el catálogo distribuido no cambió. No se conectó ni modificó ecoamigos real.
 
-Build Vite y sintaxis correctos; git diff --check sin errores. Sin nuevas dependencias ni cambios de lockfiles. Smoke manual de login/logout/expiración en navegador y topología institucional pendiente; las pruebas frontend usan ReactDOM con host mínimo y API sustituida, no certifican cookies ni geometría de navegador. La implementación no constituye un despliegue; la base real todavía no recibió migración. No se trabajó S04, sin commit/push.
+Build Vite y sintaxis correctos; git diff --check sin errores. Sin nuevas dependencias ni cambios de lockfiles. Smoke manual de login/logout/expiración en navegador y topología institucional pendiente; las pruebas frontend usan ReactDOM con host mínimo y API sustituida, no certifican cookies ni geometría de navegador. La implementación no constituye un despliegue institucional. La aplicación/verificación local de D01/F09/F16/S01 sí está informada por el proyecto. No se trabajó S04, sin commit/push.
 
 Archivos de aplicación: backend/.env.example; controllers/authController.js y passwordRecoveryController.js; middleware/authMiddleware.js, authRateLimit.js y httpConfig.js; routes/authRoutes.js; server.js. Base: database/schema.sql, 20260914_s01_session_version.sql y verify_s01_session_version.sql. Frontend: api/client.js, api/session.js, context/AuthContext.jsx y utils/uiError.js. Pruebas: d01-migration, f11-registration-access, f12-user-limit, f15-admin-scope, f16-password-recovery, helpers/authModule, s01-s03-auth, s03-rate-limit y frontend/tests/s02-session.test.js. Documentación: 01, 02, 04, 05, 06, 07, 08 y 09. Se usaron los nombres reales del repositorio: arquitectura está en 02-ARQUITECTURA.md, reglas backend en 06-REGLAS-Y-BACKEND.md y despliegue/operación en 08-OPERACION.md.
 
 
-## Cierre controlado S04–S07: archivos y compatibilidad
+### Cierre controlado S04–S07: archivos y compatibilidad
 
 Estado individual: **S04 CORREGIDO; S05 CORREGIDO; S06 CORREGIDO; S07 CORREGIDO** en código y pruebas aisladas. No supone despliegue, análisis antivirus ni validación de archivos reales. S02 permanece PARCIAL, sin modificaciones a su implementación. S08 y posteriores no se trabajaron.
 
-### S04: recepción y almacenamiento
+#### S04: recepción y almacenamiento
 
 Antes: evidencia opcional del líder en POST /api/recycling usaba regex de extensión/MIME y 20 MiB, con inconsistencias MOV/AVI; contenido administrativo en POST/PUT /api/admin/content no tenía filtro ni límite. Los nombres usaban timestamp/Math.random para evidencia y timestamp-originalname para contenido. Ambos flujos escribían bajo uploads publicado estáticamente.
 
@@ -455,7 +519,7 @@ Ahora Multer admite un archivo por solicitud (evidence o file), hasta 24 campos,
 
 Errores uniformes: 400 vacío/multipart/tipo de contenido incompatible, 413 tamaño, 415 extensión/MIME/firma y 500 almacenamiento sin ruta interna. Las extensiones constructor y __proto__ se rechazan igual que cualquier extensión ajena; la tabla de formatos no hereda propiedades de Object.
 
-### S05: acceso por entidad y frontend
+#### S05: acceso por entidad y frontend
 
 Se retiró express.static de uploads y no existe otra publicación del directorio en el servidor. GET /uploads/... devuelve 404. Endpoints GET actuales:
 
@@ -469,7 +533,7 @@ ProtectedFile usa el cliente Axios existente con Bearer, responseType blob y Abo
 
 Compatibilidad demostrada con fixtures temporales: evidencia /uploads/timestamp-random.jpg, contenido /uploads/content/old-name.pdf y DOC /uploads/content/timestamp-nombre.doc, publicado y borrador. Los bytes y la ubicación se conservan, sin moverlos. Ausentes dan 404. DOC era un formato previo: el accept de AdminContentPage en HEAD incluía .doc y el middleware de contenido no lo filtraba; también estaba documentado en el manual. DOC legacy sigue descargable como application/msword, pero una nueva carga DOC se rechaza con 415. El fixture DOC prueba transporte de bytes heredados, no decodificación de Word.
 
-### S06: transacciones, referencias y residuos
+#### S06: transacciones, referencias y residuos
 
 Antes no se compensaban archivos nuevos ante SQL fallido ni se limpiaban reemplazos/eliminaciones. Ahora INSERT o validación fallidos limpian el nuevo; UPDATE fallido conserva el anterior y limpia el nuevo. UPDATE/DELETE bloquean la entidad con SELECT FOR UPDATE y limpian el anterior solo después de COMMIT, liberando primero la conexión. Antes de borrar se consultan ambas referencias: content_items.file_url y recycling_records.evidence_url. Un archivo todavía referenciado se conserva; ENOENT es seguro. No se añadió eliminación de evidencias ni operación funcional nueva.
 
@@ -477,7 +541,7 @@ Pruebas incluyen fallo SQL de INSERT/UPDATE, COMMIT diferido fallido, dos reempl
 
 No existe atomicidad distribuida entre PostgreSQL y disco: caída del proceso o fallo físico pueden dejar residuos. No se revierte ficticiamente un COMMIT ni se declara limpieza absoluta. No se eliminan huérfanos históricos automáticamente ni se aplica retención por antigüedad. La revisión futura exige copia de seguridad, detener escrituras y cotejar ambas columnas antes de retirar residuos; procedimiento en 08-OPERACION. No se ejecutó esa operación sobre archivos reales.
 
-### S07: formatos y alcance de la firma
+#### S07: formatos y alcance de la firma
 
 Dependencia nueva exacta file-type 22.1.0, ESM, Node >=22; validada con Node 24.13.0. Solo backend/package.json y backend/package-lock.json cambian dependencias (nueve paquetes transitivos añadidos). No hay nueva dependencia frontend. Se ejecuta detección en worker con 10 segundos de plazo y heap de 64 MiB; no es un límite de memoria total del proceso. Extensión normalizada, MIME declarado permitido y extensión detectada deben concordar.
 
@@ -500,7 +564,7 @@ Se probaron JPEG y PNG reales de 1 píxel, PDF de una página con xref y DOCX ZI
 
 file-type ofrece identificación por firma de mejor esfuerzo, no antivirus ni garantía de seguridad interna. Los marcadores adicionales detectan ciertos truncamientos, no toda corrupción; no se decodifican imágenes/videos completos ni se certifican documentos libres de contenido activo. La lectura de archivos legacy no aplica retroactivamente el filtro de nuevas cargas. El smoke con archivos reales representativos queda pendiente en entorno autorizado.
 
-### Verificación y alcance de esta continuación
+#### Verificación y alcance de esta continuación
 
 Regresión completa: 166 pruebas backend y 47 frontend aprobadas, cero fallos/omisiones (213 en total). El bloque S04–S07 comprende 17 subpruebas backend más contenedor; frontend aporta cinco pruebas Blob/consumidores. Repetición final del bloque tras el último ajuste de extensiones: 18/18 aprobadas. Sintaxis de 58 archivos JavaScript y git diff --check correctos; JSX cubierto por build Vite aprobado. Las pruebas backend crean PostgreSQL y UPLOAD_ROOT temporales, inyectan sus conexiones y no cargan db.js/.env de la aplicación.
 
@@ -518,11 +582,11 @@ Archivos modificados o nuevos del bloque:
 - Documentación: 01-INSTALACION.md, 02-ARQUITECTURA.md, 04-API.md, 06-REGLAS-Y-BACKEND.md, 07-MANUAL-DE-USUARIO.md, 08-OPERACION.md y este 09-CALIDAD-Y-PENDIENTES.md.
 
 
-## Cierre controlado S08–S10: configuración y logging
+### Cierre controlado S08–S10: configuración y logging
 
 **S08 CORREGIDO; S09 CORREGIDO; S10 CORREGIDO**, con alcance de código y pruebas locales aisladas. No certifica un despliegue institucional, una conexión TLS real ni cumplimiento legal integral. Estado inicial: git status --short vacío; los cambios S04–S07 ya estaban en HEAD y se conservaron. No se trabajaron S11/S12.
 
-### Auditoría antes de implementar
+#### Auditoría antes de implementar
 
 | Área | Mapa encontrado | Decisión aplicada |
 | --- | --- | --- |
@@ -537,19 +601,19 @@ Archivos modificados o nuevos del bloque:
 
 Se revisaron package.json y lockfile, variables, rutas, servicios, consola, filesystem y documentación. La búsqueda no encontró otra configuración de conexión de la aplicación. No se introducen proveedor, dominio institucional o certificado inventados.
 
-### S08
+#### S08
 
 CORS_ORIGINS prevalece sobre CLIENT_URL; permite lista separada por comas con espacios recortados. CLIENT_URL conserva un único origen para F16. Si ambas faltan, únicamente http://localhost:5173 fuera de producción; producción exige definición explícita. Vacío, wildcard y origen inválido fallan de forma controlada. Un origen ajeno recibe 403 genérico sin llegar a la operación. Sin Origin se continúa para CLI/servidores, sin omitir autorización. OPTIONS válido devuelve 204; Authorization/Content-Type, métodos GET/HEAD/POST/PUT/PATCH/DELETE/OPTIONS y Retry-After explícitos. credentials=false, frontend withCredentials=false y Bearer sin cambios; S02 permanece PARCIAL, sin cookies ni CSRF.
 
 Pruebas HTTP cubren localhost, origen de lista, precedencia, espacios, origen ajeno (incluido POST sin ejecutar handler), preflight permitido/rechazado, Authorization y ausencia de Origin. Configuración vacía, inválida, wildcard y falta en producción rechazada. No se añadieron rutas de negocio.
 
-### S09
+#### S09
 
 Modo local: DB_HOST/DB_USER/DB_PASSWORD/DB_NAME requeridos, DB_PORT configurable 1–65535 o 5432 por omisión. DATABASE_URL no vacía prevalece completamente y se descompone en campos explícitos; admite postgres/postgresql y credenciales escapadas. Se rechazan query/fragmento para evitar ambigüedad con las opciones SSL de pg. URL vacía selecciona modo local. DB_SSL=false predeterminado; true exige verificación TLS mediante rejectUnauthorized:true. No hay modo inseguro; NODE_TLS_REJECT_UNAUTHORIZED=0 falla. Errores de configuración fijos sin secretos; DATABASE_POOL_ERROR no incluye Error original.
 
 Pruebas sin red comprueban ambos modos, puerto personalizado/fallback, precedencia, decodificación, faltantes, URLs inválidas, SSL false/true y configuración efectiva de pg.Client sin connect(). No se utilizó ecoamigos real ni infraestructura externa. Certificados privados/CA y conectividad institucional quedan para la infraestructura que defina Parques Nacionales, sin desactivar verificación.
 
-### S10
+#### S10
 
 Un logger asíncrono propio y pequeño utiliza node:fs/promises, sin nuevas dependencias. Niveles info/warn/error, fecha UTC, evento de una lista cerrada y contexto permitido: IDs enteros actor_id/record_id/entity_id/team_id, estado approved/rejected. Los IDs conservan capacidad de correlación y se tratan como datos vinculables; no se promete anonimización. Se descartan datos personales de texto, IP/user agent, notas/evidencias/rutas/nombres de archivos, secretos, headers, errores completos y objetos anidados. No se serializan getters ni toJSON del payload.
 
@@ -559,7 +623,7 @@ La cola serializa escrituras de una instancia. Saturación/fallo de escritura/ro
 
 Pruebas con directorios temporales y fixtures pequeños: tres niveles, secretos en campos/anidados/errores/texto libre, getters no ejecutados, rotación real/retención acotada y archivos ajenos preservados, cola saturada, fallo de directorio, appendFile y rename; promesas resueltas sin tumbar HTTP. Controladores reales con query sustituida fallan por SQL ficticio y devuelven solo mensaje controlado; logs no contienen el secreto de prueba. No se añadieron validaciones funcionales de S11.
 
-### Archivos y comprobaciones
+#### Archivos y comprobaciones
 
 Modificados: .gitignore; backend/.env.example; backend/src/config/db.js; backend/src/middleware/httpConfig.js; backend/src/utils/logger.js; backend/src/server.js; controllers/adminController.js, recyclingController.js, publicController.js y exportController.js. Nuevos: backend/src/config/databaseOptions.js y backend/tests/s08-s10-config-logging.test.js. Documentación: 01-INSTALACION, 02-ARQUITECTURA, 04-API, 06-REGLAS-Y-BACKEND, 08-OPERACION y este 09. Sin cambios en frontend, database, catálogo, autenticación, recuperación ni servicios de archivos S04–S07. Los controladores públicos solo pierden el campo de error interno: SQL de ranking/puntos intacto.
 
@@ -572,11 +636,11 @@ No se inició conexión a ecoamigos real ni se modificó esa base; no se ejecuta
 Validación final S08–S10: **178 pruebas backend y 47 frontend aprobadas (225 total), cero fallos ni omisiones**. Las 12 pruebas específicas nuevas están incluidas en backend. Build Vite correcto (solo avisos de deprecación existentes), sintaxis de 60 archivos JavaScript correcta, JSX cubierto por build y git diff --check correcto. Se ejecutó la suite completa final después del ajuste de CLIENT_URL y la prueba adicional de fallo de appendFile/rotación. No se reinstalaron dependencias ni se cambiaron lockfiles.
 
 
-## Cierre final S11–S12
+### Cierre final S11–S12
 
 **S11: CORREGIDO. S12: PARCIAL.** El trabajo inicial S11–S12 partió de git status limpio. Al retomar había cambios S11 correctos y cuatro capturas audit no versionadas; se conservaron y completaron, sin reimplementar S11 ni revertir trabajo. No se trabajaron otros hallazgos. La auditoría histórica “sin pruebas” ya no describe el estado actual: antes del bloque había 178 pruebas backend y 47 frontend, creadas durante D/F/S.
 
-### S11: auditoría, decisión y evidencia
+#### S11: auditoría, decisión y evidencia
 
 Solo admin, GET /api/admin/export/excel, desde AdminDashboard. No había filtros. SELECT con JOIN de usuarios/equipos y LEFT JOIN períodos, todos los estados/períodos, orden record_date DESC; no limitaba filas. ExcelJS 4.4.0 construía array result.rows, modelo Workbook/celdas y buffers XLSX/ZIP en memoria. El frontend descargaba Blob. No se conoce un número fijo de copias internas; la memoria crecía con el resultado.
 
@@ -590,7 +654,7 @@ Excel conserva hoja/archivo, nueve encabezados, anchos, estilo verde, autofiltro
 
 Pruebas S11: 14 subpruebas backend más contenedor (15) y dos frontend. Incluyen admin/no autenticado/líder; cero/pequeño/999/1000/1001 filas; ausencia de filtros; configuración personalizada e inválida; encabezados/tipos/texto; cuatro prefijos; errores SQL/XLSX, recuperación del bloqueo y dos exportaciones concurrentes; no datos técnicos al cliente. Los datos y las 56 filas del catálogo se comprueban solo en PostgreSQL temporal.
 
-### S12: implementación y validación
+#### S12: implementación y validación
 
 Scripts npm test/test:ci en backend/frontend y agregadores raíz test/test:ci/check/build. run-tests.mjs enumera suites sin glob de shell, valida binarios PostgreSQL y usa entorno ficticio/directorios temporales. Sin binarios aborta en vez de omitir migraciones. Usa conexiones temporales explícitas; un Pool de aplicación accidental obtiene 127.0.0.1:1 y cuenta/base ficticias. No carga entorno institucional. check.mjs ejecuta node --check, parser YAML real, verificaciones de contrato CI y git diff --check.
 
@@ -602,25 +666,26 @@ npm ci backend pasó. npm ci frontend inicialmente falló ERESOLVE: plugin React
 
 Audits finales: backend completo/producción, 17 paquetes señalados (4 moderados, 12 altos, 1 crítico) en ambos; frontend completo, 18 (3 bajos, 6 moderados, 9 altos); frontend producción, 6 (4 moderados, 2 altos). Capturas originales/finales preservadas en docs/audits/s12-2026-09-16. tar 6.2.1 llega por bcrypt/node-pre-gyp y se usa en instalación nativa: no se descartó su riesgo por ser transitivo. Tar 7 queda fuera del rango del padre y bcrypt 6 es un major no aplicado. Hay otras correcciones candidatas pendientes, clasificadas por cadena, versión, alcance y exposición. **S12 no se cierra solo por tener CI.**
 
-### Regresión final y límites de lo comprobado
+#### Regresión final y límites de lo comprobado
 
 **196 pruebas backend y 49 frontend aprobadas (245 total), cero fallos/omisiones.** Se ejecutaron los comandos npm del workflow, npm ci en ambos paquetes, build Vite y check (70 archivos JavaScript/mjs, YAML/contrato y diff). El backend incluye instalación, D01/F09/F16/S01, concurrencia, auth, archivos, configuración/logging y exportación. No se introdujo un linter que requiriera refactorización cosmética.
 
 S01 CORREGIDO; S02 PARCIAL; S03–S10 CORREGIDOS. Se conserva F01–F20 según estados previos: F05/F07 siguen PARCIALES, D06 pendiente institucional, F16 proveedor de email pendiente. ProtectedRoute, registro, contenido educativo, archivos S05, firma S07, CORS S08, configuración DB S09 y logging S10 intactos. F09 rollback, F10 fecha/período, F12 límite 15, F13 approved+kg y F14 indicadores retirados pasan regresión. Ranking/puntos y catálogo distribuido sin cambios; 56 filas originales comparadas intactas en las bases temporales. Winners/prizes siguen 404. No se reintrodujo ningún indicador, premio o ganador.
 
-No se conectó ni modificó ecoamigos real. No se movieron/modificaron/eliminaron uploads reales. Sin migración real, proveedor cloud elegido, deploy, commit o push. Pendientes: smoke manual Excel/navegador y **segunda ejecución real GitHub Actions tras commit/push del usuario**; en 78c0297 apt, imagen, healthcheck e instalación pasaron, pero fallaron las 13 suites con clústeres propios. El job de audit ahora diferencia riesgos publicados de errores de ejecución; ver la continuación de CI. No se presenta CI remoto como probado.
+No se conectó ni modificó ecoamigos real. No se movieron/modificaron/eliminaron uploads reales. Sin migración real, proveedor cloud elegido, deploy, commit o push. Actualización posterior: smoke manual XLSX aprobado e informado por el usuario y segundo run f21b2a6 SUCCESS validado por él en GitHub Actions. En 78c0297 fallaron las 13 suites con clústeres propios; el incidente se conserva en 14. CI está implementado y validado; S12 sigue PARCIAL exclusivamente por dependencias. No se atribuye inspección API del run a esta consolidación.
 
 Este bloque aporta automatización del aseguramiento de calidad y mecanismos automatizados de verificación y regresión, no “desarrollo automatizado” ni despliegue automático.
 
 Archivos modificados: package.json raíz; backend/package.json/package-lock.json/.env.example/src/controllers/exportController.js; frontend/package.json/package-lock.json/src/pages/admin/AdminDashboard.jsx; README.md; docs/00,01,02,04,06,08,09. Nuevos: .github/workflows/ci.yml; scripts/run-tests.mjs, check.mjs, check-workflow.mjs, check-ci-postgres.mjs; backend/scripts/measure-export.mjs; backend/tests/s11-export.test.js, s12-ci.test.js; frontend/src/utils/exportError.js; frontend/tests/s11-export.test.js; docs/13-AUDITORIA-DEPENDENCIAS-S12.md y capturas audit. Única nueva variable funcional: EXPORT_MAX_ROWS. No cambió ningún SQL de esquema ni configuración S01–S10.
 
 
-### Inventario reproducible de archivos de prueba
+#### Inventario reproducible de archivos de prueba
 
-**backend: 21 archivos .test.js.** Helpers/fixtures no cuentan como suites.
+**Inventario actualizado en f21b2a6: backend, 22 archivos .test.js.** Helpers/fixtures no cuentan como suites.
 
 | Archivo | Cobertura |
 | --- | --- |
+| backend/tests/ci-infrastructure.test.js | Aislamiento de entorno, clasificación de audit y diagnóstico de binario ausente |
 | backend/tests/d01-migration.test.js | Migración D01, equivalencia de esquema y preservación de datos |
 | backend/tests/f01-f03-retirement.test.js | Premios/ganadores retirados y 404 |
 | backend/tests/f04-points-source.test.js | Fuente única de puntos |
@@ -655,9 +720,9 @@ Archivos modificados: package.json raíz; backend/package.json/package-lock.json
 | frontend/tests/s05-protected-files.test.js | Blob, abort/revoke y consumidores privados |
 | frontend/tests/s11-export.test.js | Errores Blob de límite/ocupado, fallback seguro y consumidor de exportación |
 
-La repetición específica final S11 aprobó 15/15, incluyendo fallo simulado del writer XLSX después de preparar cabeceras y recuperación posterior. Docker CLI no está disponible en el equipo local; service container/healthcheck no se ejecutaron aquí y permanecen como validación remota pendiente.
+La repetición específica final S11 aprobó 15/15, incluyendo fallo simulado del writer XLSX después de preparar cabeceras y recuperación posterior. Docker CLI no estaba disponible en el equipo local y el service container no se ejecutó allí. Posteriormente el usuario informó SUCCESS del segundo run f21b2a6 en GitHub Actions.
 
 
-### Continuación CI del commit 78c0297
+#### Continuación CI del commit 78c0297
 
 El diagnóstico, aislamiento de PostgreSQL y nueva semántica de dependency-audit se documentan en [revisión del primer run](14-CI-PRIMER-RUN.md). Los totales anteriores son evidencia histórica; consultar ese informe para la validación de esta continuación. S11 sigue CORREGIDO y S12 PARCIAL.

@@ -12,4 +12,4 @@ assert.doesNotMatch(text,/pull_request_target|secrets\.|continue-on-error|audit 
 assert.ok(ci.jobs['dependency-audit'].steps.some(step=>step.run==='node scripts/dependency-risk-report.mjs'));
 assert.ok(ci.jobs['dependency-audit'].steps.some(step=>step.uses==='actions/upload-artifact@v4' && step.if==='always()'));
 for(const job of Object.values(ci.jobs))for(const step of job.steps){if(step.uses)assert.match(step.uses,/^actions\/(?:(checkout|setup-node)@v7\.|upload-artifact@v4$)/);if(step['working-directory'])assert.ok(fs.existsSync(new URL('../'+step['working-directory'],import.meta.url)));}
-console.log('YAML y contrato de CI válidos; ejecución GitHub pendiente.');
+console.log('YAML y contrato de CI válidos; esta comprobación local no consulta ejecuciones remotas.');

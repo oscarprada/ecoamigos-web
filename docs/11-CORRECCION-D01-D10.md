@@ -1,5 +1,7 @@
 # Entrega controlada: instalación y datos D01–D10
 
+> **HISTÓRICO: entrega inicial D01–D10.** Las limitaciones y estados del cuerpo reflejan ese momento. Posteriormente se incorporó la migración D01 (3b27ab6); D01 está CORREGIDO y D06 permanece PENDIENTE INSTITUCIONAL. El retiro funcional de premios/ganadores ocurrió después (1821e21), conservando tablas históricas. El proyecto informa aplicación y verificación de D01/F09/F16/S01 en PostgreSQL local de desarrollo/QA; no hubo despliegue institucional. Las pruebas aisladas relatadas aquí no niegan esa aplicación posterior. Estado vigente: [trazabilidad y decisiones](15-TRAZABILIDAD-Y-DECISIONES.md).
+
 ## Alcance y verificación previa
 
 Se partió de un árbol de trabajo limpio. Se revisaron nuevamente rutas, controladores, configuración, SQL, seed, CSV y consumidores frontend; se inspeccionó el inventario de 42 archivos de fuente/estilos. Los diez hallazgos seguían vigentes. Se confirmó nuevamente con bcrypt que el hash del seed no correspondía a su contraseña comentada.

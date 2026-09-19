@@ -7,7 +7,7 @@
 | Requisito | Detalle |
 | --- | --- |
 | Node y npm | Usar Node 22.12+ o 24: file-type 22.1.0 exige Node >=22 y Vite requiere 22.12+ en esa línea. Se encontró Node 24.13.0 y npm 11.6.2 en esta revisión. |
-| PostgreSQL | Servidor TCP (5432 por defecto, DB_PORT configurable) y cliente `psql`. Se encontró cliente 18.1; no se confirmó el servidor. |
+| PostgreSQL | Servidor TCP (5432 por defecto, DB_PORT configurable) y cliente `psql`. Referencia de regresión local registrada: PostgreSQL 18.1; CI usa 18. Esta consolidación no consulta el servidor de aplicación. |
 | Git | Clonación y publicación |
 | Red | Dependencias, fuentes Google y enlaces externos |
 | Disco persistente | PostgreSQL, uploads y logs |
@@ -97,7 +97,7 @@ psql -X -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATAB
 psql -X -h localhost -U postgres -d ecoamigos -f database/schema.sql
 ```
 
-No ejecutar sobre una base existente. Respaldar e inspeccionar con [inspect_existing.sql](../database/inspect_existing.sql); resolver la migración manualmente según [database/README.md](../database/README.md). No se eliminan columnas ni datos existentes automáticamente.
+No ejecutar sobre una base existente. Respaldar e inspeccionar con [inspect_existing.sql](../database/inspect_existing.sql); resolver la migración manualmente según [database/README.md](../database/README.md). No se eliminan columnas ni datos existentes automáticamente. D01/F09/F16/S01 ya cuentan con aplicación y verificación en el PostgreSQL local de desarrollo/QA del proyecto, según evidencia informada; eso no describe producción institucional ni autoriza repetir scripts. La guía distingue base nueva de adopción en otra instalación.
 
 ## 5. Primer administrador
 
@@ -114,10 +114,6 @@ psql -X -h localhost -U postgres -d ecoamigos -f database/import_points_catalog.
 Repetir el archivo no duplica ni actualiza filas; duplicados/conflictos abortan la transacción. No contiene Dependencias institucionales: sus valores deben ser autorizados por los responsables. No se renombran grupos ni se inventan puntos.
 
 ## 7. Directorios y arranque
-
-```powershell
-New-Item -ItemType Directory -Force backend/uploads/content | Out-Null
-```
 
 Los dos flujos crean sus directorios privados bajo UPLOAD_ROOT; no es necesario crear uploads/content para cargas nuevas. El directorio de trabajo del backend debe ser `backend`.
 
@@ -175,4 +171,26 @@ Configuración S08–S10: ver los contratos completos de [operación](08-OPERACI
 
 ## Verificación reproducible S12
 
-Tras npm ci --prefix backend y npm ci --prefix frontend, configurar ECOAMIGOS_TEST_PG_BIN y ejecutar npm test, npm run check y npm run build desde raíz. Los scripts internos son Node multiplataforma; [operación](08-OPERACION.md) detalla Windows/Linux y aislamiento. No ejecutar las pruebas contra una base existente. yaml 2.9.1 se usa solo para validar el workflow; plugin React 5.2.0 corrige el conflicto de peers con Vite 8. Auditoría de dependencias y CI remoto pendientes según [S12](13-AUDITORIA-DEPENDENCIAS-S12.md). EXPORT_MAX_ROWS=1000 limita la exportación, con rango 1–10000 y rechazo explícito del exceso.
+Tras npm ci --prefix backend y npm ci --prefix frontend, configurar ECOAMIGOS_TEST_PG_BIN y ejecutar npm test, npm run check y npm run build desde raíz. Los scripts internos son Node multiplataforma; [operación](08-OPERACION.md) detalla Windows/Linux y aislamiento. No ejecutar las pruebas contra una base existente. yaml 2.9.1 se usa solo para validar el workflow; plugin React 5.2.0 corrige el conflicto de peers con Vite 8. CI implementado y validado: segundo run f21b2a6 SUCCESS informado desde GitHub Actions. S12 permanece PARCIAL exclusivamente por [riesgos de dependencias](13-AUDITORIA-DEPENDENCIAS-S12.md). EXPORT_MAX_ROWS=1000 limita la exportación, con rango 1–10000 y rechazo explícito del exceso.
+
+## Registro central de configuración
+
+Los valores son técnicos, no decisiones institucionales. [Operación](08-OPERACION.md) es la fuente de límites y comportamiento detallado; las plantillas son backend/.env.example y frontend/.env.example.
+
+| Variables | Contrato |
+| --- | --- |
+| NODE_ENV | production exige origen explícito CORS y HTTPS para enlaces de recuperación; test pertenece a pruebas |
+| PORT, JWT_SECRET | Puerto Express con respaldo 3000; secreto JWT sin respaldo, nunca público |
+| CLIENT_URL, CORS_ORIGINS | Un origen de enlaces; lista CORS opcional con precedencia, sin wildcard ni cookies |
+| DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME | Conexión local; puerto 5432 por omisión, resto requerido |
+| DATABASE_URL, DB_SSL | URL no vacía prevalece; sin query/fragmento; SSL false/true, true verifica certificado |
+| TRUSTED_PROXIES | Vacío: IP directa; declarar solo proxies autorizados |
+| AUTH_WINDOW_MS, AUTH_LOGIN_MAX, AUTH_FORGOT_MAX, AUTH_RESET_MAX | 900000 ms y 10/5/10; enteros positivos, por IP/endpoint/proceso |
+| UPLOAD_ROOT | Raíz privada, uploads relativa al cwd; usar ruta absoluta en infraestructura futura |
+| UPLOAD_IMAGE_MB, UPLOAD_DOCUMENT_MB, UPLOAD_VIDEO_MB, UPLOAD_EVIDENCE_MB | 10/20/100/20 MiB; enteros 1–500; evidencia también respeta el límite de categoría |
+| LOG_DIR, LOG_MAX_BYTES, LOG_MAX_FILES, LOG_QUEUE_LIMIT | logs, 5242880 bytes, 5 rotados, 1000 eventos; rangos en Operación |
+| EXPORT_MAX_ROWS | 1000, entero 1–10000; inválido no habilita exportación ilimitada |
+| VITE_API_URL | Pública y compilada, respaldo http://localhost:3000/api |
+| ECOAMIGOS_TEST_PG_BIN | Solo pruebas; directorio de initdb/pg_ctl/psql/createdb/postgres 18 compatibles |
+
+No configurar NODE_TLS_REJECT_UNAUTHORIZED=0: se rechaza. No hay variables SMTP, cookies o CSRF implementadas. CI/GITHUB_ACTIONS/GITHUB_STEP_SUMMARY y POSTGRES_* del workflow pertenecen al runner/servicio efímero, no a la configuración institucional de aplicación. Las variables de pruebas no deben apuntar a una BD existente.

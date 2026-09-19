@@ -2,6 +2,8 @@
 
 Esta evaluación no es una certificación de seguridad ni un resultado de explotación. No se ejecutaron PoC contra la aplicación, audit fix, force ni overrides de versiones mayores. Los avisos se consultaron en npm y los rangos se contrastaron con advisories; el análisis de exposición se basa en el código actual. No se leyó .env ni se conectó una base real.
 
+> Captura histórica del 16 de septiembre de 2026; las versiones y avisos de este informe corresponden a esa consulta, no a una auditoría nueva. Corrección posterior: CI f21b2a6 SUCCESS informado por el usuario; estado vigente en [trazabilidad](15-TRAZABILIDAD-Y-DECISIONES.md). Los JSON originales se conservan intactos.
+
 ## Resultados registrados
 
 | Comando | Baja | Moderada | Alta | Crítica | Total de paquetes marcados |
@@ -38,7 +40,7 @@ Las versiones candidatas siguientes se verificaron con npm view o se identifican
 | Vite → PostCSS → nanoid | Vite 8.0.8, PostCSS 8.5.9; dev; alto | Servidor de desarrollo Windows y procesamiento CSS/sourcemaps. No forma parte del hosting estático final, pero sí afecta equipo/CI si procesa entradas hostiles | Vite 8.3.0 y PostCSS 8.5.28 publicados, fuera de rangos de esta captura; nanoid requiere 3.3.18 para todos los avisos de la rama (último 6.0.1 es major). No exponer dev server; actualizar esa cadena por separado |
 | plugin React → Babel/helpers/targets → browserslist/baseline-browser-mapping | @babel/core 7.29.0, browserslist afectado <=4.28.6; dev; alto agregado, avisos individuales bajos/moderados/altos | Compilación de fuentes y sourcemaps, no procesamiento de documentos subidos. Entradas de PR se compilan en CI aislado sin secretos | Browserslist 4.29.0 publicado; baseline mínimo 2.11.0 según aviso; Babel último 8.0.5 implica major. Tooling no se declara libre de vulnerabilidades tras el ajuste del plugin |
 
-Los avisos/rangos concretos de cada grupo y paquetes propagadores están en el inventario detallado inferior y los JSON originales. No todas las filas agregadas representan una vulnerabilidad independiente. El job dependency-audit no usa continue-on-error ni ignora resultados: se espera que falle mientras los avisos registrados sigan presentes.
+Los avisos/rangos concretos de cada grupo y paquetes propagadores están en el inventario detallado inferior y los JSON originales. No todas las filas agregadas representan una vulnerabilidad independiente. El job dependency-audit no usa continue-on-error ni ignora resultados. Tras f21b2a6, un informe válido con vulnerabilidades genera advertencias, resumen y artifacts JSON; errores de ejecución/red o JSON inválido hacen fallar el job. Un informe completado no implica ausencia de vulnerabilidades.
 
 ## Cambios puntuales autorizados
 
@@ -47,7 +49,7 @@ Los avisos/rangos concretos de cada grupo y paquetes propagadores están en el i
 - El lock frontend registra react-refresh 0.17.0 → 0.18.0, @rolldown/pluginutils beta.27 → rc.3 y la resolución de dependencias opcionales WASM @emnapi realizada por npm. No se actualizaron React, Router, Axios ni Vite.
 - No se usó npm audit fix (con o sin force), ni legacy-peer-deps, ni overrides de tar. Las actualizaciones de seguridad restantes están clasificadas como seguimiento, no como aplicadas.
 
-**Estado S12: PARCIAL** por vulnerabilidades pendientes, además de primera ejecución GitHub Actions pendiente hasta commit/push del usuario. CI de calidad y auditoría están implementados; no hay despliegue automático.
+**Estado S12: PARCIAL exclusivamente por riesgos de dependencias documentados. CI IMPLEMENTADO Y VALIDADO**: segundo run f21b2a6 SUCCESS informado y validado por el usuario mediante GitHub Actions, sin inspección API en esta consolidación. No hay CD ni despliegue automático.
 
 
 ## Inventario detallado devuelto por npm audit

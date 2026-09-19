@@ -1,165 +1,50 @@
-# Subir Ecoamigos a GitHub
+# Control de versiones y GitHub
 
 [Índice](00-INDICE.md)
 
-## Situación de esta copia
+## Referencia de esta consolidación
 
-Se comprobó localmente:
+La revisión parte de main en f21b2a6, «Corrige infraestructura PostgreSQL del CI», con árbol limpio antes de editar. La consolidación documental queda en el workspace para revisión; no hace commit, push, cambios de visibilidad ni despliegue. El historial de correcciones y sus commits está en [trazabilidad](15-TRAZABILIDAD-Y-DECISIONES.md).
 
-- Carpeta: `C:\Users\Oscar Prada\Documents\ecoamigos-web\ecoamigos-web`.
-- Rama: `main`.
-- Remoto origin: `https://github.com/oscarprada/ecoamigos-web.git`.
-- Existen cambios visuales del trabajo anterior y documentación nueva sin commit.
+## Revisión local antes de publicar cambios autorizados
 
-No se hizo commit, push, cambio de visibilidad ni modificación remota durante la documentación. La configuración local no garantiza que la cuenta actual tenga acceso de escritura o que el repositorio remoto esté sincronizado.
-
-## 1. Abrir PowerShell en el proyecto
+Desde la raíz del repositorio:
 
 ```powershell
-Set-Location 'C:\Users\Oscar Prada\Documents\ecoamigos-web\ecoamigos-web'
 git status
 git branch --show-current
-git remote -v
-```
-
-Para esta copia no ejecutar `git init` ni `git remote add origin`: ya están configurados. Los comandos generales para vincular código están en [GitHub: agregar código local](https://docs.github.com/en/migrations/importing-source-code/using-the-command-line-to-import-source-code/adding-locally-hosted-code-to-github).
-
-## 2. Identidad y autenticación
-
-Comprobar la identidad de autor:
-
-```powershell
-git config user.name
-git config user.email
-```
-
-Si falta, definirla solo para este repositorio con tus valores:
-
-```powershell
-git config user.name 'REEMPLAZAR_NOMBRE'
-git config user.email 'REEMPLAZAR_CORREO_O_NOREPLY_DE_GITHUB'
-```
-
-La identidad del commit no inicia sesión. Al hacer fetch/push por HTTPS, Git Credential Manager puede abrir la autenticación de GitHub. Si el entorno pide un token, usar uno con acceso limitado a este repositorio y permisos necesarios para escribir contenido; no la contraseña de la cuenta ni un token incluido en la URL. Nunca guardar tokens en README, `.env.example` o capturas compartidas. Ver [gestión de remotos y autenticación HTTPS](https://docs.github.com/en/get-started/git-basics/managing-remote-repositories).
-
-## 3. Revisar lo que se publicará
-
-```powershell
 git diff --stat
 git diff --check
-git status --short
 git ls-files -- backend/.env frontend/.env
-git check-ignore backend/.env frontend/.env backend/uploads/ejemplo.png
+npm run check
 ```
 
-`git ls-files` para los dos `.env` debe quedar sin resultados. `git check-ignore` debe mostrar las rutas ignoradas. `.gitignore` excluye node_modules, `.env` y variantes privadas, dist/build, logs, uploads y backups; conserva `.env.example`.
+Los dos .env privados no deben aparecer como rastreados. Revisar el diff completo, incluidos archivos nuevos, antes de seleccionar rutas concretas. No añadir bases, respaldos, uploads, logs, tokens ni datos de personas. Ignorar un archivo ya rastreado no lo elimina del historial. Si hubo una exposición, se requiere revocación/rotación y tratamiento autorizado del historial; esta guía no certifica que todo el historial esté libre de secretos.
 
-No incluir bases reales, respaldos, evidencias, reportes con nombres, claves ni JWT. Los archivos ya rastreados no dejan de estarlo por agregarlos a `.gitignore`; por ejemplo desktop.ini existe históricamente en Git. Si un secreto se publicó antes, ignorarlo o borrarlo de la versión actual no lo elimina del historial: revocar/rotar y seguir el [procedimiento oficial para datos sensibles](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository).
+Para cambios de aplicación, consultar las suites y requisitos PostgreSQL en [calidad](09-CALIDAD-Y-PENDIENTES.md) y [operación](08-OPERACION.md). Un check de sintaxis no sustituye regresión ni build. La consolidación documental solo ejecuta comprobaciones sin conexión a bases.
 
-Esta guía no realiza una auditoría completa del historial. Revisar la autorización institucional para compartir el repositorio y sus activos; no hay una licencia definida en el código.
+## Preparación y revisión por el responsable
 
-## 4. Comprobar build
+Comprobar identidad local con git config user.name y git config user.email. La identidad de autor no autentica con GitHub. Usar el gestor de credenciales; no incluir tokens en URLs o documentos. Visibilidad, licencia y permisos de publicación necesitan la decisión de sus responsables; no se presume una política institucional ya aprobada.
 
-```powershell
-npm --prefix frontend run build
-```
+En una publicación posterior autorizada, seleccionar archivos explícitos mediante git add, revisar git diff --cached y git diff --cached --check, y solo entonces crear el commit. No usar una selección general que incluya cambios ajenos. Sincronizar según la política del repositorio, con el trabajo local conservado y revisando divergencias. No forzar push para eludir conflictos o reglas de rama. Si se requiere Pull Request, usar una rama de trabajo y las revisiones configuradas; aquí no se modifican protecciones ni permisos.
 
-Si falta node_modules, instalar antes con `npm --prefix frontend ci`. `frontend/dist` no se agrega al repositorio: es generado. Un error de build se resuelve antes del commit; warnings deben revisarse sin asumir que son fallos.
+## Integración continua implementada y validada
 
-## 5. Preparar archivos y hacer commit
+El workflow [.github/workflows/ci.yml](../.github/workflows/ci.yml) se ejecuta en push a main y pull_request hacia main. La primera ejecución 78c0297 falló en suites PostgreSQL; la corrección f21b2a6 obtuvo **SUCCESS**, informado y validado por el usuario mediante GitHub Actions. No se inspeccionó el run por API en esta consolidación. Véase [incidente y cierre](14-CI-PRIMER-RUN.md).
 
-Para incluir **documentación y ajustes de estilos de esta sesión**, seleccionar sus rutas:
+quality comprueba instalación reproducible, pruebas backend/frontend, build y checks. dependency-audit publica riesgos mediante advertencias, resumen y artifacts; falla ante errores de ejecución o informes inválidos. Que ambos jobs terminen correctamente no elimina los riesgos de dependencias: S12 sigue PARCIAL por ese motivo. No hay CD ni despliegue automático. Subir código no publica la aplicación ni transfiere PostgreSQL/uploads.
 
-```powershell
-git add README.md docs .gitignore frontend/.env.example frontend/src
-git diff --cached --stat
-git diff --cached --check
-```
+## Incidencias habituales
 
-Revisar el contenido seleccionado localmente:
-
-```powershell
-git diff --cached
-```
-
-No compartir esa salida sin revisar información privada. Si el conjunto es el esperado:
-
-```powershell
-git commit -m 'Documenta Ecoamigos y actualiza estilos visuales'
-```
-
-Si deseas **solo documentación**, en lugar del primer git add usar:
-
-```powershell
-git add README.md docs .gitignore frontend/.env.example
-```
-
-Y utilizar el mensaje `Documenta arquitectura, instalacion y operacion de Ecoamigos`. Las modificaciones visuales quedarían pendientes. No ejecutar ambas alternativas sin revisar el área preparada. El commit incluye todo lo que ya estuviera en staging, no solo el último git add.
-
-## 6. Sincronizar y subir
-
-Obtener referencias remotas sin cambiar archivos locales:
-
-```powershell
-git fetch origin
-git branch -r
-git status
-```
-
-Si aparece `origin/main` y el árbol está limpio después del commit:
-
-```powershell
-git pull --rebase origin main
-```
-
-Si el remoto está vacío y no tiene main, omitir ese pull. Si elegiste commit solo documental y siguen cambios visuales locales, no iniciar rebase con cambios sin guardar: confirmar también esos cambios o conservarlos mediante un flujo consciente antes de sincronizar.
-
-Cuando no haya conflictos:
-
-```powershell
-git push -u origin main
-```
-
-`-u` configura seguimiento para futuros pushes. Comprobar que el comando terminó correctamente y abrir el repositorio en GitHub para revisar el último commit, README y docs. Esta operación sube archivos, **no despliega la web ni sube PostgreSQL/uploads**. Referencia: [GitHub, git push](https://github.com/git-guides/git-push).
-
-## 7. Errores habituales
-
-| Mensaje | Qué hacer |
+| Situación | Acción del responsable |
 | --- | --- |
-| `remote origin already exists` | Ya está configurado; revisar git remote -v |
-| `Repository not found` | Revisar URL, existencia y acceso de la cuenta |
-| `Authentication failed` | Renovar autenticación/token con acceso al repositorio |
-| `non-fast-forward` | Fetch y rebase con árbol limpio; no usar force para saltarlo |
-| `src refspec main does not match any` | Revisar rama actual y existencia de commit |
-| `nothing to commit` | Revisar git status; puede estar ya confirmado o faltan archivos preparados |
-| `Author identity unknown` | Configurar user.name y user.email locales |
-| Push bloqueado por secretos | Retirar el secreto del commit y rotarlo si se expuso; no eludir protección |
-| Push bloqueado por regla de rama | Publicar rama de trabajo y abrir Pull Request según política del repositorio |
-| Avisos LF/CRLF | Revisar git diff --check; no cambiar todo el formato del proyecto sin necesidad |
+| Autenticación o repositorio inaccesible | Verificar destino y permisos, renovar autenticación sin compartir secretos |
+| Non-fast-forward | Revisar referencias y divergencias; integrar cambios conservando el trabajo local |
+| Conflictos | Resolver por archivo y repetir comprobaciones antes de continuar |
+| Bloqueo por reglas de rama | Cumplir la revisión/PR exigida; no eludir controles |
+| Bloqueo por secretos | Retirar y, si se expuso, revocar el secreto; no saltar la protección |
+| Quality falla | Revisar la etapa y logs sanitizados; reproducir con entorno aislado |
+| Dependency-audit publica avisos | Evaluar las cadenas y pruebas de actualización en [S12](13-AUDITORIA-DEPENDENCIAS-S12.md) |
 
-Si hay conflicto de rebase, Git lista los archivos. Editarlos conservando la intención de ambos cambios, eliminar marcadores de conflicto, ejecutar git add para los archivos resueltos y `git rebase --continue`. Para cancelar el rebase en curso: `git rebase --abort`. No forzar push ni descartar trabajo con reset hard.
-
-Si main está protegida, después del commit crear una rama de trabajo de nombre libre:
-
-```powershell
-git switch -c docs/documentacion-proyecto
-git push -u origin docs/documentacion-proyecto
-```
-
-Abrir Pull Request hacia main en GitHub; no asumir permisos para saltar revisiones.
-
-## 8. Usar otro repositorio
-
-Solo si deseas un destino diferente: crear en GitHub un repositorio vacío con la visibilidad autorizada, sin README/licencia/gitignore iniciales. En esta copia, puedes añadir otro remoto sin perder origin:
-
-```powershell
-git remote add nuevo https://github.com/REEMPLAZAR_USUARIO/REEMPLAZAR_REPOSITORIO.git
-git remote -v
-git push -u nuevo main
-```
-
-O, si la intención es reemplazar definitivamente origin, utilizar `git remote set-url origin <URL_NUEVA>` y verificarlo antes de push. No mezclar ambas opciones sin decidir el destino. La [guía de remotos](https://docs.github.com/en/get-started/git-basics/managing-remote-repositories) explica estas operaciones.
-
-## 9. Actualizaciones posteriores
-
-Con árbol limpio, sincronizar antes de editar. Después de trabajar: revisar cambios, probar, preparar rutas concretas, revisar staging, hacer commit y push. Mantener docs junto al código y no confirmar secretos, datos ni archivos generados. GitHub permite leer Markdown y diagramas Mermaid directamente en el repositorio.
+El vínculo entre requisito, decisión, implementación y prueba está en el documento 15; las responsabilidades de entrega están en el [documento 16](16-ENTREGA-INSTITUCIONAL.md).

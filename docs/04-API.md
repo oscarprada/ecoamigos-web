@@ -17,9 +17,9 @@ Autenticación: `Authorization: Bearer <token>`. No son cookies de sesión. El m
 | Login incorrecto/inactivo | 401 `{ "message": "Credenciales inválidas" }` |
 | Estado de revisión inválido | 400 |
 | Registro o contenido a editar inexistente | 404 |
-| Error SQL/controlador | Generalmente 500 `{ "message": "...", "error": "detalle técnico" }` |
+| Error SQL/controlador | 500 con mensaje controlado, sin campo de detalle SQL |
 
-El manejador final devuelve JSON genérico ante errores propagados; JSON inválido es 400 y cuerpo excesivo 413. Rutas desconocidas conservan su respuesta existente. Otros controladores que capturan errores por su cuenta requieren auditoría separada. Los errores de validación de PostgreSQL suelen llegar como 500, no 400/409.
+El manejador final devuelve JSON genérico ante errores propagados; JSON inválido es 400 y cuerpo excesivo 413. Rutas desconocidas conservan su respuesta existente. Los controladores actuales mantienen respuestas internas controladas tras S10. Los errores de validación de PostgreSQL suelen llegar como 500, no 400/409.
 
 `pg` puede serializar NUMERIC y BIGINT como cadenas. Por eso `quantity`, sumatorias o `total_points` pueden ser strings; los casts `::int` y conversiones explícitas devuelven números. No asumir que todos los números JSON tienen el mismo tipo.
 
@@ -29,6 +29,11 @@ El manejador final devuelve JSON genérico ante errores propagados; JSON inváli
 | --- | --- | --- | --- |
 | POST | `/auth/login` | Público | token, user |
 | GET | `/auth/me` | Autenticado | Usuario actual |
+| POST | `/auth/forgot-password` | Público limitado | Mensaje genérico |
+| POST | `/auth/reset-password` | Público limitado | Restablecimiento con token |
+| GET | `/files/public/content/:id` | Público publicado | Archivo |
+| GET | `/files/content/:id` | admin | Archivo de contenido |
+| GET | `/files/evidence/:id` | admin o líder propietario | Evidencia |
 | GET | `/public/ranking` | Público | currentPeriod, ranking |
 | GET | `/public/stats` | Público | general, status, materials, teams, periods |
 | GET | `/public/points-catalog` | Público | Catálogo completo |
@@ -41,8 +46,10 @@ El manejador final devuelve JSON genérico ante errores propagados; JSON inváli
 | GET | `/admin/dashboard` | admin | Cuatro contadores |
 | GET | `/admin/users` | admin | Usuarios |
 | POST | `/admin/users` | admin | Usuario creado |
+| PATCH | `/admin/users/:id` | admin | Datos permitidos y estado actualizados |
 | GET | `/admin/teams` | admin | Equipos |
 | POST | `/admin/teams` | admin | Equipo creado |
+| PATCH | `/admin/teams/:id` | admin | Nombre/dependencia actualizados |
 | GET | `/admin/periods` | admin | Periodos |
 | POST | `/admin/periods` | admin | Periodo creado |
 | GET | `/admin/content` | admin | Todos los contenidos |
@@ -202,7 +209,7 @@ Objeto `{ "users": 0, "teams": 0, "records": 0, "pending": 0 }`, con números. L
 
 ### GET y POST /admin/users
 
-GET devuelve `id, name, email, role, team_name`, por id DESC. No incluye `team_id`, is_active ni hashes.
+GET devuelve `id, name, email, role, team_id, is_active, team_name`, por id DESC. No devuelve hashes ni session_version.
 
 POST JSON:
 
@@ -210,13 +217,13 @@ POST JSON:
 { "name": "Líder de ejemplo", "email": "lider@ejemplo.test", "password": "CLAVE_UNICA", "role": "leader", "team_id": 2 }
 ```
 
-bcrypt con costo 10; inserta únicamente password_hash; cuenta activa. Para admin fuerza team_id null; para leader utiliza el recibido. Devuelve 201 con `id, name, email, role, team_id` después de COMMIT. F12 limita a 15 cuentas totales almacenadas en toda la aplicación: cuentan admin, leader e inactivos, sin filtro de equipo o período. Desactivar/reactivar no cambia el total; no existen endpoints para esas operaciones ni para eliminar usuarios.
+bcrypt con costo 10; inserta únicamente password_hash; cuenta activa. Para admin fuerza team_id null; para leader utiliza el recibido. Devuelve 201 con `id, name, email, role, team_id` después de COMMIT. F12 limita a 15 cuentas totales almacenadas en toda la aplicación: cuentan admin, leader e inactivos, sin filtro de equipo o período. Desactivar/reactivar no cambia el total; PATCH permite activar/desactivar; no existe eliminación física de usuarios.
 
 Con 15 o más filas devuelve 409 con `{ "message": "Se alcanzo el maximo de 15 usuarios totales", "code": "USER_LIMIT_REACHED" }`, sin modificar usuarios. El backend calcula bcrypt antes del bloqueo y ejecuta BEGIN, LOCK TABLE users IN SHARE ROW EXCLUSIVE MODE, COUNT(*), INSERT y COMMIT en una conexión. ROLLBACK ante fallo o cupo agotado. Error interno: 500 genérico sin SQL. Dos altas con el último cupo se serializan: una obtiene 201 y la otra 409. El frontend muestra el mensaje y refresca el conteo. No se modifica el contrato de otros endpoints.
 
 ### GET y POST /admin/teams
 
-GET: filas completas, name ASC. POST: `{ "name": "Equipo", "dependency": "Dependencia" }`; devuelve fila completa con 201. Errores de unicidad/obligatoriedad dependen de SQL y se responden como 500. No hay edición o eliminación.
+GET: filas completas, name ASC. POST: `{ "name": "Equipo", "dependency": "Dependencia" }`; devuelve fila completa con 201. Errores de unicidad/obligatoriedad dependen de SQL y se responden como 500. PATCH permite editar nombre/dependencia; no hay eliminación.
 
 ### GET y POST /admin/periods
 
@@ -293,7 +300,7 @@ Contraseña: string no vacío y máximo 72 bytes UTF-8 para evitar truncamiento 
 
 El adaptador institucional de entrega aún no está configurado. Ningún entorno devuelve tokens por HTTP; las pruebas inyectan un capturador en memoria en su proceso aislado. El futuro envío debe usar CLIENT_URL para formar /reset-password?token=... con HTTPS en producción. No hay envío real hoy ni proveedor añadido.
 
-Los JWT anteriores siguen vigentes según firma/expiración (S01/S02); forgot/reset necesitan protección contra abuso en S03. Respuestas públicas uniformes no equivalen a tiempo constante ni a rate limiting.
+El reset revoca JWT anteriores mediante session_version (S01); forgot/reset tienen rate limiting S03. Las respuestas uniformes no garantizan tiempo constante.
 
 
 ### Límites de autenticación — S03

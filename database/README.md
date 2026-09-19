@@ -1,4 +1,4 @@
-# Instalación y datos: D01–D10
+# Instalación y migraciones de datos
 
 ## Fuente oficial
 
@@ -60,23 +60,28 @@ La ruta del CSV es relativa a la raíz y no depende del nombre de usuario ni de 
 
 El CSV original no se modifica: conserva códigos (incluidos los que parecen fechas), textos, grupos y puntos. **D06 sigue pendiente:** no tiene Dependencias institucionales, requerido por el formulario. Se necesita un catálogo institucional autorizado; no copiar automáticamente valores de Hogares. Las cinco referencias exactas siguen documentadas en `docs/06-REGLAS-Y-BACKEND.md`.
 
-## Base existente: revisión manual, no migración automática
+## Base existente: migraciones versionadas, aplicación deliberada
 
-Obtener un respaldo y un esquema sin datos. El diagnóstico provisto es de solo lectura:
+El proyecto informa **aplicación y verificación de D01/F09/F16/S01 en PostgreSQL local de desarrollo/QA**. No equivale a infraestructura institucional de producción, que no se ha desplegado. Esta consolidación no ejecuta SQL. En otro destino, respaldar y consultar su estado antes de escoger scripts; no ejecutar toda la lista indiscriminadamente ni aplicar schema.sql sobre tablas existentes.
+
+[inspect_existing.sql](inspect_existing.sql) permite diagnosticar el esquema sin datos sensibles. [20260908_d01_migrate_existing.sql](20260908_d01_migrate_existing.sql) ya existe: reconoce la instalación histórica inspeccionada, usa transacción y bloqueo, valida datos/restricciones y aborta ante incompatibilidades que no puede resolver sin inventar información. No es un migrador universal ni elimina tablas, columnas o filas. Conserva estructuras heredadas; la aplicación usa password_hash. Categorías, duplicados o referencias ambiguas requieren decisión sobre los datos antes de volver a intentar.
+
+| Paso condicionado al destino | Aplicación | Verificación y repetición |
+| --- | --- | --- |
+| D01: instalación histórica reconocida | [20260908_d01_migrate_existing.sql](20260908_d01_migrate_existing.sql) | [verify_20260908_d01.sql](verify_20260908_d01.sql); comprobar compatibilidad, no usar como inicializador de base vacía |
+| F09: instalación con D01 anterior al índice de período activo | [20260909_f09_periods_one_active.sql](20260909_f09_periods_one_active.sql) | Inspeccionar periods_one_active_uidx y máximo un activo; D01 actualizado y schema.sql ya lo incluyen. No repetir si existe |
+| F16: instalación conciliada sin password_reset_tokens | [20260912_f16_password_reset.sql](20260912_f16_password_reset.sql) | [verify_20260912_f16.sql](verify_20260912_f16.sql); una aplicación, aborta si la tabla existe |
+| S01: versión de sesión | [20260914_s01_session_version.sql](20260914_s01_session_version.sql) | [verify_s01_session_version.sql](verify_s01_session_version.sql); idempotente, conserva versiones previas |
+
+Una instalación vacía con schema.sql actual ya incluye esas estructuras. La migración D01 no incorpora F16/S01 posteriores. F09 permite cero activos y rechaza múltiples activos preexistentes sin elegir un ganador. S01 requiere nuevo login para JWT antiguos sin sv; no volver a un backend que ignore la versión de sesión.
+
+Ejemplo de diagnóstico, sustituyendo destino y parámetros de conexión por los autorizados:
 
 ```powershell
-psql -X -h localhost -U postgres -d REEMPLAZAR_BASE -f database/inspect_existing.sql
+psql -X -h localhost -U postgres -d REEMPLAZAR_BASE -v ON_ERROR_STOP=1 -f database/inspect_existing.sql
 ```
 
-Decisiones necesarias antes de diseñar una migración específica:
-
-1. **users.password:** determinar si existe y qué restricciones tiene. No copiar su contenido a password_hash suponiendo que es bcrypt válido. Si password es NOT NULL, el nuevo createUser no podrá insertar hasta resolver esa restricción mediante una migración autorizada. No se borra esta columna ni sus datos en esta tarea. La aplicación nueva solo lee/escribe password_hash.
-2. **Contenido antiguo:** inventariar category faltante y tipos tip/guide/blog. La categoría correcta debe decidirse por registro; no asignar agua o convertir tipos de forma indiscriminada. Conservar URL/adjuntos y contenido durante la migración.
-3. **Catálogo:** verificar tipo de evidence_required, duplicados normalizados y los catalog_* de registros existentes. Un booleano no recupera la descripción original; no reemplazar datos sin una fuente aprobada. El índice nuevo solo se puede instalar una vez revisados los duplicados existentes.
-4. **Relaciones antiguas:** verificar contents/rewards/leader_id/points y sus datos antes de conciliar nombres con content_items/prizes/team_id/points_awarded. No renombrar ni borrar automáticamente.
-5. **Credenciales y seed anterior:** no eliminar usuarios, periodos, equipos o contenidos ya creados por un seed. Sus responsables deben determinar cuáles son reales y cuáles de demostración.
-
-Por ello D01 y la adopción en bases existentes de D02–D05 quedan sujetos a prueba/migración manual. La prueba de una base vacía no demuestra que una base instalada esté conciliada.
+Para aplicar únicamente un script cuya necesidad ya fue comprobada, usar la misma conexión con -v ON_ERROR_STOP=1 y -f seguido de su ruta en la tabla. Registrar salida y ejecutar su verificación antes de habilitar la aplicación. Las suites de instalación/migración usan clústeres temporales; no sustituyen el respaldo y la revisión de un destino nuevo. Estado consolidado: [D/F/S](../docs/15-TRAZABILIDAD-Y-DECISIONES.md).
 
 ## Premios y ganadores fuera del alcance de producto
 
@@ -96,6 +101,6 @@ La funcionalidad ejecutable y visible se retiró de forma controlada al resolver
 
 Una instalación vacía con schema.sql ya incluye password_reset_tokens. En una instalación existente previamente conciliada con D01/F09, revisar y ejecutar una sola vez database/20260912_f16_password_reset.sql, antes de iniciar el backend actualizado. No cambia users, registros ni catálogo; añade únicamente tabla, restricciones, secuencia e índices de recuperación. Si la tabla ya existe, aborta sin sobrescribirla: no reejecutar sobre schema nuevo. D01 sigue siendo histórico y no incorpora esta migración posterior.
 
-Verificar con database/verify_20260912_f16.sql (transacción de solo lectura). Las pruebas F16 ejecutan ambos caminos en PostgreSQL desechable, con datos previos y repetición fallida segura. No se aplicó nada sobre ecoamigos real.
+Verificar con database/verify_20260912_f16.sql (transacción de solo lectura). Las pruebas F16 ejecutan ambos caminos en PostgreSQL desechable, con datos previos y repetición fallida segura. En esas pruebas se usaron clústeres desechables. El proyecto informa además aplicación/verificación local de F16 en desarrollo/QA; no en producción institucional.
 
 No se añadieron dependencias ni variables de entorno. CLIENT_URL ya existe: debe ser el origen institucional HTTPS para construir enlaces en producción, sin fallback localhost. passwordResetDelivery.js aún no tiene proveedor; no envía emails ni imprime tokens. Implementar/configurar el adaptador institucional de entrega antes de habilitar recuperación operativa. La única captura de tokens para validar es el capturador en memoria dentro de backend/tests/f16-password-recovery.test.js; no hay modo debug HTTP.

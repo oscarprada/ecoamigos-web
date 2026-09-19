@@ -1,8 +1,10 @@
-# Operación, despliegue y mantenimiento
+# Operación y mantenimiento
 
 [Índice](00-INDICE.md)
 
-## Estado de despliegue
+## Alcance: desarrollo/QA y futura infraestructura institucional
+
+D01/F09/F16/S01 cuentan con aplicación y verificación en PostgreSQL local de desarrollo/QA, según evidencia informada del proyecto. No existe despliegue institucional de producción. Esta consolidación no conecta bases ni ejecuta SQL. Las instrucciones de producción siguientes son preparación para una decisión posterior de Parques.
 
 El repositorio no incluye Dockerfile de aplicación, Nginx, servicio de sistema, infraestructura como código ni pipeline de despliegue. Existe CI de verificación en .github/workflows/ci.yml. Lo siguiente es una guía de preparación, no una configuración ya aplicada. Subir código a GitHub no publica la aplicación en Internet.
 
@@ -12,15 +14,15 @@ Se requieren tres servicios: hosting estático para frontend, proceso Node persi
 
 | Área | Trabajo necesario |
 | --- | --- |
-| Base de datos | Conciliar esquema real con código, versionar migración y validar restauración |
+| Base de datos | Revisar el destino futuro y las migraciones versionadas; ensayar restauración. La aplicación local/QA está informada, no la productiva |
 | Catálogo | Definir grupo/puntos institucionales y probar cada nivel |
 | CORS | Configurar CLIENT_URL o lista explícita CORS_ORIGINS; sin cookies |
 | Conexión DB | Configurar DB_PORT o DATABASE_URL y DB_SSL según la infraestructura institucional futura |
-| API pública | Decidir acceso a evidencias, borradores y estadísticas antes de exponer datos |
+| API pública | Conservar el acceso por entidad S05; el proxy futuro no debe publicar /uploads |
 | HTTPS | Terminar TLS en infraestructura y usar URL HTTPS de API en frontend |
 | Proceso Node | Ejecutar desde backend, reinicio supervisado y apagado/monitoreo definidos |
 | Almacenamiento | Volumen persistente para uploads y protección/rotación de logs |
-| Errores y seguridad | Validaciones, límites de archivos/contenido, errores sin detalles internos y protección de login |
+| Errores y seguridad | Conservar los controles implementados S01–S11 y gestionar los riesgos S02/S12 pendientes |
 | Interfaz | Probar rutas activas al recargar y mantener retirados premios/ganadores |
 
 ## Build y ejecución
@@ -61,10 +63,11 @@ $marcaRespaldo = Get-Date -Format 'yyyyMMdd-HHmmss'
 $archivoDb = "backups/ecoamigos-$marcaRespaldo.dump"
 pg_dump -h localhost -U postgres -d ecoamigos -Fc -f $archivoDb
 if ($LASTEXITCODE -ne 0) { throw 'El respaldo de PostgreSQL falló.' }
-Compress-Archive -LiteralPath backend/uploads -DestinationPath "backups/uploads-$marcaRespaldo.zip"
+$raizUploadsRespaldo = Read-Host 'Ruta efectiva de UPLOAD_ROOT que corresponde a la base respaldada'
+Compress-Archive -LiteralPath $raizUploadsRespaldo -DestinationPath "backups/uploads-$marcaRespaldo.zip"
 ```
 
-Estos comandos escriben respaldo local; copiarlo a un destino protegido fuera de la máquina y comprobar integridad. `pg_dump` ofrece una vista consistente de PostgreSQL, pero no sincroniza los archivos de uploads: para un par coherente, detener temporalmente escrituras durante la copia. Consultar [pg_dump oficial](https://www.postgresql.org/docs/current/app-pgdump.html).
+Los parámetros localhost/postgres/ecoamigos son ejemplos locales: el operador debe contrastar host, puerto y base con su configuración efectiva, sin publicar credenciales. Esta documentación no ejecuta los comandos. Estos comandos escriben respaldo local; copiarlo a un destino protegido fuera de la máquina y comprobar integridad. `pg_dump` ofrece una vista consistente de PostgreSQL, pero no sincroniza los archivos de uploads: para un par coherente, detener temporalmente escrituras durante la copia. Consultar [pg_dump oficial](https://www.postgresql.org/docs/current/app-pgdump.html).
 
 ## Restauración de ensayo
 
@@ -121,11 +124,11 @@ Si el resultado no es el esperado, usar ROLLBACK en lugar de COMMIT. En una base
 | No hay admin tras seed | El seed no crea cuentas; seguir bootstrap con datos explícitos del responsable |
 | Alta falla por password NOT NULL heredada | El código solo escribe password_hash; la base antigua requiere migración autorizada |
 | Contenido falla por category/type | Esquema histórico carece de category y admite tipos distintos |
-| `ENOENT uploads/content` | Crear carpeta y arrancar desde backend |
-| Imagen 404 | Revisar archivo físico, getBackendUrl y VITE_API_URL terminada en /api |
+| Error de almacenamiento | Revisar UPLOAD_ROOT y permisos; los subdirectorios managed se crean al cargar |
+| Imagen/archivo inaccesible | Revisar entidad, publicación/propiedad, sesión y existencia física; usar endpoints de archivos, no /uploads |
 | Evidencia rechazada | Revisar límites, extensión, MIME y firma; MOV/AVI pueden requerir reproductor compatible |
 | Aprobado con 0 puntos | Grupo/nivel sin coincidencia; CSV sin grupo institucional |
-| No existe periodo activo tras error | Creación desactivó otros antes de INSERT fallido |
+| No existe período activo | Cero activos es válido; F09 conserva el anterior si falla una creación. Revisar respuesta y datos sin activar filas arbitrariamente |
 | Token expirado | Cerrar sesión e ingresar; no hay refresh |
 | Recargar /admin devuelve 404 de hosting | Falta fallback SPA a index.html |
 | Excel falla o tarda | Token/rol, EXPORT_MAX_ROWS, exportación en curso, SQL y memoria |
@@ -133,17 +136,17 @@ Si el resultado no es el esperado, usar ROLLBACK en lugar de COMMIT. En una base
 
 ## Seguridad y alcance de acceso
 
-El código parametriza consultas y utiliza hashes y autorización por rol, pero eso no constituye una auditoría de seguridad. La creación de reciclaje valida en backend su referencia contra material, cantidad y catálogo. Persisten otros hallazgos concretos: token en localStorage, errores internos visibles en otros endpoints y riesgos fuera del bloque de autenticación. Prioridades detalladas en [calidad](09-CALIDAD-Y-PENDIENTES.md). Definir acceso institucional antes de un despliegue externo.
+El código parametriza consultas y utiliza hashes y autorización por rol, pero eso no constituye una auditoría de seguridad. La creación de reciclaje valida en backend su referencia contra material, cantidad y catálogo. Los errores HTTP son controlados y las cargas tienen límites y comprobaciones de formato. Persisten el token en localStorage (S02) y los riesgos de dependencias (S12); estas correcciones no certifican seguridad integral. Prioridades detalladas en [calidad](09-CALIDAD-Y-PENDIENTES.md). Definir acceso institucional antes de un despliegue externo.
 
 
-F16 incorpora recuperación por token desde la aplicación; el envío institucional de correo aún requiere configurar el adaptador. El procedimiento SQL excepcional anterior no es un flujo de cambio voluntario de perfil ni una función de administración de contraseñas. Ver instalación/migración F16 en database/README.md; no se ha ejecutado en la base real.
+F16 incorpora recuperación por token desde la aplicación; el envío institucional de correo aún requiere configurar el adaptador. El procedimiento SQL excepcional anterior no es un flujo de cambio voluntario de perfil ni una función de administración de contraseñas. Ver [instalación/migración F16](../database/README.md); su aplicación y verificación local de desarrollo/QA está informada por el proyecto.
 
 
 ## Configuración y migración S01–S03
 
-En una instalación existente, después de las migraciones previas D01/F09/F16 y antes de iniciar este backend, el responsable debe aplicar database/20260914_s01_session_version.sql y revisar database/verify_s01_session_version.sql. Hacer respaldo y verificar el destino; no aplicar schema.sql a una base existente. La migración añade INTEGER NOT NULL DEFAULT 0 con CHECK no negativo, sin borrar filas; repetirla conserva versiones existentes. Los JWT anteriores sin sv requieren nuevo login. No se ejecutó esta migración en ecoamigos real. El esquema nuevo ya incluye la columna. No revertir el backend a uno que ignore sv: volvería a aceptar sesiones revocadas.
+En una instalación existente, comprobar primero si S01 ya está aplicada. Si falta, después de conciliar D01/F09/F16 y antes de iniciar este backend, aplicar database/20260914_s01_session_version.sql y revisar database/verify_s01_session_version.sql. Hacer respaldo y verificar el destino; no aplicar schema.sql a una base existente. La migración añade INTEGER NOT NULL DEFAULT 0 con CHECK no negativo, sin borrar filas; repetirla conserva versiones existentes. Los JWT anteriores sin sv requieren nuevo login. El proyecto informa aplicación y verificación de S01 en PostgreSQL local de desarrollo/QA; no en infraestructura institucional de producción. Verificar el estado del destino antes de decidir si necesita aplicación. El esquema nuevo ya incluye la columna. No revertir el backend a uno que ignore sv: volvería a aceptar sesiones revocadas.
 
-CORS_ORIGINS: lista de orígenes completos separados por coma, por defecto http://localhost:5173; sin comodines, paths ni slash final. Para desarrollo con 127.0.0.1/otro puerto, declararlos explícitamente. Axios usa withCredentials:false y CORS no habilita cookies. CLIENT_URL configura enlaces de recuperación y es fallback CORS si se omite CORS_ORIGINS. La infraestructura institucional (HTTPS, dominios, proxy, mismo sitio o sitios distintos) sigue por definir; esto no es una configuración productiva certificada. S08 se verifica en el bloque de configuración que sigue.
+CORS_ORIGINS: lista de orígenes completos separados por coma; el fallback http://localhost:5173 solo aplica fuera de producción y si también se omite CLIENT_URL; sin comodines, paths ni slash final. Para desarrollo con 127.0.0.1/otro puerto, declararlos explícitamente. Axios usa withCredentials:false y CORS no habilita cookies. CLIENT_URL configura enlaces de recuperación y es fallback CORS si se omite CORS_ORIGINS. La infraestructura institucional (HTTPS, dominios, proxy, mismo sitio o sitios distintos) sigue por definir; esto no es una configuración productiva certificada. S08 se verifica en el bloque de configuración que sigue.
 
 AUTH_WINDOW_MS=900000; AUTH_LOGIN_MAX=10; AUTH_FORGOT_MAX=5; AUTH_RESET_MAX=10. Enteros positivos; configuración inválida aborta la construcción de rutas. Ventana fija por IP/endpoint; cuentan éxitos y fallos, 429 con Retry-After y reinicio al vencer. El mapa tiene como máximo 10000 IP activas por endpoint; al saturarse rechaza IP nuevas con 429, sin crecer indefinidamente. Limpieza al recibir peticiones, sin timers permanentes. NAT comparte cupo; reiniciar proceso reinicia límites y varias instancias tienen contadores independientes. No es defensa completa frente a ataques distribuidos ni bloqueo por cuenta. Antes de escalar, coordinar límite compartido o de proxy.
 
@@ -250,17 +253,17 @@ En Linux exportar ECOAMIGOS_TEST_PG_BIN=/usr/lib/postgresql/18/bin y usar los mi
 
 El runner fija datos ficticios y puertos no operativos para un Pool de aplicación accidental; sobrescribe DB_*, DATABASE_URL, JWT_SECRET, CLIENT_URL, LOG_DIR y UPLOAD_ROOT. Las pruebas de integración inyectan exclusivamente sus conexiones temporales. No se inicia server.js, no se lee .env real y no se usa la base ecoamigos. Los tests unitarios de configuración construyen objetos sin red.
 
-.github/workflows/ci.yml corre en push a main y pull_request hacia main. Usa actions/checkout@v7.0.1, actions/setup-node@v7.0.0, ubuntu-24.04, Node 24.13.0, npm 11.6.2 y permisos contents:read; no persiste credenciales. Las versiones oficiales fueron consultadas, no se afirma ejecución remota realizada. No usa pull_request_target, secrets institucionales ni pasos de deploy.
+.github/workflows/ci.yml corre en push a main y pull_request hacia main. Usa actions/checkout@v7.0.1, actions/setup-node@v7.0.0, ubuntu-24.04, Node 24.13.0, npm 11.6.2 y permisos contents:read; no persiste credenciales. El segundo run de f21b2a6 terminó SUCCESS según la validación del usuario en la interfaz de GitHub Actions; no se inspeccionó mediante API en esta consolidación. No usa pull_request_target, secrets institucionales ni pasos de deploy.
 
 El job quality declara un **service container postgres:18**, usuario/base ecoamigos_ci_s12 y password ficticia, puerto efímero del job 55432 y healthcheck pg_isready. check-ci-postgres.mjs verifica ese servicio y una tabla temporal, solo bajo GITHUB_ACTIONS/CI/test. Las suites históricas de migración/concurrencia necesitan además initdb/pg_ctl/psql locales: el workflow instala binarios 18 mediante el repositorio oficial PostgreSQL y conserva sus clústeres independientes. No se reinterpretan esos tests para compartir una BD y arriesgar colisiones. Ninguno usa una base institucional. Son dos comprobaciones distintas documentadas, no un service declarado sin uso.
 
 Después ejecuta tests backend/frontend, build y check; comprueba whitespace del commit. Un job separado dependency-audit instala desde locks con scripts deshabilitados (no necesita bcrypt para auditar) y ejecuta cuatro npm audit, completos y omit=dev. No oculta fallos con continue-on-error; los hallazgos generan advertencias, resumen y JSON; solo los errores de ejecución o informes inválidos hacen fallar ese job. Consultar [clasificación y decisiones](13-AUDITORIA-DEPENDENCIAS-S12.md).
 
-Se validó YAML con yaml 2.9.1, claves únicas, triggers, permisos, servicio/healthcheck/puerto, scripts y rutas. Se ejecutaron localmente npm ci, tests, build y check. **Primera ejecución real 78c0297: infraestructura inicial aprobada, backend 41/54 y 13 suites PostgreSQL fallidas. Pendiente segundo run con el helper corregido.** Un YAML válido no certifica ese resultado. Smoke manual de Excel real/navegador y validación del runner Linux quedan pendientes. No se añadió ESLint: node --check, pruebas, build y diff forman la verificación actual, con lint completo como mejora posterior.
+Se validó YAML con yaml 2.9.1, claves únicas, triggers, permisos, servicio/healthcheck/puerto, scripts y rutas. Se ejecutaron localmente npm ci, tests, build y check. La primera ejecución 78c0297 falló en 13 suites PostgreSQL (41/54). El segundo run f21b2a6 terminó **SUCCESS**, informado y validado por el usuario en GitHub Actions. **CI IMPLEMENTADO Y VALIDADO**. El smoke manual XLSX S11 también fue aprobado e informado por el usuario. Las pruebas locales de YAML no sustituyen esas evidencias externas. S12 sigue PARCIAL exclusivamente por dependencias. No se añadió ESLint: node --check, pruebas, build y diff forman la verificación actual, con lint completo como mejora posterior.
 
-Ecoamigos incorpora **automatización del aseguramiento de calidad**: pruebas funcionales, regresión, seguridad, concurrencia, migraciones temporales, build y verificaciones técnicas con CI. No se denomina desarrollo automatizado ni CI/CD: no hay despliegue automático.
+Ecoamigos incorpora **automatización del aseguramiento de calidad**: pruebas funcionales, regresión, seguridad, concurrencia, migraciones temporales, build y verificaciones técnicas con CI. Es integración continua; no hay despliegue automático ni CD.
 
 
 ### Continuación CI del commit 78c0297
 
-El diagnóstico, aislamiento de PostgreSQL y nueva semántica de dependency-audit se documentan en [revisión del primer run](14-CI-PRIMER-RUN.md). Los totales anteriores son evidencia histórica; consultar ese informe para la validación de esta continuación. S11 sigue CORREGIDO y S12 PARCIAL.
+El diagnóstico, aislamiento de PostgreSQL y nueva semántica de dependency-audit se documentan en [revisión del primer run](14-CI-PRIMER-RUN.md). Los totales anteriores son evidencia histórica; consultar ese informe para la validación de esta continuación. S11 sigue CORREGIDO y S12 PARCIAL exclusivamente por dependencias. El estado consolidado está en [trazabilidad](15-TRAZABILIDAD-Y-DECISIONES.md).

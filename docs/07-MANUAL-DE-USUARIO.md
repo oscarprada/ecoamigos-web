@@ -53,7 +53,7 @@ El panel muestra nombre, equipo asignado, puntos, posición y conteos personales
 8. Enviar y esperar el aviso de confirmación.
 9. Consultar el historial para comprobar que figura como pendiente.
 
-Solo el líder puede registrar. El administrador gestiona y revisa, pero no registra en nombre de un equipo; supervisor no es un rol disponible. Si no tienes equipo válido asignado, el servidor rechaza el alta: solicita revisar tu asignación y vuelve a iniciar sesión para obtener la identidad actualizada. No puedes seleccionar otro equipo modificando la solicitud; el equipo procede de tu sesión autenticada.
+Solo el líder puede registrar. El administrador gestiona y revisa, pero no registra en nombre de un equipo; supervisor no es un rol disponible. Si no tienes equipo válido asignado, el servidor rechaza el alta: solicita revisar tu asignación y recarga la pantalla; el backend consulta tu equipo actual en cada solicitud protegida. No puedes seleccionar otro equipo modificando la solicitud; el equipo procede de tu sesión autenticada.
 
 El servidor exige un período activo. Si cambió mientras completabas el formulario, el envío se rechaza: actualiza la página y comprueba el período antes de reenviar. No puedes asociar un registro a otro período modificando la solicitud.
 
@@ -111,7 +111,7 @@ Desde S01, cada solicitud protegida consulta el usuario actual: existencia, is_a
 6. Consultar Historial para verificar estado, puntos y revisor.
 7. Recargar Ranking para comprobar el efecto en el periodo activo.
 
-Los filtros no modifican registros. Historial es de lectura en la interfaz. La API admite cambiar una revisión, pero reemplaza la anterior; no equivale a una auditoría completa. Registrar decisiones institucionales por el procedimiento que corresponda.
+Los filtros no modifican registros. Historial es de lectura en la interfaz. La API rechaza con 409 una segunda revisión; conserva estado, puntos, revisor, fecha y notas. No existe un flujo para reabrirla ni una tabla de auditoría inmutable. Registrar decisiones institucionales por el procedimiento que corresponda.
 
 ### Gestionar contenidos
 
@@ -131,9 +131,11 @@ En `/admin`, los conteos de registros, estados y materiales muestran actividad h
 
 La cantidad total reciclada aprobada (kg) abarca todos los períodos, incluso registros sin período. Solo suma registros aprobados declarados en kg. Si no hay filas compatibles, el total es cero.
 
-Los indicadores ambientales equivalentes se encuentran en revisión metodológica y no se muestran hasta contar con factores técnicamente validados. Las cuatro tarjetas fueron retiradas, sin valores ni ceros sustitutos. La [metodología histórica](12-METODOLOGIA-INDICADORES.md) explica la decisión; no se muestran fórmulas antiguas en el dashboard.
+Los indicadores ambientales equivalentes fueron retirados del alcance actual; una eventual reintroducción requiere una nueva decisión y factores técnicamente sustentados. Las cuatro tarjetas fueron retiradas, sin valores ni ceros sustitutos. La [metodología histórica](12-METODOLOGIA-INDICADORES.md) explica la decisión; no se muestran fórmulas antiguas en el dashboard.
 
-Pulsar la acción de exportar para descargar `Reporte_Ecoamigos.xlsx`. Incluye todos los registros y nueve columnas, con filtros y encabezado fijo. Contiene nombres de personas/equipos; almacenarlo según las reglas internas y fuera del repositorio Git.
+Pulsar la acción de exportar para descargar `Reporte_Ecoamigos.xlsx`. Incluye registros de todos los estados/períodos, hasta EXPORT_MAX_ROWS (1000 por defecto técnico; rango 1–10000), y nueve columnas con autofiltro de Excel y encabezado fijo. No hay filtros de exportación en la API. Si excede el máximo recibe 422 y no descarga un archivo truncado; otra exportación simultánea en el mismo proceso recibe 429. El texto se escribe como texto XLSX, no como fórmula. Contiene nombres de personas/equipos; almacenarlo según las reglas internas y fuera del repositorio Git.
+
+El smoke manual de exportación XLSX fue informado como aprobado por el responsable; consultar procedencia y límites de evidencia en [Calidad](09-CALIDAD-Y-PENDIENTES.md).
 
 ## Solicitar soporte
 
