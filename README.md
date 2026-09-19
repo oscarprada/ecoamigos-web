@@ -4,7 +4,7 @@ Plataforma de educación ambiental y registro de reciclaje de **Parques Nacional
 
 La funcionalidad de premios y ganadores fue retirada del alcance actual. Sus tablas históricas permanecen conservadas en PostgreSQL, pero la aplicación ya no las consulta ni expone operaciones sobre ellas.
 
-Documentación consolidada sobre el commit **f21b2a6**. Las migraciones D01/F09/F16/S01 cuentan con aplicación y verificación en PostgreSQL local de desarrollo/QA, según evidencia informada por el responsable. No existe despliegue institucional de producción; Parques definirá posteriormente su infraestructura.
+La consolidación documental toma como línea base técnica el commit **f21b2a6**.. Las migraciones D01/F09/F16/S01 cuentan con aplicación y verificación en PostgreSQL local de desarrollo/QA, según evidencia informada por el responsable. No existe despliegue institucional de producción; Parques definirá posteriormente su infraestructura.
 
 ## Documentación completa
 
