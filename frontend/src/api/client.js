@@ -19,7 +19,7 @@ export const getBackendUrl = (path = '') => {
 
 const api = axios.create({
   baseURL: API_URL,
-  withCredentials: false,
+  withCredentials: true,
 });
 
 attachSessionInterceptors(api);

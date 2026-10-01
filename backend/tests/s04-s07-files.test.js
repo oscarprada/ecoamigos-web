@@ -85,9 +85,9 @@ test('S04-S07: revision transaccional PostgreSQL aislado', {
       const data=new FormData();for(const [key,value]of Object.entries(resource==='/evidence'?{material_type:'papel_carton',quantity:'1',unit:'kg',quality_level:'media',criteria_count:'1',period_id:'1',...reference,...extra}:{...form,...extra}))data.append(key,value);
       if(bytes!==null)data.append(field || (resource==='/evidence'?'evidence':'file'),new Blob([bytes],{type:mime}),name);
       if(multiple)data.append(field || 'file',new Blob([bytes],{type:mime}),name);
-      const res=await fetch(base+resource,{method,headers:{Authorization:'Bearer '+token(user)},body:data});return {code:res.status,body:await res.json()};
+      const res=await fetch(base+resource,{method,headers:{Cookie:'ecoamigos_session='+token(user)},body:data});return {code:res.status,body:await res.json()};
     };
-    const get=async(resource,user)=>{const r=await fetch(base+resource,{headers:user?{Authorization:'Bearer '+token(user)}:{}});return {code:r.status,headers:r.headers,bytes:Buffer.from(await r.arrayBuffer())};};
+    const get=async(resource,user)=>{const r=await fetch(base+resource,{headers:user?{Cookie:'ecoamigos_session='+token(user)}:{}});return {code:r.status,headers:r.headers,bytes:Buffer.from(await r.arrayBuffer())};};
     const exists=url=>fs.existsSync(storedPath(url));
     const disk=()=>fs.existsSync(process.env.UPLOAD_ROOT)?fs.readdirSync(process.env.UPLOAD_ROOT,{recursive:true}).filter(name=>/\.(png|jpg|webp|mp4|mov|avi|pdf|docx)$/.test(name)).sort():[];
     const settled=async()=>{await new Promise(resolve=>setTimeout(resolve,100));};
@@ -141,7 +141,7 @@ test('S04-S07: revision transaccional PostgreSQL aislado', {
     });
     await t.test('S06 DELETE no borra referencias compartidas; último elimina; ENOENT seguro',async()=>{
       await client.query('UPDATE content_items SET file_url=$1 WHERE id=$2',[published.file_url,draft.id]);
-      const remove=async id=>fetch(base+'/content/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token(1)}});
+      const remove=async id=>fetch(base+'/content/'+id,{method:'DELETE',headers:{Cookie:'ecoamigos_session='+token(1)}});
       assert.equal((await remove(published.id)).status,200);assert.ok(exists(published.file_url));assert.equal((await remove(draft.id)).status,200);assert.equal(exists(published.file_url),false);assert.equal(await removeStored(published.file_url),true);
       assert.ok(exists(evidence.evidence_url));
     });
@@ -150,7 +150,7 @@ test('S04-S07: revision transaccional PostgreSQL aislado', {
       try {
         await cleanupUnused(row.file_url,async()=>{throw Error('PRIVATE SQL path');});assert.ok(exists(row.file_url));
         await client.query('UPDATE content_items SET file_url=$1 WHERE id=$2',['/uploads/../../secret',row.id]);
-        const res=await fetch(base+'/content/'+row.id,{method:'DELETE',headers:{Authorization:'Bearer '+token(1)}});assert.equal(res.status,200);
+        const res=await fetch(base+'/content/'+row.id,{method:'DELETE',headers:{Cookie:'ecoamigos_session='+token(1)}});assert.equal(res.status,200);
         assert.ok(logs.length>=2);assert.ok(logs.every(entry=>entry.join(' ')==='FILE_CLEANUP_PENDING'));
       } finally {console.error=original;}
     });
@@ -162,7 +162,7 @@ test('S04-S07: revision transaccional PostgreSQL aislado', {
     await t.test('S06 unlink falla después de COMMIT: éxito, retención y reintento seguro',async()=>{
       const row=(await upload()).body;const original=fs.promises.unlink,log=console.error,logs=[];
       fs.promises.unlink=async()=>{throw Object.assign(Error('PRIVATE path'),{code:'EACCES'});};console.error=value=>logs.push(value);
-      try {const response=await fetch(base+'/content/'+row.id,{method:'DELETE',headers:{Authorization:'Bearer '+token(1)}});assert.equal(response.status,200);assert.ok(exists(row.file_url));assert.deepEqual(logs,['FILE_CLEANUP_PENDING']);}
+      try {const response=await fetch(base+'/content/'+row.id,{method:'DELETE',headers:{Cookie:'ecoamigos_session='+token(1)}});assert.equal(response.status,200);assert.ok(exists(row.file_url));assert.deepEqual(logs,['FILE_CLEANUP_PENDING']);}
       finally {fs.promises.unlink=original;console.error=log;}
       await cleanupUnused(row.file_url,(...args)=>testPool.query(...args));assert.equal(exists(row.file_url),false);
     });

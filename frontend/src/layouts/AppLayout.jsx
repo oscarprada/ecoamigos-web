@@ -50,8 +50,8 @@ export default function AppLayout() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    if (await logout() === false) return;
     closeMenu();
     navigate('/');
   };

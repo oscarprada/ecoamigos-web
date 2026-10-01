@@ -7,12 +7,12 @@
 ```mermaid
 flowchart LR
   U[Visitante, líder o administrador] --> F[React SPA / Vite]
-  F -->|Axios: JSON o multipart + Bearer JWT| B[Express /api]
+  F -->|Axios: JSON o multipart + cookie HttpOnly| B[Express /api]
   B --> A[Autenticación y autorización]
   A --> C[Controladores]
   C -->|pg: consultas parametrizadas| D[(PostgreSQL)]
   B -->|Multer + firma + relación BD| UP[Almacenamiento privado de archivos]
-  F -->|Archivo por ID público o Bearer| B
+  F -->|Archivo por ID público o cookie| B
   C --> L[Cola asíncrona acotada y JSONL con rotación]
   C --> X[ExcelJS: descarga XLSX]
 ```
@@ -62,7 +62,7 @@ flowchart LR
   end
   GF["Google Fonts: servicio externo"]
   U -->|Interacción con páginas y formularios| SPA
-  SPA -->|HTTP, Axios, JSON o multipart; Bearer en rutas protegidas| API
+  SPA -->|HTTP, Axios, JSON o multipart; cookie en rutas protegidas| API
   API -->|JSON, archivos autorizados y XLSX| SPA
   API -->|pg, SQL parametrizado y transacciones| PG
   API -->|Lectura y escritura mediante filesystem| UP
@@ -154,7 +154,7 @@ GitHub Actions ejecuta el workflow ante push o pull_request hacia main. El job q
 | --- | --- | --- |
 | react, react-dom | ^18.3.1 | Interfaz y montaje |
 | react-router-dom | ^6.23.1 | BrowserRouter, rutas, navegación |
-| axios | ^1.7.2 | Cliente API e interceptor Bearer |
+| axios | ^1.7.2 | Cliente API con credentials y cabecera CSRF |
 | vite | ^8.0.8 | Desarrollo y build |
 | @vitejs/plugin-react | 5.2.0 | Transformación React |
 | express | ^4.19.2 | Servidor HTTP |
@@ -285,14 +285,19 @@ El JWT es identidad mínima (id, sv, iat, exp), HS256 y ocho horas. authenticate
 
 La columna session_version permite revocar JWT después del reset sin almacenar tokens ni hashes adicionales. F16 incrementa la versión al actualizar la contraseña, en su transacción existente. Se eligió versionado porque consultar is_active/role/team no revoca una sesión de una cuenta que sigue activa después de reset. No se añadieron dependencias. La migración incremental y su verificación están en database; también cuentan con aplicación/verificación en desarrollo/QA local informada por el responsable; no en producción institucional.
 
-S02 conserva provisionalmente Bearer/localStorage, sin cookies ni duplicación. Los orígenes CORS se configuran explícitamente y credentials permanece false. S03 limita por IP y endpoint en memoria y normaliza errores de autenticación/errores propagados. Los detalles de límites y despliegue están en 08-OPERACION; comparación de alternativas y riesgo XSS pendiente en 09-CALIDAD-Y-PENDIENTES.
+Sesión S02: JWT HS256 de ocho horas en cookie ecoamigos_session, HttpOnly, SameSite=Lax, Path=/api, sin Domain; Secure cuando NODE_ENV=production. El body de login ya no contiene JWT. Frontend y API deben compartir sitio y esquema (localhost con distintos puertos en desarrollo; HTTPS bajo el mismo sitio en producción). No se soporta automáticamente un frontend en un sitio distinto; no cambiar a SameSite=None sin revisar despliegue y pruebas. CLIENT_URL es el único origen permitido para CORS y CSRF. Fuera de producción, si falta, se usa http://localhost:5173; en producción es obligatorio un origen HTTPS exacto. No se admiten wildcard, lista, ruta, credenciales ni slash final. CORS_ORIGINS es una variable heredada: retirarla o mantenerla idéntica a CLIENT_URL; otro valor detiene el arranque. Axios y CORS habilitan credenciales. Los métodos mutantes exigen Origin igual a CLIENT_URL y X-Ecoamigos-Request: 1, incluso login, logout y recuperación.
 
 
 ## Flujo de archivos S04–S07
 
 Multer recibe un archivo acotado en almacenamiento privado; el servidor genera UUID y abre con wx. Un worker limitado a 10 segundos/64 MiB de heap ejecuta file-type y comprobaciones básicas de cierre. Solo después se invoca el controlador para asociar el URL interno a la fila. El nombre original no se persiste como ruta. Los archivos publicados también permanecen fuera de express.static: la API decide acceso por ID y estado de la fila.
 
-fileStore centraliza resolución de rutas, verificación de destino real y limpieza con consulta de referencias. contentFiles serializa edición/eliminación con FOR UPDATE y retira el archivo anterior después del COMMIT. Las evidencias conservan el ciclo transaccional F10 y no tienen edición/eliminación nueva. ProtectedFile obtiene Blob mediante Axios/Bearer, cancela peticiones y revoca object URLs. No hay tokens en query ni migración a cookies.
+fileStore centraliza resolución de rutas, verificación de destino real y limpieza con consulta de referencias. contentFiles serializa edición/eliminación con FOR UPDATE y retira el archivo anterior después del COMMIT. Las evidencias conservan el ciclo transaccional F10 y no tienen edición/eliminación nueva. ProtectedFile obtiene Blob mediante Axios/cookie, cancela peticiones y revoca object URLs. No hay tokens en query; la sesión usa cookie HttpOnly.
 
 
 S11: el controlador de exportación conserva ExcelJS Workbook en memoria, pero la consulta está limitada a EXPORT_MAX_ROWS + 1 y se rechaza el exceso antes de construir el libro. Exclusión de una generación simultánea por proceso; sin cola distribuida. S12: scripts/run-tests.mjs aísla el entorno de pruebas; scripts/check.mjs valida sintaxis, YAML y diff. yaml 2.9.1 es dependencia de desarrollo backend exclusiva de esas verificaciones.
+
+
+### Actualización S02 — 2026-09-30
+
+Sesión S02: JWT HS256 de ocho horas en cookie ecoamigos_session, HttpOnly, SameSite=Lax, Path=/api, sin Domain; Secure cuando NODE_ENV=production. El body de login ya no contiene JWT. Frontend y API deben compartir sitio y esquema (localhost con distintos puertos en desarrollo; HTTPS bajo el mismo sitio en producción). No se soporta automáticamente un frontend en un sitio distinto; no cambiar a SameSite=None sin revisar despliegue y pruebas. CLIENT_URL es el único origen permitido para CORS y CSRF. Fuera de producción, si falta, se usa http://localhost:5173; en producción es obligatorio un origen HTTPS exacto. No se admiten wildcard, lista, ruta, credenciales ni slash final. CORS_ORIGINS es una variable heredada: retirarla o mantenerla idéntica a CLIENT_URL; otro valor detiene el arranque. Axios y CORS habilitan credenciales. Los métodos mutantes exigen Origin igual a CLIENT_URL y X-Ecoamigos-Request: 1, incluso login, logout y recuperación. Logout no cambia las reglas de revocación S01: reset incrementa session_version y las peticiones siguientes rechazan cualquier JWT anterior. Se conservan autorización y límites S03. Ver evidencia de pruebas y decisión CSRF en [09](09-CALIDAD-Y-PENDIENTES.md).

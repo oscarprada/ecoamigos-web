@@ -16,7 +16,7 @@ Se requieren tres servicios: hosting estático para frontend, proceso Node persi
 | --- | --- |
 | Base de datos | Revisar el destino futuro y las migraciones versionadas; ensayar restauración. La aplicación local/QA está informada, no la productiva |
 | Catálogo | Definir grupo/puntos institucionales y probar cada nivel |
-| CORS | Configurar CLIENT_URL o lista explícita CORS_ORIGINS; sin cookies |
+| CORS | Configurar CLIENT_URL exacto; cookies con credentials y control CSRF |
 | Conexión DB | Configurar DB_PORT o DATABASE_URL y DB_SSL según la infraestructura institucional futura |
 | API pública | Conservar el acceso por entidad S05; el proxy futuro no debe publicar /uploads |
 | HTTPS | Terminar TLS en infraestructura y usar URL HTTPS de API en frontend |
@@ -117,7 +117,7 @@ Si el resultado no es el esperado, usar ROLLBACK en lugar de COMMIT. En una base
 | --- | --- |
 | `Missing script: dev` | Se ejecutó desde raíz; usar frontend o backend |
 | Puerto 5173 ocupado, Vite cambia puerto | Cerrar instancia duplicada o configurar CORS para el puerto correcto |
-| CORS bloqueado | Revisar CORS_ORIGINS o su fallback CLIENT_URL y el Origin exacto |
+| CORS bloqueado | Revisar CLIENT_URL, Origin exacto y cabecera X-Ecoamigos-Request |
 | ECONNREFUSED PostgreSQL | Servicio, host/puerto de DATABASE_URL o DB_HOST/DB_PORT y firewall |
 | Authentication failed / database does not exist | DB_USER/DB_PASSWORD/DB_NAME y existencia de base |
 | Columna/relación no existe | Incompatibilidad de esquemas; comparar diccionario, no improvisar otro seed |
@@ -136,7 +136,7 @@ Si el resultado no es el esperado, usar ROLLBACK en lugar de COMMIT. En una base
 
 ## Seguridad y alcance de acceso
 
-El código parametriza consultas y utiliza hashes y autorización por rol, pero eso no constituye una auditoría de seguridad. La creación de reciclaje valida en backend su referencia contra material, cantidad y catálogo. Los errores HTTP son controlados y las cargas tienen límites y comprobaciones de formato. Persisten el token en localStorage (S02) y los riesgos de dependencias (S12); estas correcciones no certifican seguridad integral. Prioridades detalladas en [calidad](09-CALIDAD-Y-PENDIENTES.md). Definir acceso institucional antes de un despliegue externo.
+El código parametriza consultas y utiliza hashes y autorización por rol, pero eso no constituye una auditoría de seguridad. La creación de reciclaje valida en backend su referencia contra material, cantidad y catálogo. Los errores HTTP son controlados y las cargas tienen límites y comprobaciones de formato. S02 migra la sesión a cookie HttpOnly; persisten los riesgos de dependencias (S12); estas correcciones no certifican seguridad integral. Prioridades detalladas en [calidad](09-CALIDAD-Y-PENDIENTES.md). Definir acceso institucional antes de un despliegue externo.
 
 
 F16 incorpora recuperación por token desde la aplicación; el envío institucional de correo aún requiere configurar el adaptador. El procedimiento SQL excepcional anterior no es un flujo de cambio voluntario de perfil ni una función de administración de contraseñas. Ver [instalación/migración F16](../database/README.md); su aplicación y verificación local de desarrollo/QA está informada por el proyecto.
@@ -146,7 +146,7 @@ F16 incorpora recuperación por token desde la aplicación; el envío institucio
 
 En una instalación existente, comprobar primero si S01 ya está aplicada. Si falta, después de conciliar D01/F09/F16 y antes de iniciar este backend, aplicar database/20260914_s01_session_version.sql y revisar database/verify_s01_session_version.sql. Hacer respaldo y verificar el destino; no aplicar schema.sql a una base existente. La migración añade INTEGER NOT NULL DEFAULT 0 con CHECK no negativo, sin borrar filas; repetirla conserva versiones existentes. Los JWT anteriores sin sv requieren nuevo login. El proyecto informa aplicación y verificación de S01 en PostgreSQL local de desarrollo/QA; no en infraestructura institucional de producción. Verificar el estado del destino antes de decidir si necesita aplicación. El esquema nuevo ya incluye la columna. No revertir el backend a uno que ignore sv: volvería a aceptar sesiones revocadas.
 
-CORS_ORIGINS: lista de orígenes completos separados por coma; el fallback http://localhost:5173 solo aplica fuera de producción y si también se omite CLIENT_URL; sin comodines, paths ni slash final. Para desarrollo con 127.0.0.1/otro puerto, declararlos explícitamente. Axios usa withCredentials:false y CORS no habilita cookies. CLIENT_URL configura enlaces de recuperación y es fallback CORS si se omite CORS_ORIGINS. La infraestructura institucional (HTTPS, dominios, proxy, mismo sitio o sitios distintos) sigue por definir; esto no es una configuración productiva certificada. S08 se verifica en el bloque de configuración que sigue.
+CLIENT_URL es el único origen permitido para CORS y CSRF. Fuera de producción, si falta, se usa http://localhost:5173; en producción es obligatorio un origen HTTPS exacto. No se admiten wildcard, lista, ruta, credenciales ni slash final. CORS_ORIGINS es una variable heredada: retirarla o mantenerla idéntica a CLIENT_URL; otro valor detiene el arranque. Axios y CORS habilitan credenciales. Los métodos mutantes exigen Origin igual a CLIENT_URL y X-Ecoamigos-Request: 1, incluso login, logout y recuperación. Sesión S02: JWT HS256 de ocho horas en cookie ecoamigos_session, HttpOnly, SameSite=Lax, Path=/api, sin Domain; Secure cuando NODE_ENV=production. El body de login ya no contiene JWT. Frontend y API deben compartir sitio y esquema (localhost con distintos puertos en desarrollo; HTTPS bajo el mismo sitio en producción). No se soporta automáticamente un frontend en un sitio distinto; no cambiar a SameSite=None sin revisar despliegue y pruebas.
 
 AUTH_WINDOW_MS=900000; AUTH_LOGIN_MAX=10; AUTH_FORGOT_MAX=5; AUTH_RESET_MAX=10. Enteros positivos; configuración inválida aborta la construcción de rutas. Ventana fija por IP/endpoint; cuentan éxitos y fallos, 429 con Retry-After y reinicio al vencer. El mapa tiene como máximo 10000 IP activas por endpoint; al saturarse rechaza IP nuevas con 429, sin crecer indefinidamente. Limpieza al recibir peticiones, sin timers permanentes. NAT comparte cupo; reiniciar proceso reinicia límites y varias instancias tienen contadores independientes. No es defensa completa frente a ataques distribuidos ni bloqueo por cuenta. Antes de escalar, coordinar límite compartido o de proxy.
 
@@ -157,7 +157,7 @@ TRUSTED_PROXIES vacío: conexión directa; no se confía en X-Forwarded-For. Si 
 
 UPLOAD_ROOT es una raíz privada de confianza, por defecto uploads relativa al backend. En producción usar ruta absoluta persistente y permisos exclusivos del proceso. No publicar esa raíz con proxy, hosting, alias estático o CDN; quitar cualquier regla externa /uploads antes de considerar desplegada la protección S05. La aplicación ya no expone estáticos. No cambió CORS ni S02.
 
-Nuevas cargas: managed/content y managed/evidence bajo esa raíz; se crean al recibir archivos. Los contenidos públicos y borradores permanecen en almacenamiento privado y se distinguen por estado en BD, evitando movimientos cuando cambia la publicación. El navegador solicita contenido publicado por ID; lo privado usa Bearer/Blob.
+Nuevas cargas: managed/content y managed/evidence bajo esa raíz; se crean al recibir archivos. Los contenidos públicos y borradores permanecen en almacenamiento privado y se distinguen por estado en BD, evitando movimientos cuando cambia la publicación. El navegador solicita contenido publicado por ID; lo privado usa cookie/Blob.
 
 Compatibilidad: referencias heredadas /uploads/<nombre> y /uploads/content/<nombre> se resuelven en su ubicación anterior, únicamente después de consultar entidad/permisos. No se movieron archivos ni se migraron URLs en BD. Rutas absolutas, externas, traversal, segmentos extra, nombres con controles, porcentaje o separadores ambiguos y enlaces fuera de la raíz se rechazan; requieren revisión individual, no conversión automática. DOC heredado puede descargarse como adjunto; no se admite carga DOC nueva. Un archivo heredado no se certifica retroactivamente por firma. Respaldar BD y raíz juntos.
 
@@ -170,11 +170,11 @@ file-type 22.1.0 detecta firmas como indicio; los workers limitan duración a 10
 
 ## S08: contrato CORS por entorno
 
-CORS_ORIGINS, si está definida, es una lista de orígenes exactos separados por comas; se recortan espacios. Si se omite, se usa CLIENT_URL (un único origen, también utilizado en F16). Sin ambas variables se permite solamente http://localhost:5173 fuera de producción; NODE_ENV=production exige configuración explícita. Una variable seleccionada vacía, wildcard, ruta, credenciales o slash final provoca error genérico al arrancar, sin mostrar su valor. CORS_ORIGINS no cambia el destino de enlaces de recuperación.
+CLIENT_URL es el único origen permitido para CORS y CSRF. Fuera de producción, si falta, se usa http://localhost:5173; en producción es obligatorio un origen HTTPS exacto. No se admiten wildcard, lista, ruta, credenciales ni slash final. CORS_ORIGINS es una variable heredada: retirarla o mantenerla idéntica a CLIENT_URL; otro valor detiene el arranque. Axios y CORS habilitan credenciales. Los métodos mutantes exigen Origin igual a CLIENT_URL y X-Ecoamigos-Request: 1, incluso login, logout y recuperación.
 
-Origin permitido recibe el origen exacto, nunca wildcard. Origin no permitido devuelve 403 con mensaje controlado antes de ejecutar la ruta. OPTIONS permitido responde 204, habilita Authorization/Content-Type y GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS. Esto no crea endpoints nuevos. Retry-After queda expuesto. Sin Origin se permite continuar para CLI/servidor a servidor, conservando autenticación y autorización en rutas protegidas: CORS no sustituye controles de acceso ni impide clientes no navegador.
+Origin permitido recibe el origen exacto, nunca wildcard. Origin no permitido devuelve 403 con mensaje controlado antes de ejecutar la ruta. OPTIONS permitido responde 204, habilita X-Ecoamigos-Request/Content-Type y GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS. Esto no crea endpoints nuevos. Retry-After queda expuesto. Sin Origin solo continúan GET/HEAD/OPTIONS. CLI y clientes servidor a servidor deben enviar el origen configurado y la cabecera CSRF para métodos mutantes, además de su cookie. CORS no sustituye autenticación ni autorización.
 
-Bearer JWT sigue vigente, credentials=false y withCredentials=false; no hay cookies ni CSRF nuevos. S02 permanece PARCIAL. Un ejemplo local opcional es CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173; no representa dominios institucionales.
+Sesión S02: JWT HS256 de ocho horas en cookie ecoamigos_session, HttpOnly, SameSite=Lax, Path=/api, sin Domain; Secure cuando NODE_ENV=production. El body de login ya no contiene JWT. Frontend y API deben compartir sitio y esquema (localhost con distintos puertos en desarrollo; HTTPS bajo el mismo sitio en producción). No se soporta automáticamente un frontend en un sitio distinto; no cambiar a SameSite=None sin revisar despliegue y pruebas.
 
 
 ## S09: contrato de conexión PostgreSQL
@@ -267,3 +267,8 @@ Ecoamigos incorpora **automatización del aseguramiento de calidad**: pruebas fu
 ### Continuación CI del commit 78c0297
 
 El diagnóstico, aislamiento de PostgreSQL y nueva semántica de dependency-audit se documentan en [revisión del primer run](14-CI-PRIMER-RUN.md). Los totales anteriores son evidencia histórica; consultar ese informe para la validación de esta continuación. S11 sigue CORREGIDO y S12 PARCIAL exclusivamente por dependencias. El estado consolidado está en [trazabilidad](15-TRAZABILIDAD-Y-DECISIONES.md).
+
+
+### Actualización S02 — 2026-09-30
+
+Sesión S02: JWT HS256 de ocho horas en cookie ecoamigos_session, HttpOnly, SameSite=Lax, Path=/api, sin Domain; Secure cuando NODE_ENV=production. El body de login ya no contiene JWT. Frontend y API deben compartir sitio y esquema (localhost con distintos puertos en desarrollo; HTTPS bajo el mismo sitio en producción). No se soporta automáticamente un frontend en un sitio distinto; no cambiar a SameSite=None sin revisar despliegue y pruebas. CLIENT_URL es el único origen permitido para CORS y CSRF. Fuera de producción, si falta, se usa http://localhost:5173; en producción es obligatorio un origen HTTPS exacto. No se admiten wildcard, lista, ruta, credenciales ni slash final. CORS_ORIGINS es una variable heredada: retirarla o mantenerla idéntica a CLIENT_URL; otro valor detiene el arranque. Axios y CORS habilitan credenciales. Los métodos mutantes exigen Origin igual a CLIENT_URL y X-Ecoamigos-Request: 1, incluso login, logout y recuperación. Logout no cambia las reglas de revocación S01: reset incrementa session_version y las peticiones siguientes rechazan cualquier JWT anterior. Se conservan autorización y límites S03. Ver evidencia de pruebas y decisión CSRF en [09](09-CALIDAD-Y-PENDIENTES.md).

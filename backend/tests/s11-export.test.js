@@ -67,7 +67,7 @@ test('S11: exportación XLSX limitada en PostgreSQL aislado', {
     await client.query("INSERT INTO teams(name,dependency) VALUES ('Equipo normal','Fixture')");
     await client.query("INSERT INTO users(name,email,password_hash,role,team_id) VALUES ('Admin','admin@test.invalid','fixture','admin',null),('Líder normal','leader@test.invalid','fixture','leader',1)");
     await client.query("INSERT INTO periods(name,start_date,end_date,is_active) VALUES ('Período normal','2026-01-01','2026-12-31',true)");
-    const request=(id=1,suffix='')=>fetch('http://127.0.0.1:'+server.address().port+'/api/admin/export/excel'+suffix,{headers:id?{Authorization:'Bearer '+jwt.sign({id,sv:0},process.env.JWT_SECRET,{expiresIn:'5m'})}:{}});
+    const request=(id=1,suffix='')=>fetch('http://127.0.0.1:'+server.address().port+'/api/admin/export/excel'+suffix,{headers:id?{Cookie:'ecoamigos_session='+jwt.sign({id,sv:0},process.env.JWT_SECRET,{expiresIn:'5m'})}:{}});
     const reset=()=>client.query('DELETE FROM recycling_records');
     const seed=count=>client.query("INSERT INTO recycling_records(user_id,team_id,period_id,material_type,quantity,unit,quality_level,status,points_awarded,record_date) SELECT 2,1,1,'papel_carton',3.50,'kg','alta','approved',-7,'2026-01-01'::date FROM generate_series(1,$1)",[count]);
     const read=async(response)=>{assert.equal(response.status,200);assert.match(response.headers.get('content-type'),/spreadsheetml/);assert.match(response.headers.get('content-disposition'),/Reporte_Ecoamigos.xlsx/);const workbook=new ExcelJS.Workbook();await workbook.xlsx.load(Buffer.from(await response.arrayBuffer()));return workbook.getWorksheet('Reporte Ecoamigos');};

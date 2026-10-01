@@ -1,11 +1,11 @@
 import jwt from 'jsonwebtoken';
 import { query } from '../config/db.js';
+import { readSessionCookie } from '../utils/sessionCookie.js';
 
 // One current-user lookup per protected request; JWT role/team are never authority.
 export function createAuthenticateToken(runQuery) {
   return async function authenticateToken(req, res, next) {
-    const header = req.headers.authorization;
-    const token = typeof header === 'string' && /^Bearer [^ ]+$/i.test(header) ? header.slice(7) : null;
+    const token = readSessionCookie(req);
     const reject = () => res.status(401).json({ message: 'Sesión inválida o expirada' });
     if (!token) return reject();
     let decoded;

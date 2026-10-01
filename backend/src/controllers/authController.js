@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { query } from '../config/db.js';
+import { setSessionCookie, clearSessionCookie, SESSION_SECONDS } from '../utils/sessionCookie.js';
 
 // Valid bcrypt hash with cost 10; keeps missing/inactive accounts on the comparison path.
 const DUMMY_HASH = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
@@ -16,11 +17,17 @@ export async function login(req, res) {
     const valid = await bcrypt.compare(password, user?.password_hash || DUMMY_HASH);
     if (!user?.is_active || !valid) return invalid();
     const token = jwt.sign({ id: user.id, sv: user.session_version }, process.env.JWT_SECRET,
-      { algorithm: 'HS256', expiresIn: '8h' });
+      { algorithm: 'HS256', expiresIn: SESSION_SECONDS });
     const { password_hash, is_active, session_version, ...publicUser } = user;
-    return res.json({ message: 'Inicio de sesión exitoso', token, user: publicUser });
+    setSessionCookie(res, token);
+    res.set('Cache-Control', 'no-store');
+    return res.json({ message: 'Inicio de sesión exitoso', user: publicUser });
   } catch {
     return res.status(500).json({ message: 'Error al iniciar sesión' });
   }
 }
-export function me(req, res) { return res.json(req.user); }
+export function me(req, res) { return res.set('Cache-Control', 'no-store').json(req.user); }
+export function logout(req, res) {
+  clearSessionCookie(res);
+  return res.set('Cache-Control', 'no-store').json({ message: 'Sesión cerrada' });
+}

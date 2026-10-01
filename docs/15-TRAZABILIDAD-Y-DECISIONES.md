@@ -4,6 +4,8 @@
 
 ## Línea base y criterios
 
+**Continuación S02, 2026-09-30 (sin commit):** cookie HttpOnly/CSRF implementadas y verificadas; reemplaza únicamente el estado y contrato de sesión S02. La consolidación previa se conserva como contexto histórico.
+
 Consolidación sobre **f21b2a6**, «Corrige infraestructura PostgreSQL del CI». No modifica implementación, datos, dependencias ni decisiones de negocio. Cada fila relaciona el hallazgo original, su riesgo, decisión, cambio, fuente y evidencia. Los commits se comprobaron en el historial local; las pruebas citadas existen en el árbol. Las decisiones de alcance provienen de la corrección controlada autorizada y sus informes versionados; no se presenta este documento como un acta institucional firmada.
 
 Las dimensiones son independientes:
@@ -75,10 +77,10 @@ En las tablas, archivos de controladores/rutas sin prefijo pertenecen a backend/
 | ID | Hallazgo original y riesgo | Decisión y corrección/retiro | Código/SQL relacionado | Commit y verificación disponible | Resolución | Contexto | Limitación o pendiente |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | S01 | JWT conserva rol/equipo obsoletos y vive tras reset | JWT mínimo y usuario vigente por request; session_version cambia en reset atómico | authController.js; authMiddleware.js; passwordRecoveryController.js; database/20260914_s01_session_version.sql | d51387d; s01-s03-auth, migración/rollback; E-QA | CORREGIDO | VIGENTE | Logout local no revoca copias; reactivar puede admitir JWT vigente sin cambio de versión |
-| S02 | JWT en localStorage accesible a JavaScript; exposición ante XSS | Conservar Bearer y corregir manejo coherente de sesión/rechazos; diferir cambio integral de transporte | frontend/src/api/client.js; api/session.js; context/AuthContext.jsx | d51387d; frontend s02-session | PARCIAL | VIGENTE | Token sigue en localStorage; decidir topología/orígenes y migración integral, no cookies parciales |
+| S02 | JWT en localStorage accesible a JavaScript; exposición ante XSS | Migrar a cookie HttpOnly, Secure en producción, SameSite=Lax; CORS/CSRF por CLIENT_URL; logout HTTP | utils/sessionCookie.js; controllers/authController.js; middleware/authMiddleware.js y httpConfig.js; frontend api/session.js y AuthContext.jsx | Continuación 2026-09-30 sin commit; s01-s03-auth, s02-cookie-csrf y frontend s02-session; 204 backend y 51 frontend aprobadas | CORREGIDO | VIGENTE | Cierre del riesgo de almacenamiento JavaScript; no elimina XSS ni certifica HTTPS/proxy institucional. Requiere despliegue same-site |
 | S03 | Login/forgot/reset sin límites; abuso de intentos | Límites por IP/endpoint, mapa acotado, proxy explícito, 429/Retry-After y errores genéricos | backend/src/middleware/authRateLimit.js; routes/authRoutes.js | d51387d; s03-rate-limit/s01-s03-auth | CORREGIDO | VIGENTE | Memoria por proceso; NAT comparte cupo y ataques distribuidos requieren otros controles |
 | S04 | Cargas sin límites seguros; recursos/nombres manipulables | Un archivo, UUID, límites por formato y limpieza al rechazar | backend/src/middleware/uploadMiddleware.js; services/fileStore.js | a96aa30; s04-s07-files | CORREGIDO | VIGENTE | UPLOAD_ROOT requiere almacenamiento y permisos adecuados |
-| S05 | /uploads público expone evidencias y borradores | Quitar estáticos; rutas por entidad con publicación/propiedad/rol; Blob con Bearer | routes/fileRoutes.js; controllers/fileController.js; frontend/src/components/ProtectedFile.jsx | a96aa30; s04-s07-files y frontend s05-protected-files | CORREGIDO | VIGENTE | Un proxy externo no debe republicar uploads; referencias heredadas se resuelven bajo permisos |
+| S05 | /uploads público expone evidencias y borradores | Quitar estáticos; rutas por entidad con publicación/propiedad/rol; Blob con Bearer en la corrección histórica; cookie HttpOnly desde S02 2026-09-30 | routes/fileRoutes.js; controllers/fileController.js; frontend/src/components/ProtectedFile.jsx | a96aa30; s04-s07-files y frontend s05-protected-files | CORREGIDO | VIGENTE | Un proxy externo no debe republicar uploads; referencias heredadas se resuelven bajo permisos |
 | S06 | Huérfanos por fallo SQL/reemplazo/borrado; pérdida de adjuntos compartidos | Coordinar transacción y cleanup, consultar ambas tablas antes de retirar archivos | backend/src/services/contentFiles.js; fileStore.js; controladores | a96aa30; s04-s07-files: fallos/referencias/concurrencia | CORREGIDO | VIGENTE | BD y filesystem no son atómicos; crash puede dejar residuos; no barrido histórico automático |
 | S07 | Regex/MIME insuficientes; aceptar formato aparente | Allowlist, extensión/MIME/firma y marcadores estructurales con worker acotado | backend/src/services/fileFormats.js; fileValidation.js; fileValidationWorker.js | a96aa30; s04-s07-files | CORREGIDO | VIGENTE | Sin antivirus, sin decodificación total ni certificación de codecs/contenido activo |
 | S08 | CORS fijo ignora entorno; política ambigua | Orígenes exactos, fallback controlado CLIENT_URL, error al configurar mal, sin cookies | backend/src/middleware/httpConfig.js; server.js | 294563f; s08-s10-config-logging HTTP | CORREGIDO | VIGENTE | CORS no sustituye auth; topología institucional aún por definir |
@@ -93,8 +95,8 @@ En las tablas, archivos de controladores/rutas sin prefijo pertenecen a backend/
 | --- | --- | --- | --- |
 | D01–D10 | 9 | 0 | 1: D06 |
 | F01–F20 | 18 | 2: F05, F07 | 0 |
-| S01–S12 | 10 | 2: S02, S12 | 0 |
-| Total | **37** | **4** | **1** |
+| S01–S12 | 11 | 1: S12 | 0 |
+| Total | **38** | **3** | **1** |
 
 F01/F02/F03 y F14 tienen contexto RETIRADO POR DECISIÓN DE ALCANCE; los demás hallazgos de la matriz tienen contexto VIGENTE. Las evidencias intermedias siguientes tienen contexto HISTÓRICO y no añaden hallazgos ni cambian el balance.
 
@@ -105,7 +107,7 @@ F01/F02/F03 y F14 tienen contexto RETIRADO POR DECISIÓN DE ALCANCE; los demás 
 | [09: matriz original T01–T28 y cierres sucesivos](09-CALIDAD-Y-PENDIENTES.md) | Revisión 409, auth vigente, retiros, archivos y XLSX protegido | Matriz VIGENTE de 09 |
 | [14: primer run 78c0297 fallido](14-CI-PRIMER-RUN.md) | Helper corregido y segundo f21b2a6 SUCCESS informado | E-CI; S12 parcial solo por dependencias |
 
-Pendientes de decisión/ejecución posterior: catálogo institucional D06 y semántica F05/F07; proveedor/adaptador de correo F16; topología y eventual sustitución integral de localStorage S02; actualizaciones de dependencias S12 con regresión; infraestructura, HTTPS, permisos, respaldo/retención y operación que Parques defina. No se asignan responsables personales, fechas o proveedores inexistentes. El cierre técnico F16 no afirma entrega operativa de correo. Véase [entrega institucional](16-ENTREGA-INSTITUCIONAL.md).
+Pendientes de decisión/ejecución posterior: catálogo institucional D06 y semántica F05/F07; proveedor/adaptador de correo F16; verificación institucional de HTTPS/proxy y topología same-site para la cookie S02; actualizaciones de dependencias S12 con regresión; infraestructura, HTTPS, permisos, respaldo/retención y operación que Parques defina. No se asignan responsables personales, fechas o proveedores inexistentes. El cierre técnico F16 no afirma entrega operativa de correo. Véase [entrega institucional](16-ENTREGA-INSTITUCIONAL.md).
 
 ## Evidencia utilizable posteriormente en el trabajo académico
 

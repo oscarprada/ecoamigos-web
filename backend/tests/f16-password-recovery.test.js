@@ -48,6 +48,7 @@ test('F16: revision transaccional PostgreSQL aislado', {
       let source=fs.readFileSync(path.join(root,'backend/src/controllers',file),'utf8');
       source=source.replace(/import \{ (?:query|pool) \} from '..\/config\/db.js';/,()=> 'const pool=globalThis.__f16Pool; const query=(...args)=>pool.query(...args);');
       source=source.replace("import { logInfo, logError } from '../utils/logger.js';",()=> 'const logInfo=()=>{}; const logError=()=>{};');
+      source=source.replace("'../utils/sessionCookie.js'",()=>JSON.stringify(pathToFileURL(path.join(root,'backend/src/utils/sessionCookie.js')).href));
       for(const pkg of ['bcrypt','jsonwebtoken']) source=source.replace("'"+pkg+"'",()=>JSON.stringify(pathToFileURL(require.resolve(pkg)).href));
       source=source.replace("'../services/passwordResetDelivery.js'",()=>JSON.stringify(pathToFileURL(path.join(root,'backend/src/services/passwordResetDelivery.js')).href));
       if(testDelivery) source=source.replace('createRecoveryHandlers(pool, deliverPasswordReset);','createRecoveryHandlers(pool, globalThis.__f16Delivery);');
@@ -76,7 +77,7 @@ test('F16: revision transaccional PostgreSQL aislado', {
     const post=async(resource,body)=>{
       const response=await fetch(base+resource,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       const raw=await response.text();
-      return {code:response.status,body:response.headers.get('content-type')?.includes('application/json')?JSON.parse(raw):raw};
+      return {...(response.headers.get('set-cookie')?{cookie:response.headers.get('set-cookie').split(';')[0]}:{}),code:response.status,body:response.headers.get('content-type')?.includes('application/json')?JSON.parse(raw):raw};
     };
     const forgot=email=>post('/api/auth/forgot-password',{email});
     const reset=(token,password='new-fixture-password')=>post('/api/auth/reset-password',{token,new_password:password});
@@ -116,7 +117,7 @@ test('F16: revision transaccional PostgreSQL aislado', {
       assert.ok((await tokenRows()).every(row=>row.used_at));
       // S01 supersedes the historical risk: password reset revokes old JWT.
       assert.equal(after[0].session_version,before[0].session_version+1);
-      const response=await fetch(base+'/api/auth/me',{headers:{Authorization:'Bearer '+oldLogin.body.token}});assert.equal(response.status,401);
+      const response=await fetch(base+'/api/auth/me',{headers:{Cookie:oldLogin.cookie}});assert.equal(response.status,401);
     });
     await t.test('inválido/expirado/vacío y contraseñas inválidas no cambian filas',async()=>{
       await forgot('active@test.invalid');const expiring=delivered.at(-1).token;

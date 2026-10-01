@@ -74,7 +74,7 @@ node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"
 | `PORT` | Servidor Express; respaldo 3000 |
 | `JWT_SECRET` | Firma y verificación JWT; sin respaldo |
 | `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Configuración de `pg.Pool` |
-| `CLIENT_URL` | Un origen frontend para enlaces F16 y fallback CORS; CORS_ORIGINS tiene precedencia |
+| `CLIENT_URL` | Un origen frontend exacto para enlaces F16, CORS con credentials y validación CSRF |
 | `VITE_API_URL` | URL pública frontend; respaldo `http://localhost:3000/api`; debe terminar en `/api` |
 | `DATABASE_URL` | Si no está vacía, prevalece sobre las cinco variables DB_* de conexión; URL postgres/postgresql sin query ni fragmento |
 | `DB_PORT`, `DB_SSL` | Puerto 1–65535, respaldo 5432; SSL false/true, true verifica certificado |
@@ -131,7 +131,7 @@ Set-Location frontend
 npm run dev
 ```
 
-Abrir `http://localhost:5173`. CORS_ORIGINS admite por defecto solo ese origen: `127.0.0.1`, otro puerto o un dominio son diferentes.
+Abrir `http://localhost:5173`. CLIENT_URL admite por defecto solo ese origen: `127.0.0.1`, otro puerto o un dominio son diferentes.
 
 ## 8. Verificar
 
@@ -181,7 +181,7 @@ Los valores son técnicos, no decisiones institucionales. [Operación](08-OPERAC
 | --- | --- |
 | NODE_ENV | production exige origen explícito CORS y HTTPS para enlaces de recuperación; test pertenece a pruebas |
 | PORT, JWT_SECRET | Puerto Express con respaldo 3000; secreto JWT sin respaldo, nunca público |
-| CLIENT_URL, CORS_ORIGINS | Un origen de enlaces; lista CORS opcional con precedencia, sin wildcard ni cookies |
+| CLIENT_URL, CORS_ORIGINS | CLIENT_URL único; CORS_ORIGINS debe omitirse o coincidir; credentials y cookie HttpOnly |
 | DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME | Conexión local; puerto 5432 por omisión, resto requerido |
 | DATABASE_URL, DB_SSL | URL no vacía prevalece; sin query/fragmento; SSL false/true, true verifica certificado |
 | TRUSTED_PROXIES | Vacío: IP directa; declarar solo proxies autorizados |
@@ -194,3 +194,8 @@ Los valores son técnicos, no decisiones institucionales. [Operación](08-OPERAC
 | ECOAMIGOS_TEST_PG_BIN | Solo pruebas; directorio de initdb/pg_ctl/psql/createdb/postgres 18 compatibles |
 
 No configurar NODE_TLS_REJECT_UNAUTHORIZED=0: se rechaza. No hay variables SMTP, cookies o CSRF implementadas. CI/GITHUB_ACTIONS/GITHUB_STEP_SUMMARY y POSTGRES_* del workflow pertenecen al runner/servicio efímero, no a la configuración institucional de aplicación. Las variables de pruebas no deben apuntar a una BD existente.
+
+
+### Actualización S02 — 2026-09-30
+
+Sesión S02: JWT HS256 de ocho horas en cookie ecoamigos_session, HttpOnly, SameSite=Lax, Path=/api, sin Domain; Secure cuando NODE_ENV=production. El body de login ya no contiene JWT. Frontend y API deben compartir sitio y esquema (localhost con distintos puertos en desarrollo; HTTPS bajo el mismo sitio en producción). No se soporta automáticamente un frontend en un sitio distinto; no cambiar a SameSite=None sin revisar despliegue y pruebas. CLIENT_URL es el único origen permitido para CORS y CSRF. Fuera de producción, si falta, se usa http://localhost:5173; en producción es obligatorio un origen HTTPS exacto. No se admiten wildcard, lista, ruta, credenciales ni slash final. CORS_ORIGINS es una variable heredada: retirarla o mantenerla idéntica a CLIENT_URL; otro valor detiene el arranque. Axios y CORS habilitan credenciales. Los métodos mutantes exigen Origin igual a CLIENT_URL y X-Ecoamigos-Request: 1, incluso login, logout y recuperación. Logout no cambia las reglas de revocación S01: reset incrementa session_version y las peticiones siguientes rechazan cualquier JWT anterior. Se conservan autorización y límites S03. Ver evidencia de pruebas y decisión CSRF en [09](09-CALIDAD-Y-PENDIENTES.md).

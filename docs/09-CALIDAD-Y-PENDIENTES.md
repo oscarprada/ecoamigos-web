@@ -2,9 +2,11 @@
 
 [Índice](00-INDICE.md)
 
+**Actualización S02 2026-09-30:** el transporte vigente es cookie HttpOnly con control CSRF. Las decisiones Bearer/localStorage de los bloques de corrección anteriores son evidencia histórica, no instrucciones vigentes. El cierre actualizado figura al final de este documento.
+
 ## Estado vigente y procedencia de evidencia
 
-La fuente única del estado D/F/S es [15: trazabilidad y decisiones](15-TRAZABILIDAD-Y-DECISIONES.md): **37 CORREGIDOS, 4 PARCIALES (F05/F07/S02/S12) y 1 PENDIENTE INSTITUCIONAL (D06)**. Retirados por decisión de alcance: F01/F02/F03 y F14. Los informes de las intervenciones se conservan abajo como historia, no como estados adicionales contradictorios.
+La fuente única del estado D/F/S es [15: trazabilidad y decisiones](15-TRAZABILIDAD-Y-DECISIONES.md): **38 CORREGIDOS, 3 PARCIALES (F05/F07/S12) y 1 PENDIENTE INSTITUCIONAL (D06)**. Retirados por decisión de alcance: F01/F02/F03 y F14. Los informes de las intervenciones se conservan abajo como historia, no como estados adicionales contradictorios.
 
 | Evidencia | Resultado y alcance |
 | --- | --- |
@@ -28,7 +30,7 @@ Usar exclusivamente un entorno QA autorizado, cuentas y datos ficticios. Registr
 | T03 Login válido | Cuenta activa de prueba, contraseña válida | JWT HS256 8h id/sv; rol/equipo actuales en cada petición, redirección según rol | S01–S03; sesión UI S02 |
 | T04 Login inválido/inactivo | Contraseña errónea o cuenta inactiva | 401 controlado, sin sesión; límites S03 pueden producir 429 | S01–S03 |
 | T05 Autorización | Sin token, vencido/revocado, líder en admin | 401 para sesión inválida y 403 para rol no autorizado; repetir en API | S01/F11/F15 |
-| T06 Persistencia | Recargar sesión válida y cerrar sesión | Recupera identidad; logout limpia almacenamiento local, no revoca copias de JWT; reset sí invalida versiones previas | S01 y frontend S02 |
+| T06 Persistencia | Recargar sesión válida y cerrar sesión | Recupera identidad; logout elimina la cookie mediante backend, no revoca copias extraídas de JWT; reset sí invalida versiones previas | S01 y frontend S02 |
 | T07 Equipo/usuario | Admin crea equipo y líder; edita campos autorizados | 201 y listados; PATCH limitado; hash no expuesto, sin DELETE de usuarios/equipos/períodos | F15 e instalación |
 | T08 Cupo | 15 cuentas incluyendo admins/inactivos; dos altas con 14 | Máximo 15; API 409/USER_LIMIT_REACHED, una alta concurrente gana; bootstrap conserva límite | F12/F15 |
 | T09 Período | Crear activo, provocar fallo y solicitudes concurrentes | Máximo uno activo; rollback conserva el anterior, índice protege incluso SQL externo; cero permitido | F09 y D01 |
@@ -93,7 +95,7 @@ CORREGIDO se refiere al código y la instalación nueva probados, no a una base 
 
 Premios y ganadores están fuera del alcance actual del producto. Se retiraron sus páginas, rutas, enlaces, llamadas, controladores y endpoints, y `GET /public/ranking` volvió a limitarse a `currentPeriod` y `ranking`. No se modificó el cálculo de posiciones o puntos. Las tablas `prizes`, `winner_records` y `rewards` permanecen deliberadamente como legado; no se ejecutó SQL destructivo ni se modificaron datos.
 
-S01 y S03 corregidos según el bloque final; S02 parcial. S04–S07 corregidos según el bloque de archivos al final; S08–S10 corregidos según el cierre de configuración; S11 corregido y S12 parcial según el cierre final: CI implementado y validado con f21b2a6; S12 PARCIAL exclusivamente por dependencias. F20 está corregido según su bloque final, con smoke visual pendiente. F19 está corregido según su bloque final. F18 está corregido según su verificación formal. F17 está corregido según su bloque final. F16 se detalla en su bloque de recuperación. F10–F15 están corregidos según lo descrito abajo; la matriz original T01–T28 se conserva como evidencia histórica y tiene una versión vigente separada al inicio. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
+S01 y S03 corregidos; S02 corregido según la continuación HttpOnly/CSRF del 2026-09-30. S04–S07 corregidos según el bloque de archivos al final; S08–S10 corregidos según el cierre de configuración; S11 corregido y S12 parcial según el cierre final: CI implementado y validado con f21b2a6; S12 PARCIAL exclusivamente por dependencias. F20 está corregido según su bloque final, con smoke visual pendiente. F19 está corregido según su bloque final. F18 está corregido según su verificación formal. F17 está corregido según su bloque final. F16 se detalla en su bloque de recuperación. F10–F15 están corregidos según lo descrito abajo; la matriz original T01–T28 se conserva como evidencia histórica y tiene una versión vigente separada al inicio. Las menciones T23/T24 se conservan como registro histórico de las pruebas que evidenciaban el módulo retirado, no como funcionalidad vigente.
 
 ### Fuente única de puntuación — F04
 
@@ -726,3 +728,35 @@ La repetición específica final S11 aprobó 15/15, incluyendo fallo simulado de
 #### Continuación CI del commit 78c0297
 
 El diagnóstico, aislamiento de PostgreSQL y nueva semántica de dependency-audit se documentan en [revisión del primer run](14-CI-PRIMER-RUN.md). Los totales anteriores son evidencia histórica; consultar ese informe para la validación de esta continuación. S11 sigue CORREGIDO y S12 PARCIAL.
+
+
+## Cierre técnico S02 — cookie HttpOnly y CSRF, 2026-09-30
+
+**Estado propuesto: CORREGIDO en código y pruebas locales**, sin despliegue ni commit. Sustituye la decisión provisional Bearer/localStorage de los bloques históricos, que no se reescriben como si hubiera existido esta solución entonces. El backlog retrospectivo Jira conserva su corte y no fue modificado en esta corrección.
+
+### Decisión de arquitectura y CSRF
+
+React/Vite y Express permanecen separados. Se soportan orígenes distintos del mismo sitio: localhost con distintos puertos en desarrollo y HTTPS bajo el mismo sitio en producción. La cookie host-only ecoamigos_session tiene HttpOnly, SameSite=Lax, Path=/api y Max-Age=28800; Secure en NODE_ENV=production. El JWT mantiene HS256, id/sv y ocho horas. Login no lo devuelve en el body. No se lee ni escribe JWT en localStorage; solo se elimina la clave heredada sin leerla. El usuario permanece en memoria y /auth/me restaura la sesión. Los usuarios deberán volver a iniciar sesión al migrar desde Bearer; no se conserva un transporte alternativo inseguro.
+
+SameSite=Lax es defensa adicional, no la única barrera: un origen hermano dentro del mismo sitio podría enviar cookies. Todos los métodos distintos de GET/HEAD/OPTIONS bajo /api exigen Origin exactamente igual a CLIENT_URL y X-Ecoamigos-Request: 1. Esto incluye login (evita login CSRF), logout, recuperación, JSON y multipart. La cabecera fija no es un secreto: obliga a preflight en peticiones cross-origin y un formulario HTML simple no puede establecerla. CORS solo permite el origen exacto y credenciales; rechaza orígenes ajenos antes de la ruta. No se permiten listas ni wildcard. Las operaciones que cambian estado no usan GET. No se añade dependencia ni token CSRF redundante para esta API consumida mediante Axios. Fundamento: [OWASP CSRF Prevention, cabeceras personalizadas para AJAX/API y comprobación de origen](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html).
+
+Un despliegue entre sitios distintos queda fuera de esta configuración: SameSite=Lax no enviará la sesión en XHR cross-site. Requiere nueva revisión explícita; no habilitar SameSite=None como arreglo improvisado. CLIENT_URL debe ser HTTPS en producción y corresponder al frontend real; CORS_ORIGINS heredada debe eliminarse o coincidir exactamente. La API también debe publicarse por HTTPS. No se modificó ningún .env real.
+
+### Pruebas y resultados
+
+| Ejecución final | Resultado |
+| --- | --- |
+| npm test --prefix backend | 204 pruebas, 204 aprobadas, 0 fallos, 0 omitidas; PostgreSQL 18.1 aislado |
+| npm test --prefix frontend | 51 pruebas, 51 aprobadas, 0 fallos, 0 omitidas |
+| npm run build | Correcto; Vite transforma 104 módulos |
+| npm run check | Correcto; sintaxis de 75 archivos, YAML/contrato CI y git diff --check |
+
+Se ejecutaron las suites completas, no solo S02. s01-s03-auth verifica login válido, cookie/TTL, body sin JWT, me, roles vigentes, usuarios inactivos, rechazo sin cookie y de Bearer, logout, CSRF y reset con revocación/rollback. s02-cookie-csrf agrega atributos de producción/borrado, cookie duplicada o inválida y bloqueo de POST/PUT/PATCH/DELETE para origen/cabecera incorrectos o ausentes, incluidos multipart y rutas de autenticación. Frontend s02-session cubre persistencia mediante me, ausencia de lectura/escritura JWT, Axios credentials, cabecera CSRF, 401 tardío, 403/500, logout fallido y serialización login/logout. S08 comprueba CLIENT_URL exacto con credentials y rechazo de configuración ambigua. Los fixtures F11/F12/F15/F16/S04–S07/S11 se adaptaron al transporte cookie, sin cambiar expectativas de negocio.
+
+Primera ejecución backend: initdb no pudo crear sus clústeres bajo el sandbox de Windows; no fue una regresión de aplicación. Se repitió con autorización fuera del sandbox, siempre usando el runner aislado. Esa ejecución detectó un import relativo pendiente en el cargador data-URL de F15; se corrigió el helper y la suite final completa aprobó. Los logs están en el directorio temporal del sistema (ecoamigos-s02-backend-final.txt, ecoamigos-s02-frontend.txt y ecoamigos-s02-build.txt). No se conectó a ecoamigos real. No hay cambios de SQL, datos, reglas de puntos/ranking ni dependencias/lockfiles; las 56 filas de catálogo permanecen intactas en las comparaciones de las suites aisladas.
+
+### Límites y verificación previa a entrega
+
+HttpOnly evita lectura del JWT por JavaScript, pero XSS aún podría efectuar peticiones con la sesión; no es certificación de ausencia de XSS. Logout elimina la cookie del navegador sin incrementar session_version ni revocar copias sustraídas previamente: conserva la semántica de revocación global mediante reset S01/F16. Si falla la red al cerrar sesión, la UI informa y permite reintentar; no declara una cookie eliminada sin respuesta del servidor. La coordinación de operaciones login/logout es por pestaña, sin invalidación visual inmediata entre pestañas; el backend sigue comprobando identidad/versiones en cada petición.
+
+Las pruebas frontend usan ReactDOM con host mínimo, no un navegador institucional real. Antes de entregar, realizar smoke de login, recarga, permisos, logout y reset con los dominios HTTPS/proxy elegidos, confirmar flags en DevTools sin copiar tokens y comprobar cabecera/origen en multipart y descargas. Proveedor de correo F16 y riesgos de dependencias S12 siguen pendientes, fuera de S02. No hubo commit, push, cambios en Jira ni despliegue.

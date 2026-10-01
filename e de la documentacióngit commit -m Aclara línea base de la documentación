@@ -1,0 +1,225 @@
+[1mdiff --git a/docs/02-ARQUITECTURA.md b/docs/02-ARQUITECTURA.md[m
+[1mindex 131278a..d5e3a56 100644[m
+[1m--- a/docs/02-ARQUITECTURA.md[m
+[1m+++ b/docs/02-ARQUITECTURA.md[m
+[36m@@ -17,10 +17,137 @@[m [mflowchart LR[m
+   C --> X[ExcelJS: descarga XLSX][m
+ ```[m
+ [m
+[31m-SPA cliente sin renderizado en servidor, API REST sin ORM y almacenamiento local de archivos. Hay suites backend/frontend con scripts npm y PostgreSQL temporal. No hay colas de trabajos externas, WebSockets, servicios programados, microservicios, contenedores ni despliegue automatizado. El workflow .github/workflows/ci.yml incorpora integración continua. Premios y ganadores no forman parte de la aplicación actual.[m
+[32m+[m[32mSPA cliente sin renderizado en servidor, API REST sin ORM y almacenamiento local de archivos. Hay suites backend/frontend con scripts npm y PostgreSQL temporal. No hay colas de trabajos externas, WebSockets, servicios programados, microservicios ni contenedores de aplicación. CI sí usa un service container PostgreSQL; no hay despliegue automatizado. El workflow .github/workflows/ci.yml incorpora integración continua. Premios y ganadores no forman parte de la aplicación actual.[m
+ [m
+ `frontend/src/main.jsx` monta React StrictMode, ToastProvider y App. App monta AuthProvider, BrowserRouter y rutas. El layout incluye cabecera institucional y Outlet. Las rutas privadas atraviesan ProtectedRoute; la API repite la autorización en middleware.[m
+ [m
+[32m+[m[32m## Modelo C4[m
+[32m+[m
+[32m+[m[32mEstas vistas describen la arquitectura lógica inspeccionada en el repositorio sobre f21b2a6 y complementan el inventario y los flujos de este documento. Se usa Mermaid flowchart con etiquetas de responsabilidad para expresar C4 niveles 1–3, sin macros C4 experimentales. Las flechas indican uso o dependencia, no despliegue físico. Un **contenedor C4** es una aplicación o almacén de datos: no implica Docker. No existe infraestructura institucional de producción desplegada.[m
+[32m+[m
+[32m+[m[32m### C4 nivel 1 — Contexto de Ecoamigos[m
+[32m+[m
+[32m+[m[32mPropósito: delimitar el sistema, las personas que lo usan y sus relaciones externas reales. Visitante es una persona sin sesión, no un rol persistido; leader y admin sí son roles de la aplicación.[m
+[32m+[m
+[32m+[m[32m```mermaid[m
+[32m+[m[32mflowchart LR[m
+[32m+[m[32m  V["Persona: visitante"][m
+[32m+[m[32m  L["Persona: usuario líder"][m
+[32m+[m[32m  A["Persona: administrador"][m
+[32m+[m[32m  E["Sistema Ecoamigos: educación, registro, revisión, ranking y reportes"][m
+[32m+[m[32m  G["Sistema externo: Google Fonts"][m
+[32m+[m[32m  V -->|Consulta educación y ranking públicos| E[m
+[32m+[m[32m  L -->|Registra reciclaje y consulta su historial| E[m
+[32m+[m[32m  A -->|Administra, revisa y exporta XLSX| E[m
+[32m+[m[32m  E -->|El navegador descarga CSS y fuentes| G[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32mEcoamigos incluye su persistencia PostgreSQL y almacenamiento de archivos/evidencias; se abren en el nivel 2, no se presentan como sistemas de negocio externos independientes. Google Fonts está referenciado en frontend/index.html. Los enlaces a aliados en HomePage.jsx son navegación a sitios externos, sin integración API ni intercambio de registros. La recuperación contiene un adaptador sin proveedor: **Integración futura / pendiente de configuración institucional**; no hay entrega real de correo y no se dibuja como conexión activa. Fuentes locales: frontend/src/App.jsx, páginas públicas y backend/src/server.js.[m
+[32m+[m
+[32m+[m[32m### C4 nivel 2 — Contenedores de ejecución[m
+[32m+[m
+[32m+[m[32mPropósito: mostrar dónde se ejecutan la interfaz y la lógica, y qué almacenes utiliza la API. El navegador es el entorno de ejecución del frontend, no una aplicación adicional que sustituya la SPA.[m
+[32m+[m
+[32m+[m[32m```mermaid[m
+[32m+[m[32mflowchart LR[m
+[32m+[m[32m  U["Personas: visitante, líder y administrador"][m
+[32m+[m[32m  subgraph ECO["Sistema Ecoamigos: límite lógico"][m
+[32m+[m[32m    subgraph CLIENT["Navegador del usuario"][m
+[32m+[m[32m      SPA["Contenedor: frontend React; Vite para desarrollo y build"][m
+[32m+[m[32m    end[m
+[32m+[m[32m    API["Contenedor: API REST Node.js y Express"][m
+[32m+[m[32m    PG[("Almacén: PostgreSQL")][m
+[32m+[m[32m    UP[("Almacén privado: archivos y evidencias en UPLOAD_ROOT")][m
+[32m+[m[32m    LOG[("Almacén técnico privado: JSONL en LOG_DIR")][m
+[32m+[m[32m  end[m
+[32m+[m[32m  GF["Google Fonts: servicio externo"][m
+[32m+[m[32m  U -->|Interacción con páginas y formularios| SPA[m
+[32m+[m[32m  SPA -->|HTTP, Axios, JSON o multipart; Bearer en rutas protegidas| API[m
+[32m+[m[32m  API -->|JSON, archivos autorizados y XLSX| SPA[m
+[32m+[m[32m  API -->|pg, SQL parametrizado y transacciones| PG[m
+[32m+[m[32m  API -->|Lectura y escritura mediante filesystem| UP[m
+[32m+[m[32m  API -->|Logger asíncrono y rotación| LOG[m
+[32m+[m[32m  SPA -->|CSS y fuentes por HTTPS| GF[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32mReact ofrece navegación, formularios y estados de sesión; Vite sirve desarrollo y genera frontend/dist, no ejecuta el backend. Express aplica autorización, reglas y acceso por entidad a archivos; PostgreSQL conserva usuarios, períodos, catálogo y registros. UPLOAD_ROOT conserva adjuntos y LOG_DIR los eventos técnicos, sin publicación general de /uploads. Son ubicaciones lógicas, no volúmenes o servidores institucionales ya provisionados. HTTP describe el intercambio local; dominios, HTTPS, proxy y hosting futuro siguen por definir. No hay ORM ni microservicios. Referencias: frontend/src/api/client.js, backend/src/config/db.js, services/fileStore.js y utils/logger.js.[m
+[32m+[m
+[32m+[m[32m### C4 nivel 3 — Componentes del contenedor backend[m
+[32m+[m
+[32m+[m[32mPropósito: abrir la API Express en los módulos reales de entrada, seguridad, controladores, servicios y utilidades. Las agrupaciones corresponden a carpetas y responsabilidades existentes; no añaden una capa de repositorios ni un servicio de negocio universal.[m
+[32m+[m
+[32m+[m[32m```mermaid[m
+[32m+[m[32mflowchart TB[m
+[32m+[m[32m  SPA["Frontend React: cliente de la API"][m
+[32m+[m[32m  subgraph BACK["Contenedor backend Node.js y Express"][m
+[32m+[m[32m    HTTP["Configuración HTTP: httpConfig.js; CORS, proxy y errores"][m
+[32m+[m[32m    SERVER["Entrada: server.js; montaje Express"][m
+[32m+[m[32m    ROUTES["Routers: authRoutes, publicRoutes, recyclingRoutes, adminRoutes, fileRoutes"][m
+[32m+[m[32m    AUTH["authMiddleware.js: JWT, usuario vigente y roles"][m
+[32m+[m[32m    RATE["authRateLimit.js: límites login y recuperación"][m
+[32m+[m[32m    UPLOAD["uploadMiddleware.js: recepción Multer y límites"][m
+[32m+[m[32m    subgraph CTRL["Controladores HTTP"][m
+[32m+[m[32m      LOGIN["authController.js: login y sesión actual"][m
+[32m+[m[32m      PUBLIC["publicController.js: contenido, catálogo, ranking y estadísticas"][m
+[32m+[m[32m      REC["recyclingController.js: registro e historial; revisión transaccional"][m
+[32m+[m[32m      ADMIN["adminController.js: usuarios, equipos, períodos y contenido"][m
+[32m+[m[32m      FILE["fileController.js: acceso por entidad y permisos"][m
+[32m+[m[32m      RESET["passwordRecoveryController.js: recuperación y reset"][m
+[32m+[m[32m      XLSX["exportController.js: XLSX acotado con ExcelJS"][m
+[32m+[m[32m    end[m
+[32m+[m[32m    RULES["Utilidades: catalogReference.js y recordDate.js"][m
+[32m+[m[32m    CONTENT["Servicio contentFiles.js: transacciones de contenido"][m
+[32m+[m[32m    STORE["Servicio fileStore.js: rutas privadas y limpieza por referencias"][m
+[32m+[m[32m    VALID["Servicios fileFormats, fileValidation y worker: formato y firma"][m
+[32m+[m[32m    DELIVERY["passwordResetDelivery.js: adaptador sin proveedor; no envía correo"][m
+[32m+[m[32m    OPT["Configuración databaseOptions.js: conexión, puerto y TLS"][m
+[32m+[m[32m    DB["Acceso a datos db.js: pg.Pool y query; sin ORM"][m
+[32m+[m[32m    LOGGER["logger.js: eventos permitidos, cola y rotación"][m
+[32m+[m[32m  end[m
+[32m+[m[32m  PG[("PostgreSQL")][m
+[32m+[m[32m  UP[("UPLOAD_ROOT: archivos privados")][m
+[32m+[m[32m  LOG[("LOG_DIR: logs técnicos")][m
+[32m+[m[32m  SPA -->|Peticiones HTTP| SERVER[m
+[32m+[m[32m  HTTP -->|Configura políticas| SERVER[m
+[32m+[m[32m  SERVER -->|Despacha por ruta| ROUTES[m
+[32m+[m[32m  ROUTES -->|Rutas protegidas| AUTH[m
+[32m+[m[32m  AUTH -->|Consulta identidad actual| DB[m
+[32m+[m[32m  ROUTES -->|Login y recuperación| RATE[m
+[32m+[m[32m  ROUTES -->|Cargas de contenido y evidencia| UPLOAD[m
+[32m+[m[32m  ROUTES -->|Invoca tras middleware aplicable; públicas sin JWT| CTRL[m
+[32m+[m[32m  CTRL -->|SQL directo con query o cliente transaccional| DB[m
+[32m+[m[32m  REC -->|Valida catálogo y fecha| RULES[m
+[32m+[m[32m  ADMIN -->|Delega mutaciones de contenido| CONTENT[m
+[32m+[m[32m  CONTENT -->|Pool inyectado para transacción| DB[m
+[32m+[m[32m  CONTENT -->|Retira adjuntos sin referencias| STORE[m
+[32m+[m[32m  REC -->|Compensa cargas fallidas| STORE[m
+[32m+[m[32m  FILE -->|Resuelve archivo autorizado| STORE[m
+[32m+[m[32m  UPLOAD -->|Valida extensión, MIME y firma| VALID[m
+[32m+[m[32m  UPLOAD -->|Guarda carga privada| UP[m
+[32m+[m[32m  UPLOAD -->|Raíz y limpieza de rechazo| STORE[m
+[32m+[m[32m  STORE -->|Consulta referencias con conexión recibida| DB[m
+[32m+[m[32m  STORE -->|Resuelve y limpia| UP[m
+[32m+[m[32m  FILE -->|Envía archivo desde ruta autorizada| UP[m
+[32m+[m[32m  RESET -->|Solicita entrega al adaptador existente| DELIVERY[m
+[32m+[m[32m  OPT -->|Configura Pool| DB[m
+[32m+[m[32m  DB -->|Protocolo PostgreSQL| PG[m
+[32m+[m[32m  ADMIN -->|Eventos técnicos| LOGGER[m
+[32m+[m[32m  REC -->|Eventos técnicos| LOGGER[m
+[32m+[m[32m  DB -->|Error del Pool| LOGGER[m
+[32m+[m[32m  SERVER -->|Evento de inicio| LOGGER[m
+[32m+[m[32m  LOGGER -->|JSONL acotado| LOG[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32mLos routers seleccionan middleware según endpoint: no toda petición requiere JWT, límite auth o upload. authMiddleware consulta la identidad actual; los controladores ejecutan SQL directamente o reciben conexiones para transacciones. contentFiles recibe el Pool y fileStore recibe acceso a consultas para comprobar referencias; sus flechas no representan conexiones independientes. fileController resuelve permisos en BD antes de enviar el archivo. El worker de validación no es un servicio desplegado aparte ni antivirus. El controlador XLSX genera la respuesta HTTP usando ExcelJS; no hay cola de exportación externa. Las flechas a logger ilustran consumidores reales, no una auditoría inmutable ni un registro de todas las peticiones. El inventario siguiente localiza cada módulo; [API](04-API.md) y [reglas](06-REGLAS-Y-BACKEND.md) contienen los contratos completos.[m
+[32m+[m
+[32m+[m[32mNo se añade nivel 4: el inventario por archivo y el diagrama de secuencia ya permiten seguir la implementación sin duplicar clases o funciones para completar un nivel.[m
+[32m+[m
+[32m+[m[32m### Vista complementaria — CI, fuera del modelo funcional[m
+[32m+[m
+[32m+[m[32mGitHub Actions ejecuta el workflow ante push o pull_request hacia main. El job quality instala con npm ci, verifica un servicio PostgreSQL efímero y usa además clústeres aislados para las suites; después ejecuta pruebas backend/frontend, build y checks. dependency-audit es un job separado: instala sin scripts, ejecuta cuatro auditorías y publica riesgos, resumen y artifacts; no es una etapa obligatoriamente posterior a quality. Se conserva así el orden y la independencia reales de .github/workflows/ci.yml.[m
+[32m+[m
+[32m+[m[32m**CI IMPLEMENTADO Y VALIDADO**, con f21b2a6 SUCCESS informado por el usuario. No existe CD ni deploy automático. GitHub Actions, el contenedor PostgreSQL del runner y sus clústeres temporales son infraestructura de calidad; no son contenedores funcionales del sistema ni una instalación institucional. Detalles y procedencia: [operación](08-OPERACION.md) y [primer run y cierre posterior](14-CI-PRIMER-RUN.md).[m
+[32m+[m
+ ## Dependencias declaradas[m
+ [m
+ | Paquete | Rango | Uso |[m
+[36m@@ -48,7 +175,7 @@[m [mEstas son versiones solicitadas, no necesariamente las instaladas. Cada lockfile[m
+ | --- | --- |[m
+ | `README.md`, `docs/` | Documentación y SQL de referencia |[m
+ | `.gitignore` | Exclusión de dependencias, entorno, build, logs, uploads y respaldos |[m
+[31m-| `package.json`, `package-lock.json` | Paquete raíz, con ExcelJS; sin scripts ni workspaces |[m
+[32m+[m[32m| `package.json`, `package-lock.json` | Paquete raíz con ExcelJS redundante; scripts test/test:ci/check/build, sin workspaces |[m
+ | `6.png`, `ManobiMesa de trabajo.png`, `ManobiMesa de trabajo 1.png`, `ManobiMesa de trabajo 2.png` | Recursos gráficos raíz, sin imports encontrados en la aplicación |[m
+ | `database/schema.sql` | Único esquema oficial para base vacía, sin datos de negocio |[m
+ | `database/points_catalog_clean.csv` | 56 acciones históricas en cuatro grupos |[m
+[36m@@ -59,34 +186,44 @@[m [mEstas son versiones solicitadas, no necesariamente las instaladas. Cada lockfile[m
+ [m
+ | Ruta dentro de `backend/` | Responsabilidad |[m
+ | --- | --- |[m
+[31m-| `package.json`, `package-lock.json` | Dependencias; scripts `dev` y `start` |[m
+[32m+[m[32m| `package.json`, `package-lock.json` | Dependencias; scripts dev/start/test/test:ci |[m
+ | `.env.example` | Plantilla sin secretos funcionales |[m
+ | `src/server.js` | CORS, JSON, archivos por entidad, montaje de rutas, raíz HTTP y escucha |[m
+ | `src/config/db.js` | Pool único y función query; consume databaseOptions.js sin duplicar configuración |[m
+ | `src/config/databaseOptions.js` | Constructor puro de configuración DB local/URL/SSL, comprobable sin red |[m
+[31m-| `src/routes/authRoutes.js` | Login y sesión actual |[m
+[32m+[m[32m| `src/routes/authRoutes.js` | Login, sesión actual y recuperación con límites por endpoint |[m
+ | `src/routes/publicRoutes.js` | Ranking, estadísticas, catálogo y categorías |[m
+ | `src/routes/recyclingRoutes.js` | Crear, historial personal, pendientes, revisados y revisión |[m
+[31m-| `src/routes/adminRoutes.js` | Gestión y exportación; Multer de contenidos |[m
+[32m+[m[32m| `src/routes/adminRoutes.js` | Gestión, edición permitida y exportación; middleware de contenidos |[m
+ | `src/controllers/authController.js` | bcrypt, JWT, usuario y logging de acceso |[m
+ | `src/controllers/publicController.js` | Agregaciones públicas y contenido publicado |[m
+ | `src/controllers/recyclingController.js` | Normalización, registros, catálogo y revisión |[m
+[31m-| `src/controllers/adminController.js` | Dashboard, creación/listado de usuarios, equipos, periodos y CRUD de contenidos |[m
+[32m+[m[32m| `src/controllers/adminController.js` | Dashboard, alta/listado de usuarios/equipos/períodos, edición F15 y delegación del CRUD de contenidos |[m
+ | `src/controllers/exportController.js` | Generación del archivo XLSX |[m
+[31m-| `src/middleware/authMiddleware.js` | Firma de token y lista de roles permitidos |[m
+[31m-| `src/middleware/uploadMiddleware.js` | Evidencias; carpeta, nombres, filtro y límite |[m
+[32m+[m[32m| `src/middleware/authMiddleware.js` | Verificación JWT, usuario/estado/versión actual en BD y roles permitidos |[m
+[32m+[m[32m| `src/middleware/uploadMiddleware.js` | Cargas de contenido/evidencias, límites, nombres y validación |[m
+ | `src/utils/logger.js` | Eventos técnicos JSONL asíncronos, minimizados y rotados |[m
+[32m+[m[32m| `src/routes/fileRoutes.js`, `src/controllers/fileController.js` | Acceso a archivos por entidad/permisos |[m
+[32m+[m[32m| `src/controllers/passwordRecoveryController.js`, `src/services/passwordResetDelivery.js` | Recuperación y adaptador sin proveedor |[m
+[32m+[m[32m| `src/services/contentFiles.js`, `fileStore.js`, `fileFormats.js`, `fileValidation.js`, `fileValidationWorker.js` | Transacciones de contenido, almacenamiento privado y validación |[m
+[32m+[m[32m| `src/middleware/authRateLimit.js`, `httpConfig.js` | Límites auth, CORS/proxy y errores propagados |[m
+[32m+[m[32m| `src/utils/catalogReference.js`, `recordDate.js` | Validación de referencia y fecha |[m
+[32m+[m[32m| `tests/`, `scripts/hash-password.js`, `scripts/measure-export.mjs` | Verificación, bootstrap y medición sintética |[m
+ | `src/seed.sql` | Aviso sin escrituras: no hay datos predeterminados |[m
+[31m-| `uploads/`, `uploads/content/`, `logs/` | Datos generados, no código distribuido |[m
+[32m+[m[32m| UPLOAD_ROOT y LOG_DIR; por defecto uploads/ y logs/ | Datos privados generados; managed/content y managed/evidence para cargas nuevas; rutas heredadas compatibles |[m
+ [m
+ ## Inventario frontend[m
+ [m
+ | Ruta dentro de `frontend/` | Responsabilidad |[m
+ | --- | --- |[m
+ | `index.html` | Idioma español, viewport, título y fuentes Google |[m
+[31m-| `package.json`, `package-lock.json` | Dependencias y scripts `dev`, `build`, `preview` |[m
+[32m+[m[32m| `package.json`, `package-lock.json` | Dependencias y scripts dev/build/preview/test/test:ci |[m
+ | `vite.config.js` | Plugin React y puerto 5173; no proxy ni base de subdirectorio |[m
+ | `.env.example` | URL pública de API |[m
+[32m+[m[32m| `src/components/LoadState.jsx`, `ProtectedFile.jsx` | Estado de carga y archivos protegidos |[m
+[32m+[m[32m| `src/pages/public/NotFoundPage.jsx`, `src/pages/auth/PasswordRecoveryPage.jsx` | 404 y recuperación |[m
+[32m+[m[32m| `src/api/session.js`, `src/utils/uiError.js`, `exportError.js`, `dialogFocus.js` | Sesión y helpers de interacción |[m
+[32m+[m[32m| `tests/` | Pruebas frontend; host DOM mínimo, no certificación visual |[m
+ | `src/main.jsx` | Montaje e importación ordenada de CSS |[m
+ | `src/App.jsx` | Árbol de rutas y proveedor de autenticación |[m
+ | `src/App.jx` | Archivo vacío, no utilizado |[m
+[36m@@ -103,7 +240,7 @@[m [mEstas son versiones solicitadas, no necesariamente las instaladas. Cada lockfile[m
+ | `src/pages/leader/LeaderDashboard.jsx` | Historial personal y resumen del equipo |[m
+ | `src/pages/leader/RegisterRecyclingPage.jsx` | Formulario multipart y referencia de catálogo |[m
+ | `src/pages/admin/AdminDashboard.jsx` | Indicadores, gráficos CSS, accesos y descarga XLSX |[m
+[31m-| `src/pages/admin/AdminUsersPage.jsx` | Altas, cupo visual de 15 y listado |[m
+[32m+[m[32m| `src/pages/admin/AdminUsersPage.jsx` | Alta/listado/edición/estado de cuentas, cupo de 15 |[m
+ | `src/pages/admin/AdminReviewsPage.jsx` | Pendientes, búsqueda, filtros y revisión |[m
+ | `src/pages/admin/AdminContentPage.jsx` | Alta, edición, borrador/publicación y eliminación |[m
+ | `src/pages/admin/AdminSettingsPage.jsx` | Equipos y periodos del ranking |[m
+[36m@@ -139,14 +276,14 @@[m [msequenceDiagram[m
+   B-->>F: Posiciones y puntos[m
+ ```[m
+ [m
+[31m-El archivo se escribe antes del INSERT: si falla la base, puede quedar huérfano. La revisión no usa una transacción ni bloqueo; el detalle está en [pendientes](09-CALIDAD-Y-PENDIENTES.md).[m
+[32m+[m[32mLa revisión usa transacción y bloqueo de fila: solo pending → approved/rejected. F09/F10 coordinan períodos y registros mediante bloqueos de tabla. S06 compensa archivos nuevos ante fallo y limpia reemplazados después del COMMIT si no hay referencias; una caída abrupta aún puede dejar residuos porque disco y BD no son una transacción distribuida.[m
+ [m
+ [m
+ ## Autenticación y sesión — S01–S03[m
+ [m
+ El JWT es identidad mínima (id, sv, iat, exp), HS256 y ocho horas. authenticateToken verifica firma/expiración y consulta una vez users/teams; comprueba existencia, is_active y session_version. req.user solo contiene datos actuales públicos. authorizeRoles y controladores usan esa autoridad; /me la reutiliza. No hay caché de permisos. Los cambios confirmados antes de la consulta se reflejan en el siguiente request; no se promete cancelar solicitudes ya autorizadas en curso. Rea

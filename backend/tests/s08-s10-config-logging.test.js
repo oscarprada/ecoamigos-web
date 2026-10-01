@@ -20,26 +20,26 @@ async function serve(app, run) {
   finally { await new Promise(resolve=>server.close(resolve)); }
 }
 
-test('S08 CLIENT_URL local, lista normalizada, preflight y rechazos HTTP controlados',async()=>{
-  for (const env of [{CLIENT_URL:'http://localhost:5173'},{CORS_ORIGINS:' http://localhost:5173 , https://frontend.example.test ',CLIENT_URL:'https://ignored.example.test'}]) {
+test('S08 CLIENT_URL local, origen único, preflight y rechazos HTTP controlados',async()=>{
+  for (const env of [{CLIENT_URL:'http://localhost:5173'},{CORS_ORIGINS:'http://localhost:5173',CLIENT_URL:'http://localhost:5173'}]) {
     const app=express();let calls=0;app.use(cors(corsOptions(env)));app.all('/',(_req,res)=>{calls++;res.json({ok:true});});app.use(controlledError);
     await serve(app,async base=>{
-      const allowed=await fetch(base,{headers:{Origin:'http://localhost:5173'}});assert.equal(allowed.status,200);assert.equal(allowed.headers.get('access-control-allow-origin'),'http://localhost:5173');assert.equal(allowed.headers.get('access-control-allow-credentials'),null);
-      if(env.CORS_ORIGINS)assert.equal((await fetch(base,{headers:{Origin:'https://frontend.example.test'}})).status,200);
+      const allowed=await fetch(base,{headers:{Origin:'http://localhost:5173'}});assert.equal(allowed.status,200);assert.equal(allowed.headers.get('access-control-allow-origin'),'http://localhost:5173');assert.equal(allowed.headers.get('access-control-allow-credentials'),'true');
+      assert.equal((await fetch(base,{headers:{Origin:'https://frontend.example.test'}})).status,403);
       const before=calls;const denied=await fetch(base,{method:'POST',headers:{Origin:'https://unknown.example.test'}});assert.equal(denied.status,403);assert.deepEqual(await denied.json(),{message:'Origen no permitido'});assert.equal(calls,before);assert.equal(denied.headers.get('access-control-allow-origin'),null);
-      const preflight=await fetch(base,{method:'OPTIONS',headers:{Origin:'http://localhost:5173','Access-Control-Request-Method':'PATCH','Access-Control-Request-Headers':'authorization,content-type'}});
-      assert.equal(preflight.status,204);assert.match(preflight.headers.get('access-control-allow-headers'),/Authorization/);assert.match(preflight.headers.get('access-control-allow-methods'),/PATCH/);assert.equal(preflight.headers.get('access-control-allow-credentials'),null);
+      const preflight=await fetch(base,{method:'OPTIONS',headers:{Origin:'http://localhost:5173','Access-Control-Request-Method':'PATCH','Access-Control-Request-Headers':'x-ecoamigos-request,content-type'}});
+      assert.equal(preflight.status,204);assert.match(preflight.headers.get('access-control-allow-headers'),/X-Ecoamigos-Request/);assert.match(preflight.headers.get('access-control-allow-methods'),/PATCH/);assert.equal(preflight.headers.get('access-control-allow-credentials'),'true');
       assert.equal((await fetch(base,{method:'OPTIONS',headers:{Origin:'https://unknown.example.test'}})).status,403);
       assert.equal((await fetch(base)).status,200);
     });
   }
 });
 test('S08 fallback solo desarrollo; configuración vacía, wildcard y URLs inválidas fallan cerradas',()=>{
-  assert.equal(corsOptions({}).credentials,false);
+  assert.equal(corsOptions({}).credentials,true);
   for(const value of ['', ' ', '*', 'https://example.test/path','https://example.test/','null','https://example.test,'])assert.throws(()=>corsOptions({CORS_ORIGINS:value}),/Configuración CORS/);
   assert.throws(()=>corsOptions({NODE_ENV:'production'}));assert.throws(()=>corsOptions({CORS_ORIGINS:'',CLIENT_URL:'http://localhost:5173'}));
   assert.throws(()=>corsOptions({CLIENT_URL:'http://localhost:5173,http://127.0.0.1:5173'}));
-  assert.equal(corsOptions({NODE_ENV:'production',CLIENT_URL:'https://frontend.example.test'}).credentials,false);
+  assert.equal(corsOptions({NODE_ENV:'production',CLIENT_URL:'https://frontend.example.test'}).credentials,true);
 });
 test('S09 variables locales, puerto configurable y fallback sin conectar',()=>{
   assert.deepEqual(databaseOptions(local),{host:'localhost',port:5432,user:'fixture_user',password:'fixture_secret',database:'fixture_db',ssl:false});

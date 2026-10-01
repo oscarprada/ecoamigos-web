@@ -6,7 +6,7 @@
 
 Base local: `http://localhost:3000/api`. JSON para operaciones normales; `multipart/form-data` para registros y contenidos. La exportación entrega binario XLSX. Las listas no están paginadas y no aceptan filtros de servidor documentados: búsquedas de revisión se hacen en el navegador.
 
-Autenticación: `Authorization: Bearer <token>`. No son cookies de sesión. El middleware exige el esquema Bearer. Las llamadas públicas no necesitan token.
+Sesión S02: JWT HS256 de ocho horas en cookie ecoamigos_session, HttpOnly, SameSite=Lax, Path=/api, sin Domain; Secure cuando NODE_ENV=production. El body de login ya no contiene JWT. Frontend y API deben compartir sitio y esquema (localhost con distintos puertos en desarrollo; HTTPS bajo el mismo sitio en producción). No se soporta automáticamente un frontend en un sitio distinto; no cambiar a SameSite=None sin revisar despliegue y pruebas. CLIENT_URL es el único origen permitido para CORS y CSRF. Fuera de producción, si falta, se usa http://localhost:5173; en producción es obligatorio un origen HTTPS exacto. No se admiten wildcard, lista, ruta, credenciales ni slash final. CORS_ORIGINS es una variable heredada: retirarla o mantenerla idéntica a CLIENT_URL; otro valor detiene el arranque. Axios y CORS habilitan credenciales. Los métodos mutantes exigen Origin igual a CLIENT_URL y X-Ecoamigos-Request: 1, incluso login, logout y recuperación.
 
 | Situación | HTTP / respuesta |
 | --- | --- |
@@ -27,7 +27,8 @@ El manejador final devuelve JSON genérico ante errores propagados; JSON inváli
 
 | Método | Ruta con prefijo `/api` | Acceso | Respuesta principal |
 | --- | --- | --- | --- |
-| POST | `/auth/login` | Público | token, user |
+| POST | `/auth/login` | Público + CSRF | Set-Cookie y user (sin JWT en body) |
+| POST | `/auth/logout` | CSRF; admite sesión expirada | Borra cookie y devuelve mensaje |
 | GET | `/auth/me` | Autenticado | Usuario actual |
 | POST | `/auth/forgot-password` | Público limitado | Mensaje genérico |
 | POST | `/auth/reset-password` | Público limitado | Restablecimiento con token |
@@ -73,12 +74,15 @@ Consulta email exacto; exige cuenta activa; compara `password_hash` con bcrypt. 
 ```json
 {
   "message": "Inicio de sesión exitoso",
-  "token": "JWT_OMITIDO",
   "user": { "id": 1, "name": "Nombre", "email": "correo@ejemplo.test", "role": "leader", "team_id": 2, "team_name": "Equipo" }
 }
 ```
 
 El JWT HS256 contiene `id`, `sv` (session_version), `iat` y `exp`; dura 8 h, sin refresh. No contiene rol/equipo/email. Login valida tipos y límites de email/contraseña; inexistente, inactivo o clave incorrecta reciben 401 con el mismo mensaje. Error interno: 500 genérico sin detalles. JWT antiguos sin sv requieren iniciar sesión otra vez.
+
+### POST /auth/logout
+
+Elimina la cookie con el mismo Path, SameSite, Secure y HttpOnly. No requiere un JWT válido, para permitir limpiar sesiones expiradas; sí exige Origin y cabecera CSRF. No incrementa session_version ni revoca otros dispositivos.
 
 ### GET /auth/me
 
@@ -268,18 +272,18 @@ Solo ejecutar escrituras sobre un entorno de prueba autorizado. No pegar tokens 
 ```powershell
 $credencial = Get-Credential -Message 'Correo y contraseña de Ecoamigos'
 $body = @{ email = $credencial.UserName; password = $credencial.GetNetworkCredential().Password } | ConvertTo-Json
-$sesion = Invoke-RestMethod -Method Post -Uri 'http://localhost:3000/api/auth/login' -ContentType 'application/json' -Body $body
-$cabeceras = @{ Authorization = "Bearer $($sesion.token)" }
-Invoke-RestMethod -Uri 'http://localhost:3000/api/auth/me' -Headers $cabeceras
-Invoke-RestMethod -Uri 'http://localhost:3000/api/recycling/mine' -Headers $cabeceras
+$cabeceras = @{ Origin = 'http://localhost:5173'; 'X-Ecoamigos-Request' = '1' }
+$sesion = Invoke-RestMethod -SessionVariable cookieSession -Headers $cabeceras -Method Post -Uri 'http://localhost:3000/api/auth/login' -ContentType 'application/json' -Body $body
+Invoke-RestMethod -Uri 'http://localhost:3000/api/auth/me' -Headers $cabeceras -WebSession $cookieSession
+Invoke-RestMethod -Uri 'http://localhost:3000/api/recycling/mine' -Headers $cabeceras -WebSession $cookieSession
 ```
 
 Con cuenta admin, exportar fuera del repositorio:
 
 ```powershell
 $destinoReporte = Join-Path $env:TEMP 'Reporte_Ecoamigos.xlsx'
-Invoke-WebRequest -Uri 'http://localhost:3000/api/admin/export/excel' -Headers $cabeceras -OutFile $destinoReporte
-Remove-Variable body, credencial, sesion, cabeceras
+Invoke-WebRequest -Uri 'http://localhost:3000/api/admin/export/excel' -Headers $cabeceras -WebSession $cookieSession -OutFile $destinoReporte
+Remove-Variable body, credencial, sesion, cabeceras, cookieSession
 ```
 
 Para multipart en Windows PowerShell 5.1, utilizar el formulario web o un cliente HTTP que maneje multipart; `Invoke-RestMethod -Form` pertenece a versiones posteriores de PowerShell. No fijar manualmente un boundary incorrecto.
@@ -331,10 +335,15 @@ Recepción: 413 tamaño, 415 tipo/firma no admitidos, 400 vacío/cantidad/campo 
 
 ## S08: contrato CORS por entorno
 
-CORS_ORIGINS, si está definida, es una lista de orígenes exactos separados por comas; se recortan espacios. Si se omite, se usa CLIENT_URL (un único origen, también utilizado en F16). Sin ambas variables se permite solamente http://localhost:5173 fuera de producción; NODE_ENV=production exige configuración explícita. Una variable seleccionada vacía, wildcard, ruta, credenciales o slash final provoca error genérico al arrancar, sin mostrar su valor. CORS_ORIGINS no cambia el destino de enlaces de recuperación.
+CLIENT_URL es el único origen permitido para CORS y CSRF. Fuera de producción, si falta, se usa http://localhost:5173; en producción es obligatorio un origen HTTPS exacto. No se admiten wildcard, lista, ruta, credenciales ni slash final. CORS_ORIGINS es una variable heredada: retirarla o mantenerla idéntica a CLIENT_URL; otro valor detiene el arranque. Axios y CORS habilitan credenciales. Los métodos mutantes exigen Origin igual a CLIENT_URL y X-Ecoamigos-Request: 1, incluso login, logout y recuperación.
 
-Origin permitido recibe el origen exacto, nunca wildcard. Origin no permitido devuelve 403 con mensaje controlado antes de ejecutar la ruta. OPTIONS permitido responde 204, habilita Authorization/Content-Type y GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS. Esto no crea endpoints nuevos. Retry-After queda expuesto. Sin Origin se permite continuar para CLI/servidor a servidor, conservando autenticación y autorización en rutas protegidas: CORS no sustituye controles de acceso ni impide clientes no navegador.
+Origin permitido recibe el origen exacto, nunca wildcard. Origin no permitido devuelve 403 con mensaje controlado antes de ejecutar la ruta. OPTIONS permitido responde 204, habilita X-Ecoamigos-Request/Content-Type y GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS. Esto no crea endpoints nuevos. Retry-After queda expuesto. Sin Origin solo continúan GET/HEAD/OPTIONS. CLI y clientes servidor a servidor deben enviar el origen configurado y la cabecera CSRF para métodos mutantes, además de su cookie. CORS no sustituye autenticación ni autorización.
 
-Bearer JWT sigue vigente, credentials=false y withCredentials=false; no hay cookies ni CSRF nuevos. S02 permanece PARCIAL. Un ejemplo local opcional es CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173; no representa dominios institucionales.
+Sesión S02: JWT HS256 de ocho horas en cookie ecoamigos_session, HttpOnly, SameSite=Lax, Path=/api, sin Domain; Secure cuando NODE_ENV=production. El body de login ya no contiene JWT. Frontend y API deben compartir sitio y esquema (localhost con distintos puertos en desarrollo; HTTPS bajo el mismo sitio en producción). No se soporta automáticamente un frontend en un sitio distinto; no cambiar a SameSite=None sin revisar despliegue y pruebas.
 
 S10: los errores internos de consultas ya no incluyen el campo error con mensajes SQL; conservan códigos HTTP y mensajes funcionales controlados. No cambian rutas ni contratos exitosos.
+
+
+### Actualización S02 — 2026-09-30
+
+Sesión S02: JWT HS256 de ocho horas en cookie ecoamigos_session, HttpOnly, SameSite=Lax, Path=/api, sin Domain; Secure cuando NODE_ENV=production. El body de login ya no contiene JWT. Frontend y API deben compartir sitio y esquema (localhost con distintos puertos en desarrollo; HTTPS bajo el mismo sitio en producción). No se soporta automáticamente un frontend en un sitio distinto; no cambiar a SameSite=None sin revisar despliegue y pruebas. CLIENT_URL es el único origen permitido para CORS y CSRF. Fuera de producción, si falta, se usa http://localhost:5173; en producción es obligatorio un origen HTTPS exacto. No se admiten wildcard, lista, ruta, credenciales ni slash final. CORS_ORIGINS es una variable heredada: retirarla o mantenerla idéntica a CLIENT_URL; otro valor detiene el arranque. Axios y CORS habilitan credenciales. Los métodos mutantes exigen Origin igual a CLIENT_URL y X-Ecoamigos-Request: 1, incluso login, logout y recuperación. Logout no cambia las reglas de revocación S01: reset incrementa session_version y las peticiones siguientes rechazan cualquier JWT anterior. Se conservan autorización y límites S03. Ver evidencia de pruebas y decisión CSRF en [09](09-CALIDAD-Y-PENDIENTES.md).

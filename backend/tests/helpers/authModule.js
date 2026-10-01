@@ -8,6 +8,7 @@ export async function authModuleUrl(pool) {
   let source = fs.readFileSync(new URL('../../src/middleware/authMiddleware.js', import.meta.url), 'utf8');
   source = source.replace("import { query } from '../config/db.js';", 'const database = globalThis.__isolatedAuthPool; const query = (...args) => database.query(...args);');
   source = source.replace("'jsonwebtoken'", () => JSON.stringify(pathToFileURL(require.resolve('jsonwebtoken')).href));
+  source = source.replace("'../utils/sessionCookie.js'", () => JSON.stringify(new URL('../../src/utils/sessionCookie.js', import.meta.url).href));
   globalThis.__isolatedAuthPool = pool;
   const url = 'data:text/javascript;base64,' + Buffer.from(source).toString('base64');
   try { await import(url); return url; } finally { delete globalThis.__isolatedAuthPool; }

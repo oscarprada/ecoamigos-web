@@ -73,7 +73,7 @@ test('F11: revision transaccional PostgreSQL aislado', {
     const dates=(await client.query('SELECT CURRENT_DATE::text AS today,(CURRENT_DATE+1)::text AS future,(CURRENT_DATE-11)::text AS outside')).rows[0];
     const post=async (identity={id:1,role:'leader',team_id:1},extra={})=>{
       const token=jwt.sign({...identity,sv:0},process.env.JWT_SECRET,{expiresIn:'5m'});
-      const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({material_type:'papel_carton',quantity:1,unit:'kg',quality_level:'media',criteria_count:1,period_id:1,record_date:dates.today,...reference,...extra})});
+      const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json',Cookie:`ecoamigos_session=${token}`},body:JSON.stringify({material_type:'papel_carton',quantity:1,unit:'kg',quality_level:'media',criteria_count:1,period_id:1,record_date:dates.today,...reference,...extra})});
       return {code:response.status,body:await response.json()};
     };
     const rows=async ()=>(await client.query('SELECT * FROM recycling_records ORDER BY id')).rows;

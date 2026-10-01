@@ -25,7 +25,7 @@ Existe ruta comodín de página 404 fuera de ProtectedRoute. No implica HTTP 404
 
 ## Sesión y navegación
 
-AuthProvider consulta /auth/me al montar si existe ecoamigos_token en localStorage; user permanece solo en memoria. Un 401 de la sesión enviada elimina token/usuario y ProtectedRoute dirige a login. Un 403 mantiene la sesión: significa falta de permisos. Errores de red/500 al cargar me terminan loading y no autorizan la interfaz; el token se conserva para reintentar al recargar. Axios adjunta Bearer, sin cookies. Respuestas tardías de un token anterior no eliminan un login nuevo; logout invalida resultados pendientes de me.
+AuthProvider consulta /auth/me al montar; user permanece solo en memoria. Axios usa withCredentials:true y añade X-Ecoamigos-Request: 1 a métodos mutantes. No lee ni guarda JWT ni construye Authorization. Solo elimina la clave heredada ecoamigos_token, sin leerla. Un 401 vigente retira el usuario; 403/500 no equivalen a logout. Una generación de peticiones impide que un 401 anterior borre un login nuevo. Login/logout se serializan en la pestaña para ordenar respuestas Set-Cookie. Logout espera POST /auth/logout; si falla, conserva la sesión visible y muestra error para reintentar. /me tardío no revive un logout. La persistencia depende de la cookie, no de almacenamiento JavaScript.
 
 ProtectedRoute muestra “Cargando...” mientras se consulta sesión, redirige a login sin usuario y al inicio si el rol no coincide. Esta protección de interfaz no sustituye la de backend.
 
@@ -92,6 +92,11 @@ Refinamientos incluyen foco visible, hover, tarjetas discretas, cuadrículas ada
 
 ## Recursos y mantenimiento
 
-No cambiar logos ni aplicarles filtros que alteren identidad. Los archivos en assets se importan con Vite y reciben nombres con hash al compilar. Los adjuntos no se empaquetan. Educación consulta /api/files/public/content/:id; ProtectedFile solicita contenido privado/evidencia por ID con Bearer y Blob, cancela peticiones y revoca object URLs. Nunca se abre directamente file_url/evidence_url como ruta pública. getBackendUrl resuelve los endpoints contra el backend. Por ello no configurar VITE_API_URL con query strings o rutas incompatibles con ese cálculo.
+No cambiar logos ni aplicarles filtros que alteren identidad. Los archivos en assets se importan con Vite y reciben nombres con hash al compilar. Los adjuntos no se empaquetan. Educación consulta /api/files/public/content/:id; ProtectedFile solicita contenido privado/evidencia por ID con cookie y Blob, cancela peticiones y revoca object URLs. Nunca se abre directamente file_url/evidence_url como ruta pública. getBackendUrl resuelve los endpoints contra el backend. Por ello no configurar VITE_API_URL con query strings o rutas incompatibles con ese cálculo.
 
 Los PNG actuales de logo, mascota e iconos tienen varios cientos de KB. Cualquier optimización futura debe preservar apariencia y requerimientos institucionales. La documentación no reexporta ni sustituye esos activos.
+
+
+### Actualización S02 — 2026-09-30
+
+Sesión S02: JWT HS256 de ocho horas en cookie ecoamigos_session, HttpOnly, SameSite=Lax, Path=/api, sin Domain; Secure cuando NODE_ENV=production. El body de login ya no contiene JWT. Frontend y API deben compartir sitio y esquema (localhost con distintos puertos en desarrollo; HTTPS bajo el mismo sitio en producción). No se soporta automáticamente un frontend en un sitio distinto; no cambiar a SameSite=None sin revisar despliegue y pruebas. CLIENT_URL es el único origen permitido para CORS y CSRF. Fuera de producción, si falta, se usa http://localhost:5173; en producción es obligatorio un origen HTTPS exacto. No se admiten wildcard, lista, ruta, credenciales ni slash final. CORS_ORIGINS es una variable heredada: retirarla o mantenerla idéntica a CLIENT_URL; otro valor detiene el arranque. Axios y CORS habilitan credenciales. Los métodos mutantes exigen Origin igual a CLIENT_URL y X-Ecoamigos-Request: 1, incluso login, logout y recuperación. Logout no cambia las reglas de revocación S01: reset incrementa session_version y las peticiones siguientes rechazan cualquier JWT anterior. Se conservan autorización y límites S03. Ver evidencia de pruebas y decisión CSRF en [09](09-CALIDAD-Y-PENDIENTES.md).

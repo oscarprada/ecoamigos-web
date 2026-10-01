@@ -47,7 +47,7 @@ test('F15: revision transaccional PostgreSQL aislado', {
       source = source.replace("import { logInfo, logError } from '../utils/logger.js';", 'const logInfo = () => {}; const logError = () => {};');
       source = source.replace("'jsonwebtoken'", JSON.stringify(pathToFileURL(require.resolve('jsonwebtoken')).href));
       source = source.replace("'bcrypt'", JSON.stringify(pathToFileURL(require.resolve('bcrypt')).href));
-      for (const util of ['catalogReference', 'recordDate']) source = source.replace("'../utils/"+util+".js'", JSON.stringify(pathToFileURL(path.join(root,'backend/src/utils',util+'.js')).href));
+      for (const util of ['catalogReference', 'recordDate', 'sessionCookie']) source = source.replace("'../utils/"+util+".js'", JSON.stringify(pathToFileURL(path.join(root,'backend/src/utils',util+'.js')).href));
       globalThis.__f15Pool = testPool;
       try { const url='data:text/javascript;base64,'+Buffer.from(source).toString('base64'); globalThis.__f15ControllerUrl=url; return await import(url); }
       finally { delete globalThis.__f15Pool; }
@@ -72,7 +72,7 @@ test('F15: revision transaccional PostgreSQL aislado', {
     const token = role => jwt.sign({ id: role === 'admin' ? 100 : 1, sv: 0 }, process.env.JWT_SECRET, { expiresIn: '5m' });
     const request = async (method, resource, body, role = 'admin') => {
       const response = await fetch(base + resource, {
-        method, headers: { Authorization: 'Bearer ' + token(role), 'Content-Type': 'application/json' },
+        method, headers: { Cookie: 'ecoamigos_session=' + token(role), 'Content-Type': 'application/json' },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
       const raw = await response.text();

@@ -20,5 +20,5 @@ test('S03 IP directa ignora X-Forwarded-For; proxy solo si configurado',async()=
     assert.equal((await fetch(url,{headers:{'X-Forwarded-For':'2.2.2.2'}})).status,429);
   } finally {await new Promise(resolve=>server.close(resolve));}
   const proxy=express();configureProxy(proxy,{TRUSTED_PROXIES:'127.0.0.1'});assert.equal(proxy.get('trust proxy fn')('127.0.0.1',0),true);assert.equal(proxy.get('trust proxy fn')('8.8.8.8',0),false);
-  assert.throws(()=>corsOptions({CORS_ORIGINS:'*'}));assert.equal(corsOptions({CORS_ORIGINS:'https://example.test'}).credentials,false);
+  assert.throws(()=>corsOptions({CORS_ORIGINS:'*'}));assert.equal(corsOptions({CLIENT_URL:'https://example.test'}).credentials,true);
 });

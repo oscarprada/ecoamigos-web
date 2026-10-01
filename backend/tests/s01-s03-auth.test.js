@@ -50,6 +50,7 @@ test('S01-S03: revision transaccional PostgreSQL aislado', {
       let source=fs.readFileSync(path.join(root,'backend/src/controllers',file),'utf8');
       source=source.replace(/import \{ (?:query|pool) \} from '..\/config\/db.js';/,
         'const pool=globalThis.__securityPool; const query=(...args)=>pool.query(...args);');
+      source=source.replace("'../utils/sessionCookie.js'",()=>JSON.stringify(pathToFileURL(path.join(root,'backend/src/utils/sessionCookie.js')).href));
       for(const pkg of ['bcrypt','jsonwebtoken']) source=source.replace("'"+pkg+"'",()=>JSON.stringify(pathToFileURL(require.resolve(pkg)).href));
       source=source.replace("import { deliverPasswordReset } from '../services/passwordResetDelivery.js';",'const deliverPasswordReset=globalThis.__securityDelivery;');
       return 'data:text/javascript;base64,'+Buffer.from(source).toString('base64');
@@ -68,9 +69,9 @@ test('S01-S03: revision transaccional PostgreSQL aislado', {
     process.env.JWT_SECRET='security-isolated-test-secret';
     delete process.env.AUTH_LOGIN_MAX;delete process.env.AUTH_FORGOT_MAX;delete process.env.AUTH_RESET_MAX;delete process.env.AUTH_WINDOW_MS;
     const {default:router}=await import('data:text/javascript;base64,'+Buffer.from(routeSource).toString('base64'));
-    const {controlledError,corsOptions}=await import('../src/middleware/httpConfig.js');
+    const {controlledError,corsOptions,csrfProtection}=await import('../src/middleware/httpConfig.js');
     const cors=(await import('cors')).default;
-    const app=express();app.use(cors(corsOptions()));app.use(express.json());app.use('/api/auth',router);
+    const app=express();app.use(cors(corsOptions()));app.use(csrfProtection());app.use(express.json());app.use('/api/auth',router);
     app.get('/protected',middleware.authenticateToken,(req,res)=>res.json(req.user));
     app.get('/admin',middleware.authenticateToken,middleware.authorizeRoles('admin'),(req,res)=>res.json({ok:true}));
     app.get('/db-failure',middleware.createAuthenticateToken(async()=>{throw Error('SELECT private SQL password JWT reset-token');}),(_req,res)=>res.json({ok:true}));
@@ -78,7 +79,7 @@ test('S01-S03: revision transaccional PostgreSQL aislado', {
     server=await new Promise(resolve=>{const running=app.listen(0,'127.0.0.1',()=>resolve(running));});
     const base='http://127.0.0.1:'+server.address().port;
     const request=async(resource,{token,body,headers={},method=body?'POST':'GET'}={})=>{
-      const response=await fetch(base+resource,{method,headers:{...(token?{Authorization:'Bearer '+token}:{}),...(body?{'Content-Type':'application/json'}:{}),...headers},...(body?{body:JSON.stringify(body)}:{})});
+      const response=await fetch(base+resource,{method,headers:{Origin:'http://localhost:5173','X-Ecoamigos-Request':'1',...(token?{Cookie:'ecoamigos_session='+token}:{}),...(body?{'Content-Type':'application/json'}:{}),...headers},...(body?{body:JSON.stringify(body)}:{})});
       return {code:response.status,body:await response.json(),headers:response.headers};
     };
     const hash=await bcrypt.hash('fixture-password',10);
@@ -87,13 +88,29 @@ test('S01-S03: revision transaccional PostgreSQL aislado', {
     const login=()=>request('/api/auth/login',{body:{email:'leader@test.invalid',password:'fixture-password'}});
     const sign=(claims={},options={})=>jwt.sign({id:1,sv:0,...claims},process.env.JWT_SECRET,{expiresIn:'5m',...options});
     let token;
-    await t.test('S01/S02 login Bearer mínimo, ocho horas; me no expone hash/version',async()=>{
-      const response=await login();assert.equal(response.code,200);token=response.body.token;
-      assert.equal(response.headers.get('set-cookie'),null);
+    await t.test('S01/S02 login cookie HttpOnly, ocho horas; me no expone hash/version',async()=>{
+      const response=await login();assert.equal(response.code,200);token=response.headers.get('set-cookie').split(';')[0].split('=')[1];
+      assert.equal('token' in response.body,false);
+      assert.match(response.headers.get('set-cookie'),/HttpOnly/);assert.match(response.headers.get('set-cookie'),/SameSite=Lax/);assert.match(response.headers.get('set-cookie'),/Max-Age=28800/);assert.match(response.headers.get('set-cookie'),/Path=\/api/);
       const claims=jwt.verify(token,process.env.JWT_SECRET);assert.deepEqual(Object.keys(claims).sort(),['exp','iat','id','sv']);assert.equal(claims.exp-claims.iat,28800);
       const me=await request('/api/auth/me',{token});assert.equal(me.code,200);assert.equal(me.body.team_id,1);
       assert.equal('password_hash' in me.body,false);assert.equal('session_version' in me.body,false);
       assert.equal((await request('/protected',{token})).code,200);
+    });
+    await t.test('S02 logout borra cookie y rechaza Bearer sin cookie',async()=>{
+      assert.equal((await request('/protected',{headers:{Authorization:'Bearer '+token}})).code,401);
+      const loggedOut=await request('/api/auth/logout',{method:'POST',token});
+      assert.equal(loggedOut.code,200);assert.match(loggedOut.headers.get('set-cookie'),/ecoamigos_session=;/);
+      assert.match(loggedOut.headers.get('set-cookie'),/Expires=Thu, 01 Jan 1970/);
+      assert.match(loggedOut.headers.get('set-cookie'),/HttpOnly/);
+      assert.match(loggedOut.headers.get('set-cookie'),/Path=\/api/);
+      assert.match(loggedOut.headers.get('set-cookie'),/SameSite=Lax/);
+      assert.equal((await request('/api/auth/me')).code,401);
+    });
+    await t.test('S02 CSRF bloquea origen incorrecto, ausente y cabecera ausente',async()=>{
+      for(const headers of [{Origin:'https://evil.invalid'},{Origin:''},{'X-Ecoamigos-Request':''}]) {
+        assert.equal((await request('/api/auth/logout',{method:'POST',token,headers})).code,403);
+      }
     });
     await t.test('S01 desactivación y usuario inexistente rechazan me y rutas protegidas',async()=>{
       await client.query('UPDATE users SET is_active=false WHERE id=1');
@@ -125,7 +142,7 @@ test('S01-S03: revision transaccional PostgreSQL aislado', {
       try {const failed=await login();assert.equal(failed.code,500);assert.deepEqual(failed.body,{message:'Error al iniciar sesión'});}
       finally {testPool.query=original;console.log=originalLog;console.error=originalError;}
       assert.deepEqual(logs,[]);
-      const raw=await fetch(base+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:'{private'});
+      const raw=await fetch(base+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json',Origin:'http://localhost:5173','X-Ecoamigos-Request':'1'},body:'{private'});
       assert.equal(raw.status,400);assert.deepEqual(await raw.json(),{message:'Solicitud inválida'});
     });
     await t.test('S01/F16 reset revoca sesiones; rollback conserva versión y JWT',async()=>{
@@ -139,7 +156,7 @@ test('S01-S03: revision transaccional PostgreSQL aislado', {
       await client.query('DROP TRIGGER fail_session ON users');
       assert.equal((await reset()).code,200);assert.equal((await request('/api/auth/me',{token})).code,401);
       const next=await request('/api/auth/login',{body:{email:'leader@test.invalid',password:'new-password'}});
-      assert.equal(next.code,200);assert.equal((await request('/protected',{token:next.body.token})).code,200);
+      assert.equal(next.code,200);assert.equal((await request('/protected',{token:next.headers.get('set-cookie').split(';')[0].split('=')[1]})).code,200);
     });
     await t.test('S03 credenciales genéricas y límites reales login/forgot/reset',async()=>{
       const missing=await request('/api/auth/login',{body:{email:'missing@test.invalid',password:'wrong'}});
@@ -152,9 +169,9 @@ test('S01-S03: revision transaccional PostgreSQL aislado', {
       for(let i=0;i<10;i++) await request('/api/auth/reset-password',{body:{token:'a'.repeat(64),new_password:'x'}});
       assert.equal((await request('/api/auth/reset-password',{body:{token:'a'.repeat(64),new_password:'x'}})).code,429);
     });
-    await t.test('S02 CORS exacto sin credenciales y preflight Authorization',async()=>{
-      const response=await fetch(base+'/protected',{method:'OPTIONS',headers:{Origin:'http://localhost:5173','Access-Control-Request-Method':'GET','Access-Control-Request-Headers':'authorization'}});
-      assert.equal(response.headers.get('access-control-allow-origin'),'http://localhost:5173');assert.equal(response.headers.get('access-control-allow-credentials'),null);
+    await t.test('S02 CORS exacto con credenciales y preflight CSRF',async()=>{
+      const response=await fetch(base+'/protected',{method:'OPTIONS',headers:{Origin:'http://localhost:5173','Access-Control-Request-Method':'GET','Access-Control-Request-Headers':'x-ecoamigos-request'}});
+      assert.equal(response.headers.get('access-control-allow-origin'),'http://localhost:5173');assert.equal(response.headers.get('access-control-allow-credentials'),'true');
       const other=await fetch(base+'/protected',{headers:{Origin:'https://other.invalid'}});assert.equal(other.headers.get('access-control-allow-origin'),null);
     });
     await t.test('S01 migración idempotente sobre datos previos y verificación',async()=>{

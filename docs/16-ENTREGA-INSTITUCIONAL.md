@@ -21,7 +21,7 @@ No se incluyen credenciales reales, respaldo de datos personales, uploads reales
 
 ## Arquitectura y contratos que deben preservarse
 
-El navegador ejecuta una SPA independiente; Axios llama a la API y transmite Bearer JWT. Express consulta PostgreSQL y administra una raíz privada de archivos. Frontend y backend tienen package.json/lockfiles independientes; no son npm workspaces. La arquitectura e inventario detallados están en [02](02-ARQUITECTURA.md).
+El navegador ejecuta una SPA independiente; Axios llama a la API con credenciales; el navegador transmite la cookie HttpOnly. Express consulta PostgreSQL y administra una raíz privada de archivos. Frontend y backend tienen package.json/lockfiles independientes; no son npm workspaces. La arquitectura e inventario detallados están en [02](02-ARQUITECTURA.md).
 
 Los registros solo los crea leader con equipo vigente: nacen pending y con 0 puntos. La revisión permite únicamente pending → approved/rejected; una repetición devuelve 409. Los puntos proceden de points_catalog.points; el ranking suma aprobados del período activo. Se permite como máximo un período activo y también cero. El límite es 15 cuentas almacenadas, incluyendo administradores e inactivos.
 
@@ -49,7 +49,7 @@ La fuente principal de variables es [01](01-INSTALACION.md); sus contratos y lí
 
 | Área | Configuración/decisión requerida |
 | --- | --- |
-| API y navegador | PORT, VITE_API_URL, CLIENT_URL y CORS_ORIGINS según orígenes exactos; producción exige configuración explícita |
+| API y navegador | PORT, VITE_API_URL y CLIENT_URL exacto; HTTPS y mismo sitio en producción; retirar CORS_ORIGINS o igualarlo a CLIENT_URL |
 | PostgreSQL | DATABASE_URL o DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME; DB_SSL según el servicio, con verificación de certificado cuando se habilita |
 | Sesión y abuso | JWT_SECRET privado; AUTH_*; TRUSTED_PROXIES solo para proxies realmente autorizados |
 | Archivos | UPLOAD_ROOT persistente y privado, límites UPLOAD_* según contrato; jamás publicar /uploads por proxy/hosting |
@@ -57,7 +57,7 @@ La fuente principal de variables es [01](01-INSTALACION.md); sus contratos y lí
 | Excel | EXPORT_MAX_ROWS default técnico 1000, rango 1–10000; no representa política institucional |
 | Correo | Proveedor y adaptación institucional de passwordResetDelivery.js aún pendientes; no se han definido credenciales SMTP ni otro proveedor |
 
-F16 es recuperación de contraseña, no cambio voluntario de perfil. El backend implementa tokens temporales hasheados y de un uso, pero **actualmente no envía correo**. Habilitar una entrega operativa requiere trabajo posterior autorizado y verificación sin exponer tokens. S02 conserva Bearer JWT en localStorage; no se entregan cookies/CSRF ni una migración de sesión parcialmente configurada.
+F16 es recuperación de contraseña, no cambio voluntario de perfil. El backend implementa tokens temporales hasheados y de un uso, pero **actualmente no envía correo**. Habilitar una entrega operativa requiere trabajo posterior autorizado y verificación sin exponer tokens. Sesión S02: JWT HS256 de ocho horas en cookie ecoamigos_session, HttpOnly, SameSite=Lax, Path=/api, sin Domain; Secure cuando NODE_ENV=production. El body de login ya no contiene JWT. Frontend y API deben compartir sitio y esquema (localhost con distintos puertos en desarrollo; HTTPS bajo el mismo sitio en producción). No se soporta automáticamente un frontend en un sitio distinto; no cambiar a SameSite=None sin revisar despliegue y pruebas.
 
 ## Respaldo, restauración y operación
 
@@ -86,7 +86,7 @@ No hay CD ni despliegue automático. Faltan URL/ID/capturas del segundo run y ac
 | --- | --- |
 | D06; F05/F07 | Autorizar catálogo institucional, puntos e intervalos decimales y semántica de orgánico. Sin identidad válida, el alta se rechaza; no desactivar F05 para permitirla |
 | F16: entrega | Elegir/configurar proveedor y completar adaptador de correo; probar entrega/recuperación sin exponer secretos |
-| S02 | Definir topología, dominios/HTTPS y una eventual migración integral del transporte/almacenamiento de sesión; localStorage continúa expuesto a JavaScript |
+| S02 | Validar HTTPS, mismo sitio, CLIENT_URL y cookies/CSRF en el destino; migración HttpOnly implementada localmente, sin certificación del despliegue |
 | S12 | Planificar actualizaciones por cadena con instalación/regresión y nueva auditoría; incluye riesgo crítico tar vía instalación bcrypt/node-pre-gyp en la captura, sin afirmar explotación HTTP |
 | S03/S11 | Límites por proceso, no distribuidos; evaluar coordinación si se despliegan varias instancias |
 | S07 | Firma no equivale a antivirus o validación completa de codecs/documentos; evaluar protección adicional y probar formatos reales |
@@ -116,3 +116,8 @@ Para formalizar la recepción, el responsable deberá registrar la versión efec
 | Transferencia y responsabilidades futuras | Este documento |
 
 El alcance termina en software y documentación para revisión. **No se ha desplegado Ecoamigos en infraestructura institucional de producción.**
+
+
+### Actualización S02 — 2026-09-30
+
+Sesión S02: JWT HS256 de ocho horas en cookie ecoamigos_session, HttpOnly, SameSite=Lax, Path=/api, sin Domain; Secure cuando NODE_ENV=production. El body de login ya no contiene JWT. Frontend y API deben compartir sitio y esquema (localhost con distintos puertos en desarrollo; HTTPS bajo el mismo sitio en producción). No se soporta automáticamente un frontend en un sitio distinto; no cambiar a SameSite=None sin revisar despliegue y pruebas. CLIENT_URL es el único origen permitido para CORS y CSRF. Fuera de producción, si falta, se usa http://localhost:5173; en producción es obligatorio un origen HTTPS exacto. No se admiten wildcard, lista, ruta, credenciales ni slash final. CORS_ORIGINS es una variable heredada: retirarla o mantenerla idéntica a CLIENT_URL; otro valor detiene el arranque. Axios y CORS habilitan credenciales. Los métodos mutantes exigen Origin igual a CLIENT_URL y X-Ecoamigos-Request: 1, incluso login, logout y recuperación. Logout no cambia las reglas de revocación S01: reset incrementa session_version y las peticiones siguientes rechazan cualquier JWT anterior. Se conservan autorización y límites S03. Ver evidencia de pruebas y decisión CSRF en [09](09-CALIDAD-Y-PENDIENTES.md).

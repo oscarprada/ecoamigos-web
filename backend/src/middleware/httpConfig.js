@@ -1,22 +1,38 @@
+export function clientOrigin(env = process.env) {
+  const value = env.CLIENT_URL ?? (env.NODE_ENV === 'production' ? '' : 'http://localhost:5173');
+  try {
+    const url = new URL(value);
+    if (url.origin !== value || !['http:', 'https:'].includes(url.protocol) ||
+        (env.NODE_ENV === 'production' && url.protocol !== 'https:')) throw new Error();
+  } catch { throw new Error('Configuración CORS inválida: CLIENT_URL debe ser un origen exacto'); }
+  // Old deployments may still set this variable; never silently permit extra origins.
+  if (env.CORS_ORIGINS !== undefined && env.CORS_ORIGINS.trim() !== value) {
+    throw new Error('Configuración CORS inválida: CORS_ORIGINS debe retirarse o coincidir con CLIENT_URL');
+  }
+  return value;
+}
 export function corsOptions(env = process.env) {
-  if (env.CORS_ORIGINS === undefined && env.CLIENT_URL?.includes(',')) throw new Error('Configuración CORS inválida');
-  const configured = env.CORS_ORIGINS ?? env.CLIENT_URL;
-  const value = configured ?? (env.NODE_ENV === 'production' ? '' : 'http://localhost:5173');
-  const origins = value.split(',').map(origin => origin.trim());
-  if (!origins.length || origins.some(origin => {
-    try { return !origin || new URL(origin).origin !== origin || !/^https?:/.test(origin); }
-    catch { return true; }
-  })) throw new Error('Configuración CORS inválida');
+  const allowed = clientOrigin(env);
   return {
     origin(origin, callback) {
-      if (!origin || origins.includes(origin)) return callback(null, true);
+      if (!origin || origin === allowed) return callback(null, true);
       const error = new Error('Origen no permitido'); error.code = 'CORS_ORIGIN_DENIED';
       callback(error);
     },
-    credentials: false,
+    credentials: true,
     methods: ['GET','HEAD','POST','PUT','PATCH','DELETE','OPTIONS'],
-    allowedHeaders: ['Content-Type','Authorization'],
+    allowedHeaders: ['Content-Type','X-Ecoamigos-Request'],
     exposedHeaders: ['Retry-After'],
+  };
+}
+export function csrfProtection(env = process.env) {
+  const allowed = clientOrigin(env);
+  return (req, res, next) => {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+    if (req.headers.origin !== allowed || req.headers['x-ecoamigos-request'] !== '1') {
+      return res.status(403).json({ message: 'Origen o verificación de solicitud inválidos' });
+    }
+    next();
   };
 }
 export function configureProxy(app, env = process.env) {

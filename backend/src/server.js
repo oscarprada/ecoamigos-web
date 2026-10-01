@@ -2,7 +2,7 @@ import { logInfo, loggerOptions } from './utils/logger.js';
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { corsOptions, configureProxy, controlledError } from './middleware/httpConfig.js';
+import { corsOptions, csrfProtection, configureProxy, controlledError } from './middleware/httpConfig.js';
 
 import authRoutes from './routes/authRoutes.js';
 import fileRoutes from './routes/fileRoutes.js';
@@ -17,6 +17,7 @@ const app = express();
 
 configureProxy(app);
 app.use(cors(corsOptions()));
+app.use('/api', csrfProtection());
 
 app.use(express.json());
 // No static uploads: every file is resolved through its current database relation.
@@ -40,4 +41,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   logInfo('SERVER_STARTED');
 });
-

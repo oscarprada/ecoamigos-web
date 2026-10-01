@@ -68,7 +68,7 @@ test('F12: revision transaccional PostgreSQL aislado', {
     const post=async(email,extra={})=>{
       const admin=(await client.query("SELECT id FROM users WHERE email='seed-1@test.invalid'")).rows[0];
       const token=jwt.sign({id:admin.id,sv:0},process.env.JWT_SECRET,{expiresIn:'5m'});
-      const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({name:'Fixture',email,password:'fixture-password',role:'leader',team_id:1,...extra})});
+      const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json',Cookie:`ecoamigos_session=${token}`},body:JSON.stringify({name:'Fixture',email,password:'fixture-password',role:'leader',team_id:1,...extra})});
       return {code:response.status,body:await response.json()};
     };
     const rows=async()=>(await client.query('SELECT * FROM users ORDER BY id')).rows;
