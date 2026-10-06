@@ -82,6 +82,15 @@ test('F11: revision transaccional PostgreSQL aislado', {
       assert.equal(result.code,201);assert.equal(result.body.team_id,1);assert.equal(result.body.user_id,1);
       assert.equal(result.body.status,'pending');assert.equal(result.body.points_awarded,0);
     });
+    await t.test('T15 POST orgánico manipulado rechazado; histórico orgánico preservado',async()=>{
+      await client.query("INSERT INTO recycling_records(user_id,team_id,period_id,material_type,quantity,unit,quality_level,status,points_awarded,record_date) VALUES (1,1,1,'organico',5,'kg','alta','approved',40,CURRENT_DATE)");
+      const before=await rows();
+      for(const extra of [{material_type:'organico'},{material_type:'organico',catalog_action_name:'Ciclo orgánico',catalog_action_level:'5 kg de abono generado en compostera'}]) {
+        const result=await post(undefined,extra);assert.equal(result.code,400);assert.match(result.body.message,/Material o cantidad inválidos/);
+      }
+      assert.deepEqual(await rows(),before);
+      for(const material_type of ['papel_carton','plastico','vidrio','metal'])assert.equal((await post(undefined,{material_type})).code,201);
+    });
     for(const role of ['admin','supervisor']) {
       await t.test(`admin actual con claim ${role}: 403 incluso con equipo y body leader`,async()=>{
         const before=await rows();

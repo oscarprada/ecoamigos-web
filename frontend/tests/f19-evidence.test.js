@@ -84,3 +84,14 @@ test('POST fallido conserva selección y datos; reintento usa el File conservado
     await f.respond(true,retry.task);assert.equal(f.input.value,'');assert.equal(f.input.files.length,0);
   }finally{await f.unmount();}
 });
+
+test('T15 selector vigente excluye orgánico y conserva los cuatro materiales',async()=>{
+  const source=src('pages/leader/RegisterRecyclingPage.jsx');
+  const options=[...source.matchAll(/<option value="([^"]+)">/g)].map(match=>match[1]);
+  for(const material of ['papel_carton','plastico','vidrio','metal'])assert.ok(options.includes(material));
+  assert.ok(!options.includes('organico'));assert.doesNotMatch(source,/Ciclo orgánico|compostera/);
+  const {getCatalogReference}=await compile(source,'getCatalogReference',{});
+  for(const material of ['papel_carton','plastico','vidrio','metal'])for(const [quantity,level] of [[5,1],[5.1,2],[15,2],[15.1,3],[30,3],[30.1,4]]) {
+    assert.match(getCatalogReference(material,quantity).catalog_action_level,new RegExp('^Nivel '+level+':'));
+  }
+});

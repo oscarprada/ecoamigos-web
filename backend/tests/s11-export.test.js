@@ -62,7 +62,16 @@ test('S11: exportación XLSX limitada en PostgreSQL aislado', {
     routes=routes.replace("'../controllers/exportController.js'",JSON.stringify(controllerUrl));
     routes=routes.replace("'../middleware/authMiddleware.js'",JSON.stringify(await authModuleUrl(testPool)));
     const {default:router}=await import('data:text/javascript;base64,'+Buffer.from(routes).toString('base64'));
-    const app=express();app.use('/api/admin',router);
+    let responseGate=null;
+    const app=express();
+    app.use((_req,res,next)=>{
+      if(responseGate){
+        const gate=responseGate;responseGate=null;const end=res.end.bind(res);let pending=false;
+        res.end=(...args)=>{if(!pending){pending=true;gate.ready(()=>end(...args));}return res;};
+      }
+      next();
+    });
+    app.use('/api/admin',router);
     server=await new Promise(resolve=>{const running=app.listen(0,'127.0.0.1',()=>resolve(running));});
     await client.query("INSERT INTO teams(name,dependency) VALUES ('Equipo normal','Fixture')");
     await client.query("INSERT INTO users(name,email,password_hash,role,team_id) VALUES ('Admin','admin@test.invalid','fixture','admin',null),('Líder normal','leader@test.invalid','fixture','leader',1)");
@@ -84,8 +93,35 @@ test('S11: exportación XLSX limitada en PostgreSQL aislado', {
     await t.test('límite+1 rechaza sin Excel ni truncamiento silencioso',async()=>{await seed(1);const response=await request();assert.equal(response.status,422);assert.equal(response.headers.get('content-disposition'),null);assert.deepEqual(await response.json(),{message:'El reporte supera el límite de exportación',code:'EXPORT_LIMIT_EXCEEDED',maxRows:1000});});
     await t.test('configuración inválida controlada; máximo configurable y acotado',async()=>{assert.equal(controller.exportMaxRows({}),1000);assert.equal(controller.exportMaxRows({EXPORT_MAX_ROWS:'25'}),25);for(const raw of ['','0','-1','10001','1.5','secret'])assert.throws(()=>controller.exportMaxRows({EXPORT_MAX_ROWS:raw}));process.env.EXPORT_MAX_ROWS='invalid';const response=await request();assert.equal(response.status,500);assert.deepEqual(await response.json(),{message:'Error al generar el reporte'});process.env.EXPORT_MAX_ROWS='1000';});
     await t.test('SQL fallido no expone secreto/stack y libera exclusión',async()=>{fail=true;const response=await request();assert.equal(response.status,500);assert.deepEqual(await response.json(),{message:'Error al generar el reporte'});fail=false;await reset();assert.equal((await request()).status,200);});
-    await t.test('segunda exportación simultánea recibe 429 y la siguiente funciona',async()=>{let release;hold=new Promise(resolve=>release=resolve);const ready=new Promise(resolve=>entered=resolve);const first=request();await ready;const second=await request();assert.equal(second.status,429);assert.equal((await second.json()).code,'EXPORT_BUSY');release();hold=null;assert.equal((await first).status,200);assert.equal((await request()).status,200);});
+    await t.test('segunda exportación simultánea recibe 429 y la siguiente funciona',async()=>{
+      let release;hold=new Promise(resolve=>release=resolve);const ready=new Promise(resolve=>entered=resolve);const first=request();
+      try {await ready;const before=seen.length;const second=await request();assert.equal(second.status,429);assert.equal((await second.json()).code,'EXPORT_BUSY');assert.equal(seen.length,before);}
+      finally {release();hold=null;await read(await first);}
+      await read(await request());
+    });
 
+    await t.test('T25 generación XLSX retenida: segunda 429 sin segunda consulta/generación',async()=>{
+      const proto=Object.getPrototypeOf(new ExcelJS.Workbook().xlsx),original=proto.write;
+      let release,entered,generated=0;
+      const gate=new Promise(resolve=>release=resolve),ready=new Promise(resolve=>entered=resolve);
+      proto.write=async function(...args){generated++;entered();await gate;return original.apply(this,args);};
+      const first=request();
+      try {
+        await ready;const before=seen.length;const second=await request();
+        assert.equal(second.status,429);assert.equal((await second.json()).code,'EXPORT_BUSY');
+        assert.equal(seen.length,before);assert.equal(generated,1);
+      } finally {release();proto.write=original;await read(await first);}
+      await read(await request());
+    });
+    await t.test('T25 ZIP listo pero respuesta retenida conserva exclusión hasta finish',async()=>{
+      let release;const ready=new Promise(resolve=>{responseGate={ready:finish=>{release=finish;resolve();}};});
+      const first=request();
+      try {
+        await ready;const before=seen.length;const second=await request();
+        assert.equal(second.status,429);assert.equal((await second.json()).code,'EXPORT_BUSY');assert.equal(seen.length,before);
+      } finally {if(release)release();responseGate=null;await read(await first);}
+      await read(await request());
+    });
     await t.test('límite personalizado se aplica en SQL y HTTP',async()=>{
       await reset();await seed(2);process.env.EXPORT_MAX_ROWS='2';assert.equal((await read(await request())).rowCount,3);assert.deepEqual(seen.at(-1).params,[3]);await seed(1);assert.equal((await request()).status,422);process.env.EXPORT_MAX_ROWS='1000';
     });

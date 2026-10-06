@@ -61,15 +61,14 @@ Referencias enviadas por RegisterRecyclingPage, siempre grupo `Dependencias inst
 
 | Condición de interfaz | Acción | Nivel exacto |
 | --- | --- | --- |
-| material organico, cualquier cantidad aceptada | Ciclo orgánico | 5 kg de abono generado en compostera |
-| Otros materiales, cantidad <= 5 | Entrega acopio | Nivel 1: Volumen bajo (1 a 5 kg) |
-| Otros, > 5 y <= 15 | Entrega acopio | Nivel 2: Volumen medio (6 a 15 kg) |
-| Otros, > 15 y <= 30 | Entrega acopio | Nivel 3: Volumen alto (16 a 30 kg) |
-| Otros, > 30 | Entrega acopio | Nivel 4: Volumen masivo (+30 kg) |
+| Materiales vigentes, cantidad <= 5 | Entrega acopio | Nivel 1: Volumen bajo (1 a 5 kg) |
+| Materiales vigentes, > 5 y <= 15 | Entrega acopio | Nivel 2: Volumen medio (6 a 15 kg) |
+| Materiales vigentes, > 15 y <= 30 | Entrega acopio | Nivel 3: Volumen alto (16 a 30 kg) |
+| Materiales vigentes, > 30 | Entrega acopio | Nivel 4: Volumen masivo (+30 kg) |
 
-La interfaz admite decimales: 5.1 corresponde al segundo nivel aunque el texto diga 6. Para orgánico no verifica que se hayan producido 5 kg de abono. Al crear, el backend reconstruye esta misma referencia desde `material_type` y `quantity`, exige que los tres textos recibidos coincidan y comprueba que la identidad exista en `points_catalog`. Guarda los textos canónicos del catálogo y rechaza con 400 una referencia manipulada o ausente.
+La interfaz admite decimales: 5.1 corresponde al segundo nivel aunque el texto diga 6. Orgánico no es una entrada admitida desde el retiro autorizado del 2026-10-05. Al crear, el backend reconstruye esta misma referencia desde `material_type` y `quantity`, exige que los tres textos recibidos coincidan y comprueba que la identidad exista en `points_catalog`. Guarda los textos canónicos del catálogo y rechaza con 400 una referencia manipulada o ausente.
 
-El CSV distribuido no incluye ese grupo. Se necesitan valores institucionales aprobados y coherencia de catálogo antes de validar puntajes reales. En particular, un registro orgánico se rechaza si su identidad vigente no está configurada; la aplicación no inventa la fila ni sus puntos. Modificar catálogo no recalcula registros ya aprobados; F08 impide repetir su revisión por API.
+El CSV distribuido no incluye ese grupo. Se necesitan valores institucionales aprobados y coherencia de catálogo antes de validar puntajes reales. Un nuevo registro orgánico se rechaza antes de consultar el catálogo, aunque exista una fila coincidente; no se inventó una equivalencia ni se corrigió su referencia. Modificar catálogo no recalcula registros ya aprobados; F08 impide repetir su revisión por API.
 
 ## Metadatos no automatizados del catálogo
 
@@ -83,7 +82,7 @@ Por tanto, `evidence_required` y `max_frequency` se exponen únicamente como inf
 
 Los niveles son textos descriptivos, no columnas numéricas de mínimo/máximo. El comportamiento heredado conserva `q <= 5`, `5 < q <= 15`, `15 < q <= 30` y `q > 30`. Por ello 5.1–5.9 entra al nivel rotulado “6 a 15 kg” y 15.1–15.9 al rotulado “16 a 30 kg”. El `step="0.1"` permite precisamente esos valores. No hay evidencia para redondear, prohibir decimales o cambiar los límites.
 
-Para orgánico, “5 kg de abono generado en compostera” no especifica si se trata de cantidad exacta, umbral mínimo, bloque acumulable, frecuencia o simple descripción. La única fila similar pertenece a `Hogares`, no a `Dependencias institucionales`, por lo que sus 40 puntos no se reutilizan. Hasta recibir definición y catálogo institucional autorizados, la referencia orgánica no puede crearse con la protección F05 activa.
+Para orgánico, “5 kg de abono generado en compostera” no especifica si se trata de cantidad exacta, umbral mínimo, bloque acumulable, frecuencia o simple descripción. La única fila similar pertenece a `Hogares`, no a `Dependencias institucionales`, por lo que sus 40 puntos no se reutilizan. Esta ambigüedad se conserva como historia: desde 2026-10-05 Orgánico queda fuera del registro vigente, independientemente del catálogo. No se borra la referencia histórica ni se convierte en una nueva regla de puntuación.
 
 ## Fuente única de puntos
 
@@ -99,9 +98,9 @@ F09 conserva la regla de máximo un período activo, con cero permitido. Crear u
 
 F13 define reciclaje aprobado como registros con `status = 'approved'`. Las sumas denominadas kg (`general.total_quantity`, `materials[].total_quantity`) aplican además `lower(btrim(unit)) = 'kg'`. Pending/rejected y cualquier otra unidad quedan fuera de esas cantidades, sin alterar registros ni convertir unidades. Los conteos operativos y las sumas de puntos conservan su contrato anterior: actividad de todos los estados, independiente de la unidad.
 
-`quantity` es NUMERIC(10,2), cantidad positiva en la unidad declarada por separado en `unit` (texto libre, predeterminado kg). Esto se aplica a papel/cartón, plástico, vidrio, metal y orgánico, los únicos materiales admitidos por esquema y F05. El formulario etiqueta por separado Cantidad y Unidad; no impone kg. El manual recomienda kg, pero no demuestra que toda fila lo use. Por tanto, cada uno de los cinco materiales entra al total únicamente si su fila declara kg; `KG` y espacios exteriores se normalizan solo para comparar. Litros, unidades, bloques, gramos, toneladas, unidad vacía/desconocida y otros textos quedan excluidos, sin equivalencias inventadas.
+`quantity` es NUMERIC(10,2), cantidad positiva en la unidad declarada por separado en `unit` (texto libre, predeterminado kg). Esto se aplica a papel/cartón, plástico, vidrio, metal y orgánico, materiales conservados por el esquema para compatibilidad histórica; F05 solo admite los cuatro no orgánicos para nuevas altas. El formulario etiqueta por separado Cantidad y Unidad; no impone kg. El manual recomienda kg, pero no demuestra que toda fila lo use. Por tanto, cada uno de los cinco materiales entra al total únicamente si su fila declara kg; `KG` y espacios exteriores se normalizan solo para comparar. Litros, unidades, bloques, gramos, toneladas, unidad vacía/desconocida y otros textos quedan excluidos, sin equivalencias inventadas.
 
-En orgánico no se deducen kg desde “5 kg de abono generado en compostera”, ni se multiplica quantity por 5, ni se presume que representa bloques. Una fila orgánica aprobada con unit kg aporta exactamente su quantity declarada; una con unit bloques no aporta kg. Esto no valida la metodología orgánica ni cambia F05/F07: la falta de catálogo institucional sigue bloqueando las altas correspondientes y requiere su decisión independiente. El CSV contiene actividades en litros, unidades y kg de otros grupos, pero no una tabla de conversión de recycling_records. Seeds no aportan registros de negocio; las pruebas anteriores en kg son fixtures, no evidencia sobre datos reales.
+En orgánico no se deducen kg desde “5 kg de abono generado en compostera”, ni se multiplica quantity por 5, ni se presume que representa bloques. Una fila orgánica aprobada con unit kg aporta exactamente su quantity declarada; una con unit bloques no aporta kg. Esto no valida la metodología orgánica ni cambia F05/F07: las nuevas altas orgánicas se rechazan por retiro de alcance y el catálogo institucional de los materiales vigentes sigue pendiente. El CSV contiene actividades en litros, unidades y kg de otros grupos, pero no una tabla de conversión de recycling_records. Seeds no aportan registros de negocio; las pruebas anteriores en kg son fixtures, no evidencia sobre datos reales.
 
 Alcance histórico: general, materiales, equipos incluyen todos los períodos y filas sin período. periods agrupa por período existente; no hay filtro de activo. El dashboard administrativo consume `/public/stats`, por lo que comparte exactamente la base pública. `GET /admin/dashboard` y los conteos personales siguen mostrando actividad, no kg. El ranking mantiene aprobados del período activo; no se modifica su SQL ni la puntuación. Excel conserva filas de todos los estados con cantidad/unidad separadas, sin sumatoria.
 
@@ -183,3 +182,10 @@ Los errores de cleanup generan FILE_CLEANUP_PENDING sin rutas/SQL/secretos. Si B
 ### Actualización S02 — 2026-09-30
 
 Sesión S02: JWT HS256 de ocho horas en cookie ecoamigos_session, HttpOnly, SameSite=Lax, Path=/api, sin Domain; Secure cuando NODE_ENV=production. El body de login ya no contiene JWT. Frontend y API deben compartir sitio y esquema (localhost con distintos puertos en desarrollo; HTTPS bajo el mismo sitio en producción). No se soporta automáticamente un frontend en un sitio distinto; no cambiar a SameSite=None sin revisar despliegue y pruebas. CLIENT_URL es el único origen permitido para CORS y CSRF. Fuera de producción, si falta, se usa http://localhost:5173; en producción es obligatorio un origen HTTPS exacto. No se admiten wildcard, lista, ruta, credenciales ni slash final. CORS_ORIGINS es una variable heredada: retirarla o mantenerla idéntica a CLIENT_URL; otro valor detiene el arranque. Axios y CORS habilitan credenciales. Los métodos mutantes exigen Origin igual a CLIENT_URL y X-Ecoamigos-Request: 1, incluso login, logout y recuperación. Logout no cambia las reglas de revocación S01: reset incrementa session_version y las peticiones siguientes rechazan cualquier JWT anterior. Se conservan autorización y límites S03. Ver evidencia de pruebas y decisión CSRF en [09](09-CALIDAD-Y-PENDIENTES.md).
+
+
+## Exclusión XLSX — continuación 2026-10-05
+
+La bandera se adquiere antes de consultar datos y crear el workbook. Se mantiene hasta terminar la generación **y** finalizar/cerrar la respuesta HTTP (finish/close/error); finally libera después de ambas condiciones. El finish del ZIP interno de ExcelJS no garantiza el finish del destino HTTP y res.end() inicia el cierre, no lo espera. Una segunda petición que entra al controlador durante esa ventana recibe 429 EXPORT_BUSY sin consultar datos ni crear otro workbook. Si la primera ya terminó, dos respuestas 200 son válidas: no se introduce espera artificial, cooldown ni límite por clic.
+
+Se conserva EXPORT_MAX_ROWS=1000 por defecto, rango configurado 1–10000, LIMIT+1, 422 EXPORT_LIMIT_EXCEEDED, las nueve columnas y formato XLSX. La exclusión es por proceso/instancia, no distribuida. Un trabajo de base de datos o escritura que nunca termina puede mantener ocupado ese proceso; no se introduce un timeout arbitrario ni liberación anticipada mientras aún se genera. La desconexión libera al finalizar también la generación pendiente; errores controlados liberan tras cerrar la respuesta.

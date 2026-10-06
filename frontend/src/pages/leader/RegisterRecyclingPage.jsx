@@ -15,14 +15,6 @@ const QUALITY_CRITERIA = [
 function getCatalogReference(materialType, quantityValue) {
   const quantity = Number(quantityValue) || 0;
 
-  if (materialType === 'organico') {
-    return {
-      catalog_group_name: 'Dependencias institucionales',
-      catalog_action_name: 'Ciclo orgánico',
-      catalog_action_level: '5 kg de abono generado en compostera',
-    };
-  }
-
   if (quantity <= 5) {
     return {
       catalog_group_name: 'Dependencias institucionales',
@@ -250,9 +242,6 @@ export default function RegisterRecyclingPage() {
               Metal
             </option>
 
-            <option value="organico">
-              Orgánico
-            </option>
           </select>
         </label>
 

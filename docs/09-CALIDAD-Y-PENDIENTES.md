@@ -39,7 +39,7 @@ Usar exclusivamente un entorno QA autorizado, cuentas y datos ficticios. Registr
 | T12 Validación | Cantidad cero, material/tipo/firma inválidos, evidencia >20 MiB | Rechazo controlado según contrato, sin registro ni residuo nuevo normal; no asumir código uniforme | F05/F10/S04–S07 |
 | T13 Catálogo | Fixtures aisladas de las cinco referencias; aprobar | Puntos exactamente points_catalog.points, sin fórmula alternativa ni modificar CSV original | F04/F05 e instalación |
 | T14 Sin coincidencia | Referencia inexistente o manipulada | 400 y ningún registro; no inventar grupo institucional para hacer pasar la prueba | F05; limitación D06 |
-| T15 Rangos | 5, 5.1, 15, 15.1, 30, 30.1 y orgánico | Conservar resultados heredados documentados, detectar huecos; no declarar resueltas F05/F07/D06 | F06–F07; reglas 06 |
+| T15 Rangos/retiro | Cuatro materiales: 5, 5.1, 15, 15.1, 30, 30.1; intento orgánico manipulado | Niveles 1,2,2,3,3,4 intactos; selector sin orgánico y POST 400 sin inserción; históricos intactos. No resuelve D06 ni huecos decimales F07 | f05-catalog-validation, f11-registration-access, frontend f19-evidence |
 | T16 Rechazo | Revisar pending como rejected | 0 puntos, revisor actual, fecha y notas persistidas; operación atómica | F08 |
 | T17 Revisión repetida | Volver a aprobar/rechazar un registro resuelto; dos revisores concurrentes | 409 sin cambio de estado, auditoría ni puntos; una única decisión gana | F08 |
 | T18 Historial personal | Dos líderes del mismo equipo | mine solo devuelve los registros del usuario actual; evidencia no accesible al otro líder | F11/S05 |
@@ -49,7 +49,7 @@ Usar exclusivamente un entorno QA autorizado, cuentas y datos ficticios. Registr
 | T22 Adjuntos | Editar con/sin archivo, sustituir y borrar contenido | Conserva archivo sin reemplazo; retira el anterior solo sin referencias en ambas tablas. Rollback/errores conservan datos; crash puede requerir reconciliación | S06; operación 08 |
 | T23 Ganadores retirados | Solicitar /api/public/winners y antigua página /winners | Endpoint inexistente 404; SPA muestra página no encontrada, sin enlaces ni función de ganadores | F01–F03/F17; no exigir HTTP 404 del servidor SPA |
 | T24 Premios retirados | Solicitar antiguas rutas públicas de prizes y rutas admin con sesión admin válida | 404, sin escritura ni UI de premios; tablas históricas preservadas | F01–F03 |
-| T25 XLSX | Admin; límites, exceso, simultaneidad y textos = + - @ | EXPORT_MAX_ROWS default técnico 1000, rango 1–10000; LIMIT + 1; exceso 422 sin truncamiento; una exportación por proceso y otra 429; lock liberado ante error; strings sin fórmulas. Nueve columnas, sin inventar filtros API | S11 backend/frontend; smoke XLSX aprobado informado |
+| T25 XLSX | Admin; límites, exceso, simultaneidad y textos = + - @ | EXPORT_MAX_ROWS default técnico 1000, rango 1–10000; LIMIT + 1; exceso 422 sin truncamiento; una exportación por proceso hasta finish/close de HTTP y otra solapada 429; barreras deterministas en SQL, generación y respuesta; lock liberado ante error; strings sin fórmulas. Nueve columnas, sin inventar filtros API | S11 backend/frontend; smoke XLSX aprobado informado |
 | T26 Accesibilidad | 360/768/1440 px, menú y modal con teclado | Sin recortes, tablas desplazables, foco visible, Escape/restauración de foco y menú accesible | F20 automatizado; smoke visual integral por registrar |
 | T27 Navegación directa | Ahora: servidor local SPA, recarga /educacion/agua, /admin y ruta desconocida | Comprobar rutas/404 visual y rol API local. Cuando Parques despliegue: verificar fallback del hosting, HTTPS/proxy. Producción inexistente no es requisito de QA actual | F17/ProtectedRoute; hosting futuro fuera del alcance |
 | T28 Restauración | En ensayo autorizado: dump y UPLOAD_ROOT coherentes hacia destinos aislados | Datos y evidencias asociados, login/exportación; registrar recuperación. Esta consolidación no restaura ni certifica un backup institucional | Procedimiento 08; acta de restauración por registrar |
@@ -760,3 +760,37 @@ Primera ejecución backend: initdb no pudo crear sus clústeres bajo el sandbox 
 HttpOnly evita lectura del JWT por JavaScript, pero XSS aún podría efectuar peticiones con la sesión; no es certificación de ausencia de XSS. Logout elimina la cookie del navegador sin incrementar session_version ni revocar copias sustraídas previamente: conserva la semántica de revocación global mediante reset S01/F16. Si falla la red al cerrar sesión, la UI informa y permite reintentar; no declara una cookie eliminada sin respuesta del servidor. La coordinación de operaciones login/logout es por pestaña, sin invalidación visual inmediata entre pestañas; el backend sigue comprobando identidad/versiones en cada petición.
 
 Las pruebas frontend usan ReactDOM con host mínimo, no un navegador institucional real. Antes de entregar, realizar smoke de login, recarga, permisos, logout y reset con los dominios HTTPS/proxy elegidos, confirmar flags en DevTools sin copiar tokens y comprobar cabecera/origen en multipart y descargas. Proveedor de correo F16 y riesgos de dependencias S12 siguen pendientes, fuera de S02. No hubo commit, push, cambios en Jira ni despliegue.
+
+
+## Continuación manual T15/T25 — 2026-10-05
+
+**Incidencias cerradas en código y pruebas locales:** retiro de Orgánico del registro vigente y extensión de exclusión XLSX hasta terminar/cerrar la respuesta HTTP. Sin commit, push, despliegue, migraciones ni conexión a la base real.
+
+### Diagnóstico y cambio autorizado
+
+Orgánico permanecía en el selector y en deriveCatalogReference, con una derivación fija a “Ciclo orgánico”. La ausencia de catálogo no era una prohibición funcional suficiente. Se retiró del selector y de la lista permitida/derivación backend. Una solicitud directa con organico recibe 400 antes de consultar el catálogo; no se ha corregido una equivalencia ni creado una nueva referencia. Permanecen los contenidos educativos, las 56 filas del catálogo distribuido, la restricción heredada del esquema y los registros históricos orgánicos. Revisión, estadísticas, puntos, ranking y exportación histórica no se filtran ni recalculan por esta decisión.
+
+Exportación: el bloqueo ya abarcaba SQL y await workbook.xlsx.write(res), por lo que la prueba previa con SQL retenido era realmente concurrente y válida. La brecha estaba en la finalización: ExcelJS resuelve con finish del ZIP interno y res.end() no espera finish del destino HTTP. finally liberaba antes de confirmar ese final. Ahora se registra finish/close/error antes del trabajo y se espera su resolución en finally, manteniendo también la espera de generación. No se libera por desconexión mientras el trabajo de generación continúe.
+
+El informe manual de dos HTTP 200 no permite demostrar por sí solo solapamiento dentro del controlador: también ocurre si la primera termina antes de que la segunda alcance el bloqueo, aunque los clientes se inicien casi juntos. No se inventa una causa observada en el servidor sin trazas. La nueva prueba retiene expresamente la respuesta después de completar el ZIP y comprueba la ventana corregida; no se añade cooldown ni demora artificial de producción.
+
+### Evidencia automática
+
+| Control | Resultado |
+| --- | --- |
+| Backend completo | 209 pruebas aprobadas; 0 fallos, 0 omitidas |
+| Frontend completo | 52 pruebas aprobadas; 0 fallos, 0 omitidas |
+| Build frontend | Correcto; 104 módulos transformados |
+| Checks | Sintaxis de 75 archivos y YAML/contrato CI correctos; git diff --check correcto |
+| SQL, generación y fin de respuesta retenidos | Primera petición aceptada; segunda 429 EXPORT_BUSY sin segunda consulta; tras liberar, XLSX legible y exportación posterior 200 |
+| Fallo SQL / escritor XLSX | Error controlado y exportación posterior disponible; bloqueo liberado |
+| Materiales/cantidades | Papel/cartón, plástico, vidrio y metal conservan 5→1, 5.1→2, 15→2, 15.1→3, 30→3 y 30.1→4; cantidades inválidas rechazadas |
+| Orgánico manipulado | 400 aun con referencia aparente válida; sin consulta de catálogo ni inserción; histórico orgánico de fixture intacto |
+
+Pruebas afectadas: backend f05-catalog-validation (referencias y límites), f11-registration-access (HTTP real con cookie y base desechable), s11-export (barreras por promesas en SQL, escritura y res.end; nueve columnas, 1000 filas, 422 y errores); frontend f19-evidence (selector y derivación de niveles). Las barreras se liberan en finally y no dependen de setTimeout. El runner completo conserva regresión de autenticación, roles, cookie HttpOnly, CSRF/CORS, evidencia, revisión, puntuación/ranking y contenidos. PostgreSQL 18.1 se ejecutó en clústeres temporales aislados con autorización fuera del sandbox. Logs locales temporales: ecoamigos-oct05-backend.txt, ecoamigos-oct05-frontend.txt, ecoamigos-oct05-build.txt y ecoamigos-oct05-check.txt.
+
+### Impacto y límites
+
+T15 vigente verifica retiro, rechazo directo, historia y límites de los cuatro materiales. La antigua fila T15 y las referencias orgánicas en informes anteriores permanecen como historia, no como requisito a implementar. F05/F07 siguen PARCIALES por catálogo institucional D06 y ambigüedades decimales de los materiales vigentes; no se cierran por retirar orgánico. S11 conserva CORREGIDO para su alcance, con esta evidencia adicional sobre finalización HTTP. T25 exige solapamiento real controlado, no solo dos invocaciones cercanas.
+
+EXPORT_BUSY es por proceso/instancia. Varias instancias pueden exportar simultáneamente; coordinación distribuida queda como evolución futura, no fallo del contrato actual. No garantiza ocupación mínima ni confirmación de guardado del archivo por el cliente; finish significa entrega al transporte local. Un trabajo que nunca termina puede mantener el bloqueo; no se agregan timeout arbitrario, Redis, colas ni dependencias. Antes del commit revisar diff y repetir smoke manual en una única instancia; conservar el límite real 1000 y no usar la base productiva para fabricar solapamiento.

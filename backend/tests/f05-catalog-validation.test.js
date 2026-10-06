@@ -104,9 +104,9 @@ test('rechaza un nivel superior aunque exista cuando la cantidad corresponde al 
 test('rechaza una referencia coherente si la identidad no existe en points_catalog', async () => {
   await assert.rejects(
     validateCatalogReference({
-      materialType: 'organico',
+      materialType: 'plastico',
       quantity: 5,
-      receivedReference: references.organic,
+      receivedReference: references.level1,
       findCatalogEntry: async () => null,
     }),
     (error) => {
@@ -126,10 +126,10 @@ test('la derivación del backend conserva el contrato actual del frontend en sus
   assert.deepEqual(deriveCatalogReference('metal', 16), references.level3);
   assert.deepEqual(deriveCatalogReference('papel_carton', 30), references.level3);
   assert.deepEqual(deriveCatalogReference('plastico', 30.1), references.level4);
-  assert.deepEqual(deriveCatalogReference('organico', 1), references.organic);
+  assert.throws(() => deriveCatalogReference('organico', 1), CatalogReferenceValidationError);
 
   const frontend = read('frontend/src/pages/leader/RegisterRecyclingPage.jsx');
-  for (const reference of Object.values(references)) {
+  for (const reference of [references.level1, references.level2, references.level3, references.level4]) {
     assert.ok(frontend.includes(reference.catalog_group_name));
     assert.ok(frontend.includes(reference.catalog_action_name));
     assert.ok(frontend.includes(reference.catalog_action_level));
@@ -155,4 +155,21 @@ test('points del cliente no son entrada y la puntuación conserva su fuente auto
   assert.match(controller, /SELECT\s+points\s+FROM points_catalog/i);
   assert.match(reviewRecord, /if \(status === 'approved'\)[\s\S]*getCatalogPoints/);
   assert.match(reviewRecord, /points_awarded = \$4/);
+});
+
+test('T15 orgánico se rechaza antes de consultar incluso un catálogo sintético válido', async()=>{
+  for (const receivedReference of [references.organic,references.level1]) {
+    let called=false;
+    await assert.rejects(validateCatalogReference({materialType:'organico',quantity:5,receivedReference,
+      findCatalogEntry:async()=>{called=true;return catalogRow(receivedReference);}}),CatalogReferenceValidationError);
+    assert.equal(called,false);
+  }
+});
+test('T15 cuatro materiales conservan niveles y rechazan cantidades inválidas',()=>{
+  for(const material of ['papel_carton','plastico','vidrio','metal']) {
+    for(const [quantity,level] of [[5,1],[5.1,2],[15,2],[15.1,3],[30,3],[30.1,4]]) {
+      assert.deepEqual(deriveCatalogReference(material,quantity),references['level'+level]);
+    }
+    for(const quantity of [0,-1,NaN,Infinity,'invalid'])assert.throws(()=>deriveCatalogReference(material,quantity),CatalogReferenceValidationError);
+  }
 });

@@ -158,7 +158,7 @@ El equipo procede de req.user.team_id, leído de PostgreSQL por el middleware S0
 
 | Campo | Uso / normalización |
 | --- | --- |
-| material_type | papel_carton, plastico, vidrio, metal, organico; trim o null |
+| material_type | papel_carton, plastico, vidrio, metal; trim, orgánico rechazado con 400 |
 | quantity | Valor numérico; SQL histórico exige > 0 |
 | unit | Texto; trim o null; UI inicia kg |
 | quality_level | alta, media, baja; trim o null |
@@ -263,7 +263,7 @@ Elimina la fila y, después del COMMIT, retira su archivo si no quedan referenci
 
 ### GET /admin/export/excel
 
-Sin body ni parámetros de filtro implementados. MIME `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`; Content-Disposition attachment; filename `Reporte_Ecoamigos.xlsx`. Incluye todos los estados y periodos, siempre que no exceda EXPORT_MAX_ROWS (1000 predeterminado técnico configurable). Recupera como máximo límite+1: el exceso devuelve 422 JSON con code EXPORT_LIMIT_EXCEEDED y maxRows, sin adjunto XLSX ni truncamiento. La UI informa que administración técnica debe revisar el volumen/configuración; no existen filtros. Exportación simultánea en el mismo proceso: 429 EXPORT_BUSY. Errores internos: 500 genérico; si ya comenzó el envío, se interrumpe la conexión. Columnas y alcance en [reglas](06-REGLAS-Y-BACKEND.md).
+Sin body ni parámetros de filtro implementados. MIME `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`; Content-Disposition attachment; filename `Reporte_Ecoamigos.xlsx`. Incluye todos los estados y periodos, siempre que no exceda EXPORT_MAX_ROWS (1000 predeterminado técnico configurable). Recupera como máximo límite+1: el exceso devuelve 422 JSON con code EXPORT_LIMIT_EXCEEDED y maxRows, sin adjunto XLSX ni truncamiento. La UI informa que administración técnica debe revisar el volumen/configuración; no existen filtros. Exportación solapada en el mismo proceso: 429 EXPORT_BUSY durante consulta, generación y hasta finalizar/cerrar la respuesta HTTP. Una segunda solicitud posterior a ese cierre puede devolver 200. Errores internos: 500 genérico; si ya comenzó el envío, se interrumpe la conexión. Columnas y alcance en [reglas](06-REGLAS-Y-BACKEND.md).
 
 ## Ejemplos PowerShell
 
@@ -347,3 +347,6 @@ S10: los errores internos de consultas ya no incluyen el campo error con mensaje
 ### Actualización S02 — 2026-09-30
 
 Sesión S02: JWT HS256 de ocho horas en cookie ecoamigos_session, HttpOnly, SameSite=Lax, Path=/api, sin Domain; Secure cuando NODE_ENV=production. El body de login ya no contiene JWT. Frontend y API deben compartir sitio y esquema (localhost con distintos puertos en desarrollo; HTTPS bajo el mismo sitio en producción). No se soporta automáticamente un frontend en un sitio distinto; no cambiar a SameSite=None sin revisar despliegue y pruebas. CLIENT_URL es el único origen permitido para CORS y CSRF. Fuera de producción, si falta, se usa http://localhost:5173; en producción es obligatorio un origen HTTPS exacto. No se admiten wildcard, lista, ruta, credenciales ni slash final. CORS_ORIGINS es una variable heredada: retirarla o mantenerla idéntica a CLIENT_URL; otro valor detiene el arranque. Axios y CORS habilitan credenciales. Los métodos mutantes exigen Origin igual a CLIENT_URL y X-Ecoamigos-Request: 1, incluso login, logout y recuperación. Logout no cambia las reglas de revocación S01: reset incrementa session_version y las peticiones siguientes rechazan cualquier JWT anterior. Se conservan autorización y límites S03. Ver evidencia de pruebas y decisión CSRF en [09](09-CALIDAD-Y-PENDIENTES.md).
+
+
+Actualización 2026-10-05: POST /recycling rechaza material_type=organico antes de consultar el catálogo, incluso con referencia manipulada o coincidente. Los registros históricos, estadísticas, revisión y exportación conservan ese material si ya está almacenado; no se modifica esquema ni contenido educativo.

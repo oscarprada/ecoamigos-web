@@ -14,6 +14,16 @@ const textCell = value => value == null ? null : String(value);
 export async function exportRecyclingReport(req, res) {
   if (exporting) return res.status(429).json({message:'Ya hay una exportación en curso',code:'EXPORT_BUSY'});
   exporting = true;
+  // ExcelJS finalizes its ZIP before the HTTP writable necessarily finishes.
+  // Keep ownership through both generation and response completion/disconnect.
+  const responseDone = new Promise(resolve => {
+    const done = () => {
+      res.off('finish', done); res.off('close', done); res.off('error', done);
+      resolve();
+    };
+    res.once('finish', done); res.once('close', done); res.once('error', done);
+    if (res.writableFinished || res.destroyed) done();
+  });
   try {
     const maxRows = exportMaxRows();
     const result = await query(`
@@ -125,6 +135,7 @@ export async function exportRecyclingReport(req, res) {
       message: 'Error al generar el reporte',
     });
   } finally {
+    await responseDone;
     exporting = false;
   }
 }

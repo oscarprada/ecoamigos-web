@@ -5,7 +5,6 @@ const MATERIAL_TYPES = new Set([
   'plastico',
   'vidrio',
   'metal',
-  'organico',
 ]);
 
 export class CatalogReferenceValidationError extends Error {
@@ -23,14 +22,6 @@ export function deriveCatalogReference(materialType, quantityValue) {
     throw new CatalogReferenceValidationError(
       'Material o cantidad inválidos para determinar la referencia de catálogo.'
     );
-  }
-
-  if (material === 'organico') {
-    return {
-      catalog_group_name: CATALOG_GROUP,
-      catalog_action_name: 'Ciclo orgánico',
-      catalog_action_level: '5 kg de abono generado en compostera',
-    };
   }
 
   if (quantity <= 5) {
