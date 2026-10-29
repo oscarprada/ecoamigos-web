@@ -1,5 +1,6 @@
 export function clientOrigin(env = process.env) {
-  const value = env.CLIENT_URL ?? (env.NODE_ENV === 'production' ? '' : 'http://localhost:5173');
+  const development = env.NODE_ENV === undefined || env.NODE_ENV === 'development';
+  const value = env.CLIENT_URL ?? (development ? 'http://localhost:5173' : '');
   try {
     const url = new URL(value);
     if (url.origin !== value || !['http:', 'https:'].includes(url.protocol) ||

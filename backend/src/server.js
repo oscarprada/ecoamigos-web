@@ -3,6 +3,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { corsOptions, csrfProtection, configureProxy, controlledError } from './middleware/httpConfig.js';
+import { serverOptions } from './config/serverOptions.js';
+import healthRoutes from './routes/healthRoutes.js';
 
 import authRoutes from './routes/authRoutes.js';
 import fileRoutes from './routes/fileRoutes.js';
@@ -12,6 +14,7 @@ import gardenRoutes from './routes/gardenRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 
 dotenv.config();
+const { port: PORT } = serverOptions();
 
 loggerOptions(); // Fail early on invalid logging configuration, before listening.
 const app = express();
@@ -21,6 +24,7 @@ app.use(cors(corsOptions()));
 app.use('/api', csrfProtection());
 
 app.use(express.json());
+app.use('/api/health', healthRoutes);
 // No static uploads: every file is resolved through its current database relation.
 app.use('/api/files', fileRoutes);
 
@@ -37,8 +41,6 @@ app.get('/', (_req, res) => {
 });
 
 app.use(controlledError);
-
-const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   logInfo('SERVER_STARTED');
