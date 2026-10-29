@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { corsOptions, csrfProtection, configureProxy, controlledError } from './middleware/httpConfig.js';
 import { serverOptions } from './config/serverOptions.js';
 import healthRoutes from './routes/healthRoutes.js';
+import { createStorage } from './services/fileStore.js';
 
 import authRoutes from './routes/authRoutes.js';
 import fileRoutes from './routes/fileRoutes.js';
@@ -15,6 +16,7 @@ import adminRoutes from './routes/adminRoutes.js';
 
 dotenv.config();
 const { port: PORT } = serverOptions();
+createStorage(); // Validate provider and production credentials before accepting requests.
 
 loggerOptions(); // Fail early on invalid logging configuration, before listening.
 const app = express();

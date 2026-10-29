@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { pool } from '../config/db.js';
 import { removeStored } from '../services/fileStore.js';
 import { authenticateToken, authorizeRoles } from '../middleware/authMiddleware.js';
-import { upload } from '../middleware/uploadMiddleware.js';
+import { gardenUpload as upload } from '../middleware/uploadMiddleware.js';
 import { createGardenHandlers } from '../controllers/gardenHandlers.js';
 const router = Router();
 const handlers = createGardenHandlers({ pool, removeStored });

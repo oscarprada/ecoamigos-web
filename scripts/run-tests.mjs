@@ -14,7 +14,7 @@ if(side==='backend'){
  }
 }
 const temporary=fs.mkdtempSync(path.join(os.tmpdir(),'ecoamigos-suite-'));
-const env={...isolatedEnvironment(),NODE_ENV:'test',JWT_SECRET:'ci-and-local-test-only-not-a-real-secret',CLIENT_URL:'http://localhost:5173',CORS_ORIGINS:'http://localhost:5173',
+const env={...isolatedEnvironment(),STORAGE_PROVIDER:'local',CLOUDINARY_CLOUD_NAME:'',CLOUDINARY_API_KEY:'',CLOUDINARY_API_SECRET:'',NODE_ENV:'test',JWT_SECRET:'ci-and-local-test-only-not-a-real-secret',CLIENT_URL:'http://localhost:5173',CORS_ORIGINS:'http://localhost:5173',
  DB_HOST:'127.0.0.1',DB_PORT:'1',DB_USER:'not_an_application_account',DB_PASSWORD:'test-only',DB_NAME:'not_an_application_database',DATABASE_URL:'',DB_SSL:'false',
  LOG_DIR:path.join(temporary,'logs'),UPLOAD_ROOT:path.join(temporary,'uploads')};
 // Individual suites inject their disposable databases. Accidental application Pool gets port 1, never a real DB.

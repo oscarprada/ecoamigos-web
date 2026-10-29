@@ -1,5 +1,6 @@
 import { isValidRecordDate } from '../utils/recordDate.js';
 import { formats, extension } from '../services/fileFormats.js';
+import { cleanupUncommitted } from '../services/fileStore.js';
 
 export const vegetables = ['cebolla larga', 'tomate', 'lechuga', 'cilantro', 'pimentón', 'ají'];
 const text = (value, max) => typeof value === 'string' && value.trim().length > 0 && value.trim().length <= max;
@@ -10,12 +11,12 @@ const fail = (code, message) => { throw new RequestError(code, message); };
 // Inject infrastructure so tests never load application credentials or .env.
 export function createGardenHandlers({ pool, removeStored }) {
   const action = operation => async (req, res) => {
-    let client, committed = false, releaseError;
+    let client, committed = false, commitAttempted = false, releaseError;
     try {
       client = await pool.connect();
       await client.query('BEGIN');
       const result = await operation(req, client);
-      await client.query('COMMIT'); committed = true;
+      commitAttempted = true; await client.query('COMMIT'); committed = true;
       res.status(result.code || 200).json(result.data);
     } catch (error) {
       if (client && !committed) try { await client.query('ROLLBACK'); } catch (rollbackError) { releaseError = rollbackError; }
@@ -23,7 +24,7 @@ export function createGardenHandlers({ pool, removeStored }) {
     } finally {
       client?.release(releaseError);
       // The validated upload has a new random filename and no relation on failure.
-      if (req.file && !committed) await removeStored(req.file.url);
+      if (req.file && !committed) await cleanupUncommitted(req.file.url, (...args) => pool.query(...args), { commitAttempted, storage: { remove: removeStored } });
     }
   };
   const leader = req => {

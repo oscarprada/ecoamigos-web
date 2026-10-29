@@ -1,4 +1,4 @@
-import { cleanupUnused } from '../services/fileStore.js';
+import { cleanupUncommitted } from '../services/fileStore.js';
 import { query, pool } from '../config/db.js';
 import { logInfo, logError } from '../utils/logger.js';
 import { isValidRecordDate } from '../utils/recordDate.js';
@@ -61,6 +61,7 @@ async function findCatalogEntry({
 
 export async function createRecord(req, res) {
   let fileCommitted = false;
+  let commitAttempted = false;
   let client;
   let transactionOpen = false;
   let releaseError;
@@ -180,6 +181,7 @@ export async function createRecord(req, res) {
       ]
     );
 
+    commitAttempted = true;
     await client.query('COMMIT');
     transactionOpen = false;
     fileCommitted = true;
@@ -205,7 +207,7 @@ export async function createRecord(req, res) {
     });
   } finally {
     if (client) client.release(releaseError);
-    if (req.file && !fileCommitted) await cleanupUnused(req.file.url, query);
+    if (req.file && !fileCommitted) await cleanupUncommitted(req.file.url, query, { commitAttempted });
   }
 }
 

@@ -1,7 +1,7 @@
-import { cleanupUnused } from './fileStore.js';
-export function createContentHandlers(pool, query) {
+import { cleanupUnused, cleanupUncommitted, createStorage } from './fileStore.js';
+export function createContentHandlers(pool, query, storage = createStorage()) {
   const mutate = operation => async (req,res) => {
-    let client, open=false, committed=false, previous, row, releaseError;
+    let client, open=false, committed=false, commitAttempted=false, previous, row, releaseError;
     try {
       if(operation!=='create' && !/^[1-9]\d{0,9}$/.test(req.params.id)) return res.status(404).json({message:'Contenido no encontrado'});
       client=await pool.connect();await client.query('BEGIN');open=true;
@@ -20,15 +20,15 @@ export function createContentHandlers(pool, query) {
         else row=(await client.query(
           'UPDATE content_items SET title=$1,category=$2,type=$3,description=$4,file_url=$5,status=$6 WHERE id=$7 RETURNING *', [...values,req.params.id])).rows[0];
       }
-      await client.query('COMMIT');open=false;committed=true;client.release();client=null;
-      if(previous && (operation==='delete' || previous!==row.file_url)) await cleanupUnused(previous,query);
+      commitAttempted=true;await client.query('COMMIT');open=false;committed=true;client.release();client=null;
+      if(previous && (operation==='delete' || previous!==row.file_url)) await cleanupUnused(previous,query,storage);
       return res.status(operation==='create'?201:200).json(operation==='delete'?{message:'Contenido eliminado correctamente'}:row);
     } catch {
       if(open) {try{await client.query('ROLLBACK');}catch(error){releaseError=error;}}
       return res.status(500).json({message:operation==='create'?'Error al crear contenido':operation==='delete'?'Error al eliminar contenido':'Error al actualizar contenido'});
     } finally {
       if(client) client.release(releaseError);
-      if(req.file && !committed) await cleanupUnused(req.file.url,query);
+      if(req.file && !committed) await cleanupUncommitted(req.file.url,query,{commitAttempted,storage});
     }
   };
   return {createContent:mutate('create'),updateContent:mutate('update'),deleteContent:mutate('delete')};
