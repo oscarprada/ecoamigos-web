@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import mascota from '../../assets/cleoecoamigos.png';
+import cleoJuegos from '../../assets/cleo-juegos.jpeg';
 import aguaIcon from '../../assets/icons/agua.png';
 import energiaIcon from '../../assets/icons/energia.png';
 import papelIcon from '../../assets/icons/papel.png';
@@ -63,7 +64,11 @@ export default function HomePage() {
         <div className="home-cards">
           <Link to="/educacion/juegos" className="home-cardLink">
             <article className="home-card">
-              <div className="home-iconCircle" aria-hidden="true">↻</div>
+              <img
+                src={cleoJuegos}
+                alt="Cleo, tortuga de Ecoamigos con piezas de rompecabezas"
+                className="home-gamesIllustration"
+              />
               <h4 className="home-cardTitle">Juegos didácticos</h4>
               <p className="home-cardText">Aprende con la ruleta ambiental y descubre nuestros próximos juegos.</p>
             </article>
