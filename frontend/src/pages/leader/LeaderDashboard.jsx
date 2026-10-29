@@ -1,5 +1,6 @@
 import ProtectedFile from '../../components/ProtectedFile';
 import LoadState from '../../components/LoadState';
+import GardenChallengePage from '../public/GardenChallengePage';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
@@ -11,6 +12,18 @@ export default function LeaderDashboard() {
   const { user } = useAuth();
   const [records, setRecords] = useState([]);
   const [ranking, setRanking] = useState([]);
+  const [activeTab, setActiveTab] = useState('garden');
+  const tabs = [{ id: 'garden', label: 'Huerta' }, { id: 'recycling', label: 'Reciclaje' }];
+  const handleTabKey = (event, index) => {
+    let next;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') next = (index + 1) % tabs.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = tabs.length - 1;
+    else return;
+    event.preventDefault();
+    setActiveTab(tabs[next].id);
+    event.currentTarget.parentElement.querySelectorAll('[role="tab"]')[next].focus();
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -50,24 +63,34 @@ export default function LeaderDashboard() {
           </p>
         </div>
 
-        {user?.role === 'leader' && <Link to="/leader/register" style={styles.primaryButton}>
-          Registrar reciclaje
-        </Link>}
       </section>
 
       <section style={styles.statsGrid}>
         <article style={styles.statCard}>
-          <span style={styles.statLabel}>Puntaje del equipo</span>
+          <span style={styles.statLabel}>Puntaje general del grupo</span>
           <strong style={styles.statValue}>
-            {Number(teamStats?.total_points ?? teamStats?.score ?? totalPoints ?? 0)}
+            {Number(teamStats?.total_points ?? teamStats?.score ?? 0)}
           </strong>
         </article>
 
         <article style={styles.statCard}>
-          <span style={styles.statLabel}>Posición actual</span>
+          <span style={styles.statLabel}>Posición general</span>
           <strong style={styles.statValue}>#{teamStats?.position || '-'}</strong>
         </article>
 
+      </section>
+      <div role="tablist" aria-label="Actividades del grupo" className="inline-actions leader-tabs">
+        {tabs.map((tab, index) => <button key={tab.id} type="button" role="tab" id={`leader-tab-${tab.id}`}
+          aria-controls={`leader-panel-${tab.id}`} aria-selected={activeTab === tab.id} tabIndex={activeTab === tab.id ? 0 : -1}
+          className={`button ${activeTab === tab.id ? 'primary' : 'secondary'}`}
+          onClick={() => setActiveTab(tab.id)} onKeyDown={event => handleTabKey(event, index)}>{tab.label}</button>)}
+      </div>
+      <section role="tabpanel" id="leader-panel-garden" aria-labelledby="leader-tab-garden" hidden={activeTab !== 'garden'} tabIndex={0}>
+        <GardenChallengePage embedded onRankingLoaded={setRanking} />
+      </section>
+      <section role="tabpanel" id="leader-panel-recycling" aria-labelledby="leader-tab-recycling" hidden={activeTab !== 'recycling'} tabIndex={0}>
+        {user?.role === 'leader' && <Link to="/leader/register" className="button primary">Registrar reciclaje</Link>}
+        <section style={styles.statsGrid}>
         <article style={styles.statCard}>
           <span style={styles.statLabel}>Registros enviados</span>
           <strong style={styles.statValue}>{records.length}</strong>
@@ -76,6 +99,10 @@ export default function LeaderDashboard() {
         <article style={styles.statCard}>
           <span style={styles.statLabel}>Aprobados</span>
           <strong style={styles.statValue}>{approvedCount}</strong>
+        </article>
+        <article style={styles.statCard}>
+          <span style={styles.statLabel}>Puntos de reciclaje · Historial</span>
+          <strong style={styles.statValue}>{totalPoints}</strong>
         </article>
       </section>
 
@@ -163,6 +190,7 @@ export default function LeaderDashboard() {
             </table>
           </div>
         )}
+      </section>
       </section>
     </div>
   );

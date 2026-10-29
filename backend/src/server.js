@@ -8,6 +8,7 @@ import authRoutes from './routes/authRoutes.js';
 import fileRoutes from './routes/fileRoutes.js';
 import publicRoutes from './routes/publicRoutes.js';
 import recyclingRoutes from './routes/recyclingRoutes.js';
+import gardenRoutes from './routes/gardenRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 
 dotenv.config();
@@ -27,6 +28,7 @@ app.use('/api/files', fileRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/recycling', recyclingRoutes);
+app.use('/api/garden', gardenRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Health check

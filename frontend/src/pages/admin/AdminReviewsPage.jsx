@@ -1,4 +1,5 @@
 import ProtectedFile from '../../components/ProtectedFile';
+import { Link } from 'react-router-dom';
 import LoadState from '../../components/LoadState';
 import { uiError } from '../../utils/uiError';
 import { useEffect, useMemo, useState } from 'react';
@@ -118,6 +119,7 @@ export default function AdminReviewsPage() {
       </div>
 
       <div style={styles.tabs}>
+        <Link className="button secondary" to="/educacion/juegos/huerta">Validar evidencias de la huerta</Link>
         <button
           style={
             activeTab === 'pending'
@@ -590,4 +592,3 @@ const styles = {
     textDecoration: 'none',
   },
 };
-

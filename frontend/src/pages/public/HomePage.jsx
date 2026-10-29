@@ -61,6 +61,13 @@ export default function HomePage() {
         </div>
 
         <div className="home-cards">
+          <Link to="/educacion/juegos" className="home-cardLink">
+            <article className="home-card">
+              <div className="home-iconCircle" aria-hidden="true">↻</div>
+              <h4 className="home-cardTitle">Juegos didácticos</h4>
+              <p className="home-cardText">Aprende con la ruleta ambiental y descubre nuestros próximos juegos.</p>
+            </article>
+          </Link>
   <Link to="/educacion/agua" className="home-cardLink">
     <article className="home-card">
       <div className="home-iconCircle">

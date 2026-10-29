@@ -9,6 +9,8 @@ import HomePage from './pages/public/HomePage';
 import NotFoundPage from './pages/public/NotFoundPage';
 import RankingPage from './pages/public/RankingPage';
 import EducationCategoryPage from './pages/public/EducationCategoryPage';
+import EducationGamesPage from './pages/public/EducationGamesPage';
+import GardenChallengePage from './pages/public/GardenChallengePage';
 
 import LoginPage from './pages/auth/LoginPage';
 import PasswordRecoveryPage from './pages/auth/PasswordRecoveryPage';
@@ -34,6 +36,8 @@ export default function App() {
             <Route path="/ranking" element={<RankingPage />} />
 
             {/* Educación ambiental */}
+            <Route path="/educacion/juegos" element={<EducationGamesPage />} />
+            <Route path="/educacion/juegos/huerta" element={<GardenChallengePage />} />
             <Route
               path="/educacion/:category"
               element={<EducationCategoryPage />}

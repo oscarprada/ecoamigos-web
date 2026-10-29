@@ -12,6 +12,7 @@ import pg from 'pg';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import { createGardenHandlers } from '../src/controllers/gardenHandlers.js';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
@@ -64,6 +65,12 @@ test('S04-S07: revision transaccional PostgreSQL aislado', {
     const {authenticateToken,authorizeRoles}=await import(await authModuleUrl(testPool));
     const handlers=createContentHandlers(testPool,(...args)=>testPool.query(...args));
     const app=express();app.use(express.json());
+    const garden=createGardenHandlers({pool:testPool,removeStored});
+    app.post('/garden',authenticateToken,authorizeRoles('leader'),garden.createCrop);
+    app.get('/garden',authenticateToken,authorizeRoles('leader','admin'),garden.list);
+    app.post('/garden/:id/evidence',authenticateToken,authorizeRoles('leader'),receiveUpload('evidence'),garden.addEvidence);
+    app.patch('/garden/evidence/:id/review',authenticateToken,authorizeRoles('admin'),garden.review);
+    app.get('/api/files/garden/:id',authenticateToken,authorizeRoles('leader','admin'),files.garden);
     app.get('/api/files/public/content/:id',files.published);
     app.get('/api/files/evidence/:id',authenticateToken,files.evidence);
     app.get('/api/files/content/:id',authenticateToken,authorizeRoles('admin'),files.content);
@@ -92,6 +99,42 @@ test('S04-S07: revision transaccional PostgreSQL aislado', {
     const disk=()=>fs.existsSync(process.env.UPLOAD_ROOT)?fs.readdirSync(process.env.UPLOAD_ROOT,{recursive:true}).filter(name=>/\.(png|jpg|webp|mp4|mov|avi|pdf|docx)$/.test(name)).sort():[];
     const settled=async()=>{await new Promise(resolve=>setTimeout(resolve,100));};
     let published,draft,evidence;
+    await t.test('Huerta: foto real persistida, reintento sin otro cultivo, visualización y permisos',async()=>{
+      const json=async(resource,user,body,method='POST')=>{
+        const response=await fetch(base+resource,{method,headers:{Cookie:'ecoamigos_session='+token(user),'Content-Type':'application/json'},body:JSON.stringify(body)});
+        return {code:response.status,body:await response.json()};
+      };
+      const crop=await json('/garden',2,{bed:'Era fixture',vegetables:['tomate'],description:'Foto inicial fixture'});assert.equal(crop.code,201);
+      const today=(await client.query('SELECT CURRENT_DATE::text AS today')).rows[0].today;
+      const photo=async(stage='seguimiento',bytes=png,user=2)=>{
+        const data=new FormData();for(const [key,value]of Object.entries({stage,record_date:today,story:'Progreso fixture',period_id:1}))data.set(key,value);
+        data.set('evidence',new Blob([bytes],{type:'image/png'}),'fixture.png');
+        const response=await fetch(base+'/garden/'+crop.body.id+'/evidence',{method:'POST',headers:{Cookie:'ecoamigos_session='+token(user)},body:data});
+        return {code:response.status,body:await response.json()};
+      };
+      const before=disk();assert.equal((await photo('seguimiento',Buffer.from('invalid image'))).code,415);
+      assert.equal((await client.query('SELECT count(*)::int AS n FROM garden_crops')).rows[0].n,1);
+      assert.deepEqual(disk(),before);
+      const initial=await photo();assert.equal(initial.code,201);assert.equal(initial.body.points_awarded,0);assert.equal(initial.body.status,'pending');assert.equal(initial.body.stage,'seguimiento');
+      assert.ok(exists(initial.body.evidence_url));assert.deepEqual(fs.readFileSync(storedPath(initial.body.evidence_url)),png);
+      for(const user of [1,2]){
+        const loaded=await get('/api/files/garden/'+initial.body.id,user);assert.equal(loaded.code,200);assert.equal(loaded.headers.get('content-type'),'image/png');assert.deepEqual(loaded.bytes,png);
+        const history=JSON.parse((await get('/garden',user)).bytes.toString());assert.ok(history.evidence.some(row=>row.id===initial.body.id && row.evidence_url===initial.body.evidence_url));
+      }
+      assert.equal((await get('/api/files/garden/'+initial.body.id,3)).code,403);
+      assert.equal((await get('/api/files/garden/'+initial.body.id)).code,401);
+      assert.equal((await photo('crecimiento',png,3)).code,403);assert.equal((await photo('crecimiento',png,1)).code,403);
+      assert.equal((await json('/garden/evidence/'+initial.body.id+'/review',1,{status:'approved',review_notes:'Validado'},'PATCH')).body.points_awarded,0);
+      for(const [stage,points]of [['crecimiento',50],['cosecha',100]]){
+        const item=await photo(stage);assert.equal(item.code,201);assert.equal(item.body.status,'pending');assert.equal(item.body.points_awarded,0);
+        const endpoint='/garden/evidence/'+item.body.id+'/review';
+        assert.equal((await json(endpoint,2,{status:'approved',review_notes:'Fixture'},'PATCH')).code,403);
+        assert.equal((await json(endpoint,1,{status:'approved',review_notes:'Fixture'},'PATCH')).body.points_awarded,points);
+        assert.equal((await json(endpoint,1,{status:'approved',review_notes:'Otra vez'},'PATCH')).code,409);
+        const extra=await photo(stage);assert.equal((await json('/garden/evidence/'+extra.body.id+'/review',1,{status:'approved',review_notes:'Extra'},'PATCH')).body.points_awarded,0);
+      }
+      assert.equal((await client.query('SELECT count(*)::int AS n FROM garden_crops')).rows[0].n,1);
+    });
     await t.test('S04/S07 formatos, MIME reales y nombres UUID sin sobrescritura',async()=>{
       for(const [name,mime,bytes,type]of [['one.png','image/png',png,'image'],['one.jpg','image/jpeg',jpg,'image'],['one.webp','image/webp',webp,'image'],['one.mp4','video/mp4',mp4,'video'],['one.mov','video/quicktime',mov,'video'],['one.avi','video/x-msvideo',avi,'video'],['one.pdf','application/pdf',pdf,'file'],['one.docx','application/vnd.openxmlformats-officedocument.wordprocessingml.document',await docx(),'file']]){
         const result=await upload({name,mime,bytes,extra:{type}});assert.equal(result.code,201,name+': '+JSON.stringify(result.body));assert.match(result.body.file_url,/\/managed\/content\/[0-9a-f-]{36}\./);assert.ok(exists(result.body.file_url));

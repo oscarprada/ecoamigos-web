@@ -30,3 +30,11 @@ backups/
 
 # Editor
 .vscode/
+
+# Local uploads, temporary files and private keys
+/uploads/
+tmp/
+*.tmp
+*.bak
+*.pem
+*.key

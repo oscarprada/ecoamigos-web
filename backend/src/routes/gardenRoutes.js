@@ -1,0 +1,14 @@
+import { Router } from 'express';
+import { pool } from '../config/db.js';
+import { removeStored } from '../services/fileStore.js';
+import { authenticateToken, authorizeRoles } from '../middleware/authMiddleware.js';
+import { upload } from '../middleware/uploadMiddleware.js';
+import { createGardenHandlers } from '../controllers/gardenHandlers.js';
+const router = Router();
+const handlers = createGardenHandlers({ pool, removeStored });
+router.use(authenticateToken);
+router.get('/', authorizeRoles('leader', 'admin'), handlers.list);
+router.post('/', authorizeRoles('leader'), handlers.createCrop);
+router.post('/:id/evidence', authorizeRoles('leader'), upload.single('evidence'), handlers.addEvidence);
+router.patch('/evidence/:id/review', authorizeRoles('admin'), handlers.review);
+export default router;

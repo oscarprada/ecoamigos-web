@@ -8,6 +8,8 @@ import { renderToString } from 'react-dom/server';
 import * as router from 'react-router-dom';
 import { transformWithOxc } from 'vite';
 import { uiError } from '../src/utils/uiError.js';
+import { gardenIntro, gardenStages, gardenVegetables } from '../src/pages/public/gardenContent.js';
+import { registerGardenCrop } from '../src/pages/public/gardenRegistration.js';
 
 const root = fileURLToPath(new URL('../src/', import.meta.url));
 // Compile actual source with the existing Vite JSX transformer. No new framework.
@@ -36,7 +38,12 @@ async function mount(file, api, props = {}, auth = {}) {
     return [states[index], value => { states[index] = typeof value === 'function' ? value(states[index]) : value; }];
   };
   const bindings = {
-    React, api, uiError, LoadState, useState,
+    React, api, uiError, LoadState, useState, gardenIntro, gardenStages, gardenVegetables,
+    useCallback: fn => fn,
+    ProtectedFile: props => React.createElement('button', { type: 'button' }, props.label),
+    GardenChallengePage: props => React.createElement('div', { 'data-embedded': props.embedded }, 'Huerta reutilizada'),
+    EvidencePhotoInput: props => React.createElement('input', { type: 'file', name: 'evidence', ...props }),
+    registerGardenCrop,
     useRef: initial => useState(() => ({ current: initial }))[0],
     useEffect: fn => { if (!mounted) effects.push(fn); }, useMemo: fn => fn(),
     useToast: () => ({ showToast: (...args) => toasts.push(args) }),
@@ -73,6 +80,29 @@ async function mount(file, api, props = {}, auth = {}) {
 }
 const failed = { get: async () => { throw technical; }, post: async () => { throw technical; }, patch: async () => { throw technical; } };
 
+test('selector de foto valida formato, muestra vista previa y libera URLs al cambiar o desmontar', async () => {
+  const states = [], effects = [], revoked = [];
+  let cursor = 0, previous, cleanup, created = 0;
+  const Photo = await compile('components/EvidencePhotoInput.jsx', { React,
+    useState: initial => { const index = cursor++; if (!(index in states)) states[index] = initial; return [states[index], value => { states[index] = value; }]; },
+    useEffect: (fn, dependencies) => { if (previous !== dependencies[0]) { previous = dependencies[0]; effects.push(fn); } },
+    URL: { createObjectURL: () => 'blob:fixture-' + ++created, revokeObjectURL: url => revoked.push(url) },
+  });
+  const render = () => { cursor = 0; return Photo({ required: true }); };
+  const settleEffects = () => { for (const fn of effects.splice(0)) { cleanup?.(); cleanup = fn(); } };
+  let tree = render(); settleEffects();
+  const input = () => tree.props.children[0].props.children[1];
+  let validity;
+  const choose = file => input().props.onChange({ target: { files: [file], setCustomValidity: value => { validity = value; } } });
+  choose({ name: 'fixture.png', type: 'image/png', size: 123 }); tree = render(); settleEffects(); tree = render();
+  assert.equal(validity, ''); assert.equal(tree.props.children[1].props.src, 'blob:fixture-1');
+  choose({ name: 'other.jpg', type: 'image/jpeg', size: 456 }); tree = render(); settleEffects(); tree = render();
+  assert.deepEqual(revoked, ['blob:fixture-1']); assert.equal(tree.props.children[1].props.src, 'blob:fixture-2');
+  choose({ name: 'bad.exe', type: 'application/octet-stream', size: 1 }); tree = render(); settleEffects(); tree = render();
+  assert.match(validity, /JPG, PNG o WebP/); assert.equal(tree.props.children[1], '');
+  assert.deepEqual(revoked, ['blob:fixture-1', 'blob:fixture-2']); cleanup?.();
+});
+
 for (const file of ['admin/AdminDashboard', 'admin/AdminContentPage', 'admin/AdminSettingsPage', 'admin/AdminReviewsPage', 'admin/AdminUsersPage', 'leader/LeaderDashboard', 'leader/RegisterRecyclingPage', 'public/RankingPage', 'public/EducationCategoryPage']) {
   test('HTTP fallido: carga termina, error persistente y reintento en ' + file, async () => {
     const page = await mount('pages/' + file + '.jsx', failed);
@@ -89,6 +119,47 @@ for (const file of ['admin/AdminDashboard', 'admin/AdminContentPage', 'admin/Adm
 test('ranking exitoso vacío se distingue de HTTP fallido', async () => {
   const page = await mount('pages/public/RankingPage.jsx', { get: async () => ({ data: { ranking: [], currentPeriod: null } }) });
   assert.match(page.text(), /Aún no hay registros/); assert.doesNotMatch(page.text(), /No fue posible|Cargando/);
+});
+test('panel de líder conserva cuenta, grupo e historial para Administrativa y otros grupos', async () => {
+  for (const [team_id, team_name] of [[1, 'Administrativa'], [2, 'Otro grupo']]) {
+    const record = { id: team_id, created_at: '2026-10-13', material_type: 'organico', quantity: '1', unit: 'kg', status: 'approved', points_awarded: 20, review_notes: 'Registro conservado' };
+    const api = { get: async url => ({ data: url === '/recycling/mine' ? [record] : { ranking: [{ id: team_id, total_points: 20, position: 1 }] } }) };
+    const page = await mount('pages/leader/LeaderDashboard.jsx', api, {}, { user: { id: team_id, name: 'Fixture', role: 'leader', team_id, team_name } });
+    assert.match(page.text(), new RegExp(team_name));
+    assert.match(page.text(), /Registro conservado/);
+    assert.doesNotMatch(page.text(), /No fue posible/);
+    assert.ok(page.nodes().some(node => node.type === 'a' && node.props.href === '/leader/register'));
+  }
+});
+test('panel inicia en Huerta y cambia a Reciclaje sin perder el ranking general', async () => {
+  const page = await mount('pages/leader/LeaderDashboard.jsx', { get: async url => ({ data: url === '/recycling/mine' ? [] : { ranking: [{ id: 1, total_points: 150, position: 2 }] } }) }, {}, { user: { role: 'leader', team_id: 1 } });
+  const tab = label => page.nodes().find(node => node.props?.role === 'tab' && node.props.children === label);
+  const panel = id => page.nodes().find(node => node.props?.id === id);
+  assert.equal(tab('Huerta').props['aria-selected'], true);
+  assert.equal(panel('leader-panel-garden').props.hidden, false);
+  assert.equal(panel('leader-panel-recycling').props.hidden, true);
+  assert.match(page.text(), /Puntaje general del grupo/); assert.match(page.text(), /150/);
+  tab('Reciclaje').props.onClick(); page.render();
+  assert.equal(tab('Reciclaje').props['aria-selected'], true);
+  assert.equal(panel('leader-panel-recycling').props.hidden, false);
+  assert.equal(panel('leader-panel-garden').props.hidden, true);
+  assert.match(page.text(), /150/);
+  let focused;
+  tab('Reciclaje').props.onKeyDown({ key: 'Home', preventDefault() {}, currentTarget: { parentElement: { querySelectorAll: () => [{ focus() { focused = 'garden'; } }, { focus() {} }] } } });
+  page.render(); assert.equal(focused, 'garden'); assert.equal(tab('Huerta').props['aria-selected'], true);
+});
+test('huerta integrada usa solo sus evidencias para contadores e historial del grupo', async () => {
+  const crops = [{ id: 7, bed: 'Era fixture', vegetables: ['tomate'], created_at: '2026-10-13', team_name: 'Fixture', description: 'Cultivo' }];
+  const evidence = [{ id: 9, crop_id: 7, stage: 'crecimiento', status: 'approved', points_awarded: 50, record_date: '2026-10-13', story: 'Creció', review_notes: 'Verificado' }, { id: 10, crop_id: 7, stage: 'seguimiento', status: 'pending', points_awarded: 0, record_date: '2026-10-13', story: 'Seguimiento' }];
+  const calls = [];
+  const page = await mount('pages/public/GardenChallengePage.jsx', { get: async url => { calls.push(url); return { data: url === '/garden' ? { crops, evidence } : { currentPeriod: { id: 1, start_date: '2026-01-01', end_date: '2026-12-31' }, ranking: [{ total_points: 999 }] } }; } }, { embedded: true }, { user: { role: 'leader', team_id: 1 } });
+  const counters = page.nodes().find(node => node.props?.['aria-label'] === 'Contadores de huerta');
+  const values = counters.props.children.flat().map(node => node.props.children.find(child => child.type === 'strong').props.children);
+  assert.deepEqual(values, [1, 2, 1, 1, 0, 50]);
+  assert.deepEqual(calls.sort(), ['/garden', '/public/ranking']);
+  assert.match(page.text(), /Era fixture/); assert.match(page.text(), /tomate/); assert.match(page.text(), /Verificado/);
+  assert.ok(page.nodes().some(node => node.type === 'button' && node.props.children === 'Ver foto del progreso'));
+  assert.ok(page.nodes().some(node => node.type === 'input' && node.props.name === 'evidence'));
 });
 
 test('loading a éxito muestra ranking real sin cambiar puntos', async () => {
@@ -172,7 +243,7 @@ async function renderPath(url) {
   const bindings = { React, ...router, NotFoundPage, ProtectedRoute,
     BrowserRouter: p => React.createElement(router.MemoryRouter, { initialEntries: [url] }, p.children),
     AuthProvider: p => p.children, AppLayout: router.Outlet };
-  for (const name of ['HomePage', 'RankingPage', 'EducationCategoryPage', 'LoginPage', 'PasswordRecoveryPage', 'LeaderDashboard', 'RegisterRecyclingPage', 'AdminDashboard', 'AdminReviewsPage', 'AdminUsersPage', 'AdminContentPage', 'AdminSettingsPage']) bindings[name] = () => React.createElement('p', null, name);
+  for (const name of ['HomePage', 'RankingPage', 'EducationCategoryPage', 'EducationGamesPage', 'GardenChallengePage', 'LoginPage', 'PasswordRecoveryPage', 'LeaderDashboard', 'RegisterRecyclingPage', 'AdminDashboard', 'AdminReviewsPage', 'AdminUsersPage', 'AdminContentPage', 'AdminSettingsPage']) bindings[name] = () => React.createElement('p', null, name);
   const App = await compile('App.jsx', bindings);
   return renderToString(React.createElement(App));
 }
@@ -181,6 +252,28 @@ for (const url of ['/missing', '/admin/missing', '/leader/missing', '/winners', 
 });
 test('router real mantiene rutas válidas públicas/admin/recuperación', async () => {
   for (const url of ['/', '/ranking', '/admin', '/admin/users', '/login', '/forgot-password', '/reset-password']) assert.doesNotMatch(await renderPath(url), /404/);
+});
+test('rutas públicas de juegos y huerta seleccionan sus páginas específicas', async () => {
+  assert.match(await renderPath('/educacion/juegos'), /EducationGamesPage/);
+  assert.match(await renderPath('/educacion/juegos/huerta'), /GardenChallengePage/);
+});
+test('huerta pública muestra instrucciones, oculta medios vacíos y no consulta datos privados', async () => {
+  let calls = 0;
+  const page = await mount('pages/public/GardenChallengePage.jsx', { get: async () => { calls++; throw technical; } }, {}, { user: null, loading: false });
+  assert.equal(calls, 0);
+  assert.match(page.text(), /Sembrando conciencia|Controla las arvenses/);
+  assert.match(page.text(), /50 puntos/); assert.match(page.text(), /100 puntos/);
+  assert.ok(page.nodes().some(node => node.type === 'a' && node.props.href === '/login'));
+  assert.ok(!page.nodes().some(node => ['img', 'video', 'form'].includes(node.type)));
+});
+test('huerta: líder sin grupo no registra; error de carga permite reintentar', async () => {
+  const unassigned = await mount('pages/public/GardenChallengePage.jsx', failed, {}, { user: { role: 'leader', team_id: null } });
+  assert.match(unassigned.text(), /Necesitas un grupo asignado/);
+  assert.ok(!unassigned.nodes().some(node => node.type === 'form'));
+  const leaderPage = await mount('pages/public/GardenChallengePage.jsx', failed, {}, { user: { role: 'leader', team_id: 1 } });
+  assert.ok(leaderPage.nodes().some(node => node.props?.role === 'alert'));
+  assert.ok(leaderPage.nodes().some(node => node.type === 'button' && node.props.children === 'Reintentar carga'));
+  assert.ok(!leaderPage.nodes().some(node => node.type === 'form'));
 });
 test('ProtectedRoute conserva login, falta de permiso y loading', async () => {
   for (const [auth, expected] of [[{ user: null, loading: false }, '/login'], [{ user: { role: 'leader' }, loading: false }, '/']]) {

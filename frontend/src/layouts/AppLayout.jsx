@@ -101,6 +101,9 @@ export default function AppLayout() {
             <Link to="/" className="site-link" onClick={closeMenu}>
               Inicio
             </Link>
+            <Link to="/educacion/juegos" className="site-link" onClick={closeMenu}>
+              Juegos didácticos
+            </Link>
 
             {user ? (
               <>

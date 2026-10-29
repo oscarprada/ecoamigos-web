@@ -17,7 +17,35 @@ export async function getRanking(_req, res) {
     let ranking = [];
 
     if (currentPeriod) {
-      const rankingResult = await query(
+      // Deploying the optional challenge must not break existing leader dashboards.
+      // Check on each request so its points become available immediately after migration.
+      const availability = await query(`SELECT to_regclass('garden_crops') IS NOT NULL AS crops,
+        to_regclass('garden_evidence') IS NOT NULL AS evidence`);
+      const { crops, evidence } = availability.rows[0];
+      if (crops !== evidence) throw new Error('Incomplete garden schema');
+      // Keep both SQL statements explicit so installation tests prepare each one.
+      const rankingResult = crops ? await query(
+        `
+          SELECT
+            t.id,
+            t.name,
+            t.dependency,
+            COALESCE(SUM(rr.points_awarded), 0) AS total_points
+          FROM teams t
+          LEFT JOIN (
+            SELECT team_id, period_id, status, points_awarded FROM recycling_records
+            UNION ALL
+            SELECT c.team_id, e.period_id, e.status, e.points_awarded
+            FROM garden_evidence e JOIN garden_crops c ON c.id=e.crop_id
+          ) rr
+            ON rr.team_id = t.id
+           AND rr.period_id = $1
+           AND rr.status = 'approved'
+          GROUP BY t.id, t.name, t.dependency
+          ORDER BY total_points DESC, t.name ASC
+        `,
+        [currentPeriod.id]
+      ) : await query(
         `
           SELECT
             t.id,
