@@ -199,13 +199,6 @@
   height: 90px;
   object-fit: contain;
 }
-.home-gamesIllustration {
-  display: block;
-  width: min(100%, 220px);
-  height: auto;
-  object-fit: contain;
-  margin-bottom: 20px;
-}
 .home-alliesSection {
   max-width: 1280px;
   margin: 0 auto;

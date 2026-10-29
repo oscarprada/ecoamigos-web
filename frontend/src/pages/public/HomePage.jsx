@@ -64,11 +64,13 @@ export default function HomePage() {
         <div className="home-cards">
           <Link to="/educacion/juegos" className="home-cardLink">
             <article className="home-card">
-              <img
-                src={cleoJuegos}
-                alt="Cleo, tortuga de Ecoamigos con piezas de rompecabezas"
-                className="home-gamesIllustration"
-              />
+              <div className="home-iconCircle">
+                <img
+                  src={cleoJuegos}
+                  alt="Cleo, tortuga de Ecoamigos con piezas de rompecabezas"
+                  className="home-iconImg"
+                />
+              </div>
               <h4 className="home-cardTitle">Juegos didácticos</h4>
               <p className="home-cardText">Aprende con la ruleta ambiental y descubre nuestros próximos juegos.</p>
             </article>
