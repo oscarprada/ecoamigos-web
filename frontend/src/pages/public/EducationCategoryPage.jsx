@@ -11,11 +11,6 @@ const CATEGORY_LABELS = {
   papel: 'Uso eficiente del papel',
 };
 
-// =============================================================
-// INTRODUCCIONES DE LAS CATEGORÍAS
-// Modifique únicamente los textos.
-// No cambie las llaves: agua, energia, papel y residuos.
-// =============================================================
 const CATEGORY_INTROS = {
   agua: `¿Sabías que una llave abierta gasta hasta 12 litros de agua por minuto? ¡Ciérrala! 
 Optimizar el consumo de agua es un pilar fundamental para la sostenibilidad ambiental y 
@@ -82,86 +77,137 @@ export default function EducationCategoryPage() {
 
   useEffect(() => {
     if (!selectedItem || !dialogRef.current) return;
+
     return activateDialog(dialogRef.current, triggerRef.current, () => setSelectedItem(null));
-  }, [selectedItem]);
+}, [selectedItem]);
 
   useEffect(() => {
     let current = true;
-    setPageLoading(true); setLoadError(''); setSelectedItem(null);
+
+    setPageLoading(true);
+    setLoadError('');
+    setSelectedItem(null);
+
     api.get(`/public/content/${category}`)
-      .then(({ data }) => { if (current) setItems(data || []); })
-      .catch(() => { if (current) setLoadError('No fue posible cargar el contenido.'); })
-      .finally(() => { if (current) setPageLoading(false); });
-    return () => { current = false; };
+      .then(({ data }) => {
+        if (current) setItems(data || []);
+      })
+      .catch(() => {
+        if (current) setLoadError('No fue posible cargar el contenido.');
+      })
+      .finally(() => {
+        if (current) setPageLoading(false);
+      });
+
+    return () => {
+      current = false;
+    };
   }, [category]);
 
-  if (pageLoading || loadError) return <LoadState loading={pageLoading} error={loadError} retry={() => window.location.reload()} />;
+  if (pageLoading || loadError) {
+    return (
+      <LoadState
+        loading={pageLoading}
+        error={loadError}
+        retry={() => window.location.reload()}
+      />
+    );
+  }
 
   return (
-    <div style={styles.page}>
-      <Link to="/" style={styles.backButton}>← Atrás</Link>
+    <div className="education-page">
+      <nav className="page-breadcrumb" aria-label="Ruta de navegación">
+        <Link to="/">Inicio</Link>
+        <span aria-hidden="true">›</span>
+        <span>Contenido multimedia</span>
+        <span aria-hidden="true">›</span>
+        <span aria-current="page">{CATEGORY_LABELS[category]}</span>
+      </nav>
 
-      <div style={styles.titleRow}>
-  <div>
-    <p style={styles.kicker}>Educación ambiental</p>
-    <h2 style={styles.title}>{CATEGORY_LABELS[category]}</h2>
-  </div>
+      <section className="education-hero">
+        <div className="education-heroContent">
+          <p className="education-kicker">Contenido multimedia</p>
+          <h2>{CATEGORY_LABELS[category]}</h2>
+          <p className="education-introduction">
+            {CATEGORY_INTROS[category]}
+          </p>
+        </div>
 
-  {category === 'residuos' && (
-    <div style={styles.actionButtons}>
-      <Link to="/ranking" style={styles.secondaryButton}>
-        🏆 Ranking
-      </Link>
+        <div
+          className={`education-orb education-orb-${category}`}
+          aria-hidden="true"
+        />
+      </section>
 
-      <Link to="/login" style={styles.primaryButton}>
-        🔑 Ingresar
-      </Link>
-    </div>
-  )}
-</div>
+      <div className="education-publicationsHeader">
+        <div>
+          <p className="education-kicker">Contenido disponible</p>
+          <h3>Publicaciones</h3>
+        </div>
 
-      <div style={styles.introductionBox}>
-        <p style={styles.introduction}>
-          {CATEGORY_INTROS[category]}
-        </p>
+        {category === 'residuos' && (
+          <div className="education-actions">
+            <Link to="/ranking" className="button secondary">
+              🏆 Ranking
+            </Link>
+
+            <Link to="/login" className="button primary">
+              🔑 Ingresar
+            </Link>
+          </div>
+        )}
       </div>
 
       {items.length === 0 ? (
-        <div style={styles.empty}>Aún no hay contenido publicado en esta categoría.</div>
+        <div className="education-empty">
+          Aún no hay contenido publicado en esta categoría.
+        </div>
       ) : (
-        <div style={styles.list}>
+        <div className="education-list">
           {items.map((item) => (
-            <article key={item.id} style={styles.card}>
-              <div style={styles.preview}>
+            <article key={item.id} className="education-card">
+              <div className="education-preview">
                 {item.file_url && item.type === 'image' ? (
                   <img
-                    src={getBackendUrl('/api/files/public/content/' + item.id)}
+                    src={getBackendUrl(
+                      '/api/files/public/content/' + item.id
+                    )}
                     alt={item.title}
-                    style={styles.previewMedia}
+                    className="education-previewMedia"
                   />
                 ) : item.file_url && item.type === 'video' ? (
                   <video
-                    src={getBackendUrl('/api/files/public/content/' + item.id)}
-                    style={styles.previewMedia}
+                    src={getBackendUrl(
+                      '/api/files/public/content/' + item.id
+                    )}
+                    className="education-previewMedia"
                     muted
                     preload="metadata"
                     controlsList="nodownload"
                     disablePictureInPicture
                   />
                 ) : (
-                  <div style={styles.textPreview}>{getTypeLabel(item.type)}</div>
+                  <div className="education-textPreview">
+                    {getTypeLabel(item.type)}
+                  </div>
                 )}
               </div>
 
-              <div style={styles.content}>
-                <p style={styles.typeLabel}>{getTypeLabel(item.type)}</p>
-                <h3 style={styles.cardTitle}>{item.title}</h3>
-                <p style={styles.cardText}>{item.description}</p>
+              <div className="education-cardContent">
+                <p className="education-typeLabel">
+                  {getTypeLabel(item.type)}
+                </p>
+
+                <h3>{item.title}</h3>
+                <p>{item.description}</p>
 
                 <button
                   type="button"
-                  style={styles.viewButton}
-                  onClick={e => { triggerRef.current = e.currentTarget; setSelectedItem(item); }}
+                  className="education-viewButton"
+                  onClick={(e) => {
+                    triggerRef.current = e.currentTarget;
+                    setSelectedItem(item);
+                  }}
                 >
                   Ver contenido completo
                 </button>
@@ -172,59 +218,84 @@ export default function EducationCategoryPage() {
       )}
 
       {selectedItem && (
-        <dialog ref={dialogRef} className="education-dialog" style={styles.modal}
-          aria-modal="true" aria-labelledby="education-dialog-title" tabIndex={-1}
-          onCancel={e => { e.preventDefault(); setSelectedItem(null); }}
-          onClick={e => {
+        <dialog ref={dialogRef}
+          className="education-dialog"
+          style={{ maxHeight: '90vh', overflowY: 'auto' }}
+          aria-modal="true"
+          aria-labelledby="education-dialog-title"
+          tabIndex={-1}
+          onCancel={(e) => {
+            e.preventDefault();
+            setSelectedItem(null);
+          }}
+          onClick={(e) => {
             if (e.target !== e.currentTarget) return;
-            const rect = e.currentTarget.getBoundingClientRect();
-            if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) setSelectedItem(null);
-          }}>
-            <div style={styles.modalHeader}>
-              <div>
-                <p style={styles.kicker}>Contenido educativo</p>
-                <h3 id="education-dialog-title" style={styles.modalTitle}>{selectedItem.title}</h3>
-              </div>
 
-              <button
-                type="button"
-                style={styles.closeButton}
-                onClick={() => setSelectedItem(null)}
-              >
-                Cerrar
-              </button>
+            const rect = e.currentTarget.getBoundingClientRect();
+
+            if (
+              e.clientX < rect.left ||
+              e.clientX > rect.right ||
+              e.clientY < rect.top ||
+              e.clientY > rect.bottom
+            ) {
+              setSelectedItem(null);
+            }
+          }}
+        >
+          <div className="education-modalHeader">
+            <div>
+              <p className="education-kicker">Contenido educativo</p>
+              <h3 id="education-dialog-title">{selectedItem.title}</h3>
             </div>
 
-            <p style={styles.modalText}>{selectedItem.description}</p>
+            <button
+              type="button"
+              className="education-closeButton"
+              onClick={() => setSelectedItem(null)}
+            >
+              Cerrar
+            </button>
+          </div>
 
-            {selectedItem.file_url && selectedItem.type === 'image' && (
-              <img
-                src={getBackendUrl('/api/files/public/content/' + selectedItem.id)}
-                alt={selectedItem.title}
-                style={styles.modalMedia}
-              />
-            )}
+          <p className="education-modalText">
+            {selectedItem.description}
+          </p>
 
-            {selectedItem.file_url && selectedItem.type === 'video' && (
-              <video
-                src={getBackendUrl('/api/files/public/content/' + selectedItem.id)}
-                controls
-                controlsList="nodownload"
-                disablePictureInPicture
-                style={styles.modalMedia}
-              />
-            )}
+          {selectedItem.file_url && selectedItem.type === 'image' && (
+            <img
+              src={getBackendUrl(
+                '/api/files/public/content/' + selectedItem.id
+              )}
+              alt={selectedItem.title}
+              className="education-modalMedia"
+            />
+          )}
 
-            {selectedItem.file_url && selectedItem.type === 'file' && (
-              <a
-                href={getBackendUrl('/api/files/public/content/' + selectedItem.id)}
-                target="_blank"
-                rel="noreferrer"
-                style={styles.fileButton}
-              >
-                Ver archivo
-              </a>
-            )}
+          {selectedItem.file_url && selectedItem.type === 'video' && (
+            <video
+              src={getBackendUrl(
+                '/api/files/public/content/' + selectedItem.id
+              )}
+              controls
+              controlsList="nodownload"
+              disablePictureInPicture
+              className="education-modalMedia"
+            />
+          )}
+
+          {selectedItem.file_url && selectedItem.type === 'file' && (
+            <a
+              href={getBackendUrl(
+                '/api/files/public/content/' + selectedItem.id
+              )}
+              target="_blank"
+              rel="noreferrer"
+              className="education-fileButton"
+            >
+              Ver archivo
+            </a>
+          )}
         </dialog>
       )}
     </div>
@@ -241,213 +312,3 @@ function getTypeLabel(type) {
 
   return labels[type] || 'Contenido';
 }
-
-const styles = {
-  page: {
-    maxWidth: '1200px',
-    margin: '0 auto',
-    padding: '42px 32px',
-    fontFamily: 'Montserrat, sans-serif',
-  },
-  backButton: {
-    color: 'var(--turquoise)',
-    fontWeight: 800,
-    textDecoration: 'none',
-    display: 'inline-block',
-    marginBottom: '22px',
-  },
-  kicker: {
-    margin: 0,
-    color: 'var(--turquoise)',
-    fontWeight: 800,
-    textTransform: 'uppercase',
-    fontSize: '13px',
-    letterSpacing: '0.6px',
-  },
-  title: {
-    fontFamily: 'Nunito Sans, sans-serif',
-    fontSize: '38px',
-    margin: '8px 0 0',
-  },
-
-  titleRow: {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'flex-end',
-  gap: 20,
-  marginBottom: 28,
-  flexWrap: 'wrap',
-},
-
-actionButtons: {
-  display: 'flex',
-  gap: 12,
-  flexWrap: 'wrap',
-},
-
-secondaryButton: {
-  textDecoration: 'none',
-  backgroundColor: 'var(--turquoise)',
-  color: '#ffffff',
-  padding: '10px 18px',
-  borderRadius: '10px',
-  fontSize: '14px',
-  fontWeight: 700,
-  whiteSpace: 'nowrap',
-},
-
-primaryButton: {
-  textDecoration: 'none',
-  backgroundColor: 'var(--green)',
-  color: '#ffffff',
-  padding: '10px 18px',
-  borderRadius: '10px',
-  fontSize: '14px',
-  fontWeight: 800,
-  whiteSpace: 'nowrap',
-},
-  introductionBox: {
-    background: '#f8fbf9',
-    border: '1px solid var(--border)',
-    borderRadius: 18,
-    padding: '22px 24px',
-    marginBottom: 30,
-  },
-  introduction: {
-    margin: 0,
-    color: '#444',
-    fontSize: '16px',
-    lineHeight: 1.8,
-    whiteSpace: 'pre-line',
-  },
-  empty: {
-    background: '#fff',
-    padding: 24,
-    borderRadius: 16,
-    border: '1px solid var(--border)',
-  },
-  list: {
-    display: 'grid',
-    gap: 22,
-  },
-  card: {
-  background: '#fff',
-  borderRadius: 22,
-  border: '1px solid var(--border)',
-  boxShadow: 'var(--shadow-card)',
-  overflow: 'hidden',
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))',
-},
-  preview: {
-    backgroundColor: '#eef8f3',
-  height: '180px',
-  padding: '10px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  overflow: 'hidden',
-  },
-  previewMedia: {
-    width: '100%',
-  height: '100%',
-  objectFit: 'contain',
-  borderRadius: '12px',
-  },
-  textPreview: {
-    color: 'var(--turquoise)',
-    fontWeight: 800,
-    fontSize: 20,
-  },
-  content: {
-    padding: 28,
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  typeLabel: {
-    margin: 0,
-    color: 'var(--turquoise)',
-    fontSize: 12,
-    fontWeight: 800,
-    textTransform: 'uppercase',
-    letterSpacing: '0.7px',
-  },
-  cardTitle: {
-    margin: 0,
-    fontFamily: 'Nunito Sans, sans-serif',
-    fontSize: 26,
-    color: '#000000',
-  },
-  cardText: {
-    margin: '0 0 8px',
-    color: '#444',
-    lineHeight: 1.65,
-    fontSize: 16,
-  },
-  viewButton: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'var(--green)',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 12,
-    padding: '12px 16px',
-    fontWeight: 800,
-    cursor: 'pointer',
-    fontFamily: 'Montserrat, sans-serif',
-  },
-  modal: {
-    backgroundColor: '#fff',
-    width: 'min(920px, calc(100% - 32px))',
-    boxSizing: 'border-box',
-    border: 'none',
-    margin: 'auto',
-    maxHeight: '90vh',
-    overflowY: 'auto',
-    borderRadius: 22,
-    padding: 24,
-    boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
-  },
-  modalHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: 16,
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    margin: '8px 0 0',
-    fontFamily: 'Nunito Sans, sans-serif',
-    fontSize: 30,
-  },
-  modalText: {
-    color: '#444',
-    lineHeight: 1.6,
-  },
-  modalMedia: {
-    width: '100%',
-    maxHeight: '65vh',
-    objectFit: 'contain',
-    borderRadius: 16,
-    backgroundColor: '#000',
-  },
-  closeButton: {
-    backgroundColor: '#000',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 12,
-    padding: '10px 14px',
-    fontWeight: 800,
-    cursor: 'pointer',
-  },
-  fileButton: {
-    display: 'inline-flex',
-    backgroundColor: 'var(--turquoise)',
-    color: '#fff',
-    padding: '12px 16px',
-    borderRadius: 12,
-    textDecoration: 'none',
-    fontWeight: 800,
-  },
-};
